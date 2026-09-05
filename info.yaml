@@ -7,8 +7,9 @@ project:
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
 
-  # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "1x1"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
+  # How many tiles your design occupies? On ihp-sg13g2 a 1x1 tile is 202.08 x 154.98 uM.
+  # 2x1 is two tiles side by side: 419.52 x 154.98 uM.
+  tiles: "2x1"          # Valid (ihp-sg13g2): 1x1 1x2 2x1 2x2 3x1 3x2 3x4 4x1 4x2 4x4 5x4 6x1 6x2 6x4 8x1 8x2 8x4
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
   top_module:  "tt_um_example"

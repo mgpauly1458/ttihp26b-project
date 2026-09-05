@@ -102,7 +102,33 @@ whether the design fits in a tile.
 
 ## Tile budget
 
-A 1x1 tile is roughly 167x108 µm. `tiles` in `info.yaml` accepts
-`1x1, 1x2, 2x2, 3x2, 4x2, 6x2, 8x2`. Start at `1x1`; if global placement fails,
-first try raising `PL_TARGET_DENSITY_PCT` in `src/config.json` (up to ~80 is
-reported to work), and only then ask for more tiles.
+This project is set to **`2x1`** — two tiles side by side, 419.52 x 154.98 um on
+`ihp-sg13g2`. That is the allocation, so it is a ceiling, not a target.
+
+The full set of valid values for this PDK is larger than the stale comment in
+the stock template suggests. From `tt-support-tools/tech/ihp-sg13g2/tile_sizes.yaml`:
+
+| tiles | width x height (um) | tiles | width x height (um) |
+|-------|---------------------|-------|---------------------|
+| 1x1   | 202.08 x 154.98     | 4x1   | 854.40 x 154.98     |
+| 1x2   | 202.08 x 313.74     | 4x2   | 854.40 x 313.74     |
+| 2x1   | 419.52 x 154.98     | 6x1   | 1289.28 x 154.98    |
+| 2x2   | 419.52 x 313.74     | 6x2   | 1289.28 x 313.74    |
+| 3x1   | 636.96 x 154.98     | 8x1   | 1724.16 x 154.98    |
+| 3x2   | 636.96 x 313.74     | 8x2   | 1724.16 x 313.74    |
+
+(`3x4`, `4x4`, `5x4`, `6x4` and `8x4` also exist.)
+
+Note these are IHP numbers. The 167x108 um figure quoted in most Tiny Tapeout
+documentation is sky130 and does not apply here.
+
+If global placement fails with GPL-0302, raise `PL_TARGET_DENSITY_PCT` in
+`src/config.json` before assuming you have run out of area — the default is 60
+and users report up to about 80 working.
+
+## Deadline
+
+**TTIHP 26b closes 2026-09-21** (`end_date` in the shuttle's `config.yaml`).
+Leave several days of margin: the GDS workflow takes real wall-clock time, and
+the first run usually surfaces lint or timing problems you will need to iterate
+on.
