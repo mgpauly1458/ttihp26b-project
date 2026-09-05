@@ -5,20 +5,35 @@ docs workflow checks for them.
 
 ## How it works
 
-Placeholder while the real design is chosen. At present this is the stock
-Tiny Tapeout example: a combinational 8-bit adder that sums the dedicated
-inputs with the bidirectional inputs and presents the result on the dedicated
-outputs. There is no sequential state, so `clk` and `rst_n` are unused.
+A single CMOS inverter, laid out by hand in the `ihp-sg13g2` PDK. It is
+deliberately the smallest circuit that still exercises every step of the analog
+flow — schematic capture, SPICE, layout, DRC and LVS — so that the toolchain and
+the submission path can be validated before anything more ambitious is built on
+top of them.
+
+- PMOS `sg13_lv_pmos`, W = 2 µm; NMOS `sg13_lv_nmos`, W = 1 µm; both L = 130 nm.
+- The 2:1 width ratio puts the switching threshold at 618 mV against an ideal
+  600 mV on a 1.2 V supply, with a peak small-signal gain of −17.2.
+- Simulated delay into a 10 fF load is 38.5 ps falling and 36.9 ps rising.
+
+The devices come from the PDK's own PCells, so they are correct by
+construction; only the interconnect between them is drawn by hand. The layout
+is DRC clean against the sg13g2 maximal rule set and LVS clean against the
+xschem schematic.
 
 ## How to test
 
-Set a value on `ui_in` and another on `uio_in`; `uo_out` shows the low 8 bits
-of their sum, with the carry discarded.
+`ua[1]` is the input and drives both gates. `ua[0]` is the output, tied to both
+drains. Sweep `ua[1]` from 0 V to VDPWR and `ua[0]` should follow the inverting
+transfer curve, crossing mid-supply at roughly 0.62 V.
 
-Locally, `cd test && make -B` runs the cocotb bench. On a Basys3 (see
-`fpga/basys3/`), `sw[7:0]` and `sw[15:8]` are the two operands and `led[7:0]`
-plus the 7-segment display show the sum.
+Note there is no output buffer: `ua[0]` drives the analog pad directly through
+the pad's own series resistance, so the edges you observe off-chip will be far
+slower than the simulated on-chip figures above. For a static sweep this does
+not matter.
+
+The digital pins are unused and the tile ignores `clk` and `rst_n`.
 
 ## External hardware
 
-None.
+None. A voltage source on `ua[1]` and a meter or scope on `ua[0]` is enough.

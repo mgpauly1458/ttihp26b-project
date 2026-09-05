@@ -1,0 +1,43 @@
+VERSION 5.7 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+
+MACRO tt_um_mgpauly1458_inverter
+  CLASS BLOCK ;
+  ORIGIN 0 0 ;
+  SIZE 202.080 BY 313.740 ;
+  PIN ua[0]
+    DIRECTION INOUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER TopMetal1 ;
+        RECT 190.165 0.000 191.915 2.000 ;
+    END
+  END ua[0]
+  PIN ua[1]
+    DIRECTION INOUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER TopMetal1 ;
+        RECT 165.685 0.000 167.435 2.000 ;
+    END
+  END ua[1]
+  PIN VDPWR
+    DIRECTION INOUT ;
+    USE POWER ;
+    PORT
+      LAYER Metal4 ;
+        RECT 170.000 3.000 172.000 310.740 ;
+    END
+  END VDPWR
+  PIN VGND
+    DIRECTION INOUT ;
+    USE GROUND ;
+    PORT
+      LAYER Metal4 ;
+        RECT 184.000 3.000 186.000 310.740 ;
+    END
+  END VGND
+END tt_um_mgpauly1458_inverter
+
+END LIBRARY

@@ -1,0 +1,4 @@
+# Local xschem config: start from the IHP PDK setup, then make this directory
+# visible so inverter.sym resolves from the testbench.
+source $env(PDK_ROOT)/$env(PDK)/libs.tech/xschem/xschemrc
+lappend XSCHEM_LIBRARY_PATH /work/xschem
