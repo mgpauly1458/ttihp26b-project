@@ -418,16 +418,16 @@ MACRO tt_um_mgpauly1458_inverter
     DIRECTION INOUT ;
     USE POWER ;
     PORT
-      LAYER Metal4 ;
-        RECT 170.000 3.000 172.000 310.740 ;
+      LAYER TopMetal1 ;
+        RECT 98.700 6.000 101.300 310.740 ;
     END
   END VDPWR
   PIN VGND
     DIRECTION INOUT ;
     USE GROUND ;
     PORT
-      LAYER Metal4 ;
-        RECT 184.000 3.000 186.000 310.740 ;
+      LAYER TopMetal1 ;
+        RECT 128.700 6.000 131.300 310.740 ;
     END
   END VGND
 END tt_um_mgpauly1458_inverter

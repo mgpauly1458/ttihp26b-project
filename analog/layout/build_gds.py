@@ -140,17 +140,28 @@ pcell(top, "via_stack", VDX, VDY, b_layer="Metal1", t_layer="Metal4", vn_columns
 pcell(top, "via_stack", VSX, VSY, b_layer="Metal1", t_layer="Metal4", vn_columns=3, vn_rows=3)
 
 # ------------------------------------------------------------ power stripes
-# Spec: vertical Metal4, at least 1.2um wide, starting within 10um of the
-# bottom and running to within 10um of the top, so the shuttle's grid can
-# strap onto them anywhere along the tile.
-STRIPE_HW = 1000
-VDPWR_X, VGND_X = 171000, 185000
-box(top, METAL4, VDPWR_X - STRIPE_HW, 3000, VDPWR_X + STRIPE_HW, DIE_H - 3000)
-box(top, METAL4, VGND_X - STRIPE_HW, 3000, VGND_X + STRIPE_HW, DIE_H - 3000)
+# Precheck is the authority here, and it wants TopMetal1 at least 2.1um wide:
+#   ERROR: Port VDPWR has wrong layer ...: Metal4 != TopMetal1
+#   ERROR: Port VGND has too small width ...: 2.0 < 2.1 um
+# (The published analog spec quotes Metal4 and 1.2um, which is the sky130
+# guidance, not IHP's.)
+#
+# That puts the stripes on the same layer as the ua routing, so they are placed
+# well clear of the signal corridor at x = 165560..192040 and are fed from the
+# core by Metal4 spurs, which pass underneath the signal routes harmlessly.
+STRIPE_HW = 1300                        # 2.6um wide, over the 2.1um floor
+STRIPE_Y0, STRIPE_Y1 = 6000, DIE_H - 3000
+VDPWR_X, VGND_X = 100000, 130000
 
-# Metal4 spurs from the power via stacks out to their stripes.
-box(top, METAL4, VDPWR_X - STRIPE_HW, VDY - 555, VDX + 555, VDY + 555)
-box(top, METAL4, VSX - 555, VSY - 555, VGND_X + STRIPE_HW, VSY + 555)
+box(top, TOPMETAL1, VDPWR_X - STRIPE_HW, STRIPE_Y0, VDPWR_X + STRIPE_HW, STRIPE_Y1)
+box(top, TOPMETAL1, VGND_X - STRIPE_HW, STRIPE_Y0, VGND_X + STRIPE_HW, STRIPE_Y1)
+
+# Metal4 spurs from each power via stack across to its stripe, and a
+# Metal4 -> TopMetal1 stack where the spur meets it.
+box(top, METAL4, VDPWR_X, VDY - 555, VDX + 555, VDY + 555)
+box(top, METAL4, VSX - 555, VSY - 555, VGND_X, VSY + 555)
+pcell(top, "via_stack", VDPWR_X, VDY, b_layer="Metal4", t_layer="TopMetal1", vn_columns=3, vn_rows=3)
+pcell(top, "via_stack", VGND_X, VSY, b_layer="Metal4", t_layer="TopMetal1", vn_columns=3, vn_rows=3)
 
 # --------------------------------------------------- TopMetal1 to the ua pads
 TM_HW = 1000            # 2um wide, comfortably over TopMetal1 minimum width
@@ -213,10 +224,10 @@ for name, direction, use, layer, rect in pins:
 # the pin shapes.
 PINS = [(name, use, layer, rect) for name, _, use, layer, rect in pins]
 PINS += [
-    ("VDPWR", "POWER",  "Metal4",
-     (VDPWR_X - STRIPE_HW, 3000, VDPWR_X + STRIPE_HW, DIE_H - 3000)),
-    ("VGND",  "GROUND", "Metal4",
-     (VGND_X - STRIPE_HW, 3000, VGND_X + STRIPE_HW, DIE_H - 3000)),
+    ("VDPWR", "POWER",  "TopMetal1",
+     (VDPWR_X - STRIPE_HW, STRIPE_Y0, VDPWR_X + STRIPE_HW, STRIPE_Y1)),
+    ("VGND",  "GROUND", "TopMetal1",
+     (VGND_X - STRIPE_HW, STRIPE_Y0, VGND_X + STRIPE_HW, STRIPE_Y1)),
 ]
 
 
