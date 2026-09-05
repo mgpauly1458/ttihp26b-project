@@ -17,7 +17,7 @@ leftward pad at x=166560) and the output takes ua[0] (x=191040). Assigning them
 the other way round would force the two TopMetal1 routes to cross.
 """
 
-import sys, os, pya
+import sys, os, re, pya
 
 KT = "/foss/pdks/ihp-sg13g2/libs.tech/klayout"
 sys.path += [os.path.join(KT, "python"),
@@ -171,17 +171,51 @@ ua_route(AX, AY, 1)     # input  A -> ua[1], exits left
 ua_route(YX, YY, 0)     # output Y -> ua[0], exits right
 
 # ------------------------------------------------------------------- output
-# The LEF is emitted from the same constants that drew the layout, so the two
-# cannot drift apart. Pins only, no obstructions, matching the "lef write
-# -pinonly" convention the analog spec asks for.
-PINS = [
-    ("ua[0]",  "SIGNAL", "TopMetal1",
-     (UA_X[0] - UA_HW, 0, UA_X[0] + UA_HW, UA_TOP)),
-    ("ua[1]",  "SIGNAL", "TopMetal1",
-     (UA_X[1] - UA_HW, 0, UA_X[1] + UA_HW, UA_TOP)),
-    ("VDPWR",  "POWER",  "Metal4",
+# Tiny Tapeout's precheck requires the LEF to declare every pin in the tile
+# interface, not just the ones this design connects to. Rather than hand-write
+# 51 entries, parse them straight out of the DEF template: that guarantees the
+# names, layers and positions agree with what the shuttle expects, and it draws
+# the matching metal in the GDS so the LEF is not describing geometry that
+# isn't there.
+DEF_TEMPLATE = "tech/tt_analog_1x2.def"
+DEF_LAYER_GDS = {"Metal4": METAL4, "TopMetal1": TOPMETAL1}
+
+PIN_RE = re.compile(
+    r"-\s+(\S+)\s+\+\s+NET\s+\S+\s+\+\s+DIRECTION\s+(\S+)\s+\+\s+USE\s+(\S+)"
+    r"\s*\+\s*PORT\s*\+\s*LAYER\s+(\S+)\s+\(\s*(-?\d+)\s+(-?\d+)\s*\)"
+    r"\s*\(\s*(-?\d+)\s+(-?\d+)\s*\)\s*\+\s*PLACED\s+\(\s*(-?\d+)\s+(-?\d+)\s*\)",
+    re.S,
+)
+
+
+def def_pins(path):
+    """Yield (name, direction, use, layer, (x1, y1, x2, y2)) for each DEF pin."""
+    with open(path) as fh:
+        text = fh.read()
+    for name, direction, use, layer, ox1, oy1, ox2, oy2, px, py in PIN_RE.findall(text):
+        px, py = int(px), int(py)
+        yield (name, direction, use, layer,
+               (px + int(ox1), py + int(oy1), px + int(ox2), py + int(oy2)))
+
+
+pins = list(def_pins(DEF_TEMPLATE))
+if len(pins) != 51:
+    raise SystemExit(f"expected 51 pins in {DEF_TEMPLATE}, parsed {len(pins)}")
+
+# Draw every interface pin. The ones this design uses (ua[0], ua[1]) already
+# have routing on them; redrawing the DEF rectangle just merges with it. The
+# rest are unconnected stubs, which is what an unused tile input should be.
+for name, direction, use, layer, rect in pins:
+    box(top, DEF_LAYER_GDS[layer], *rect)
+
+# Power comes last: these are not in the DEF's PINS section (it declares VPWR
+# and VGND as special nets with no geometry), so the stripes drawn above are
+# the pin shapes.
+PINS = [(name, use, layer, rect) for name, _, use, layer, rect in pins]
+PINS += [
+    ("VDPWR", "POWER",  "Metal4",
      (VDPWR_X - STRIPE_HW, 3000, VDPWR_X + STRIPE_HW, DIE_H - 3000)),
-    ("VGND",   "GROUND", "Metal4",
+    ("VGND",  "GROUND", "Metal4",
      (VGND_X - STRIPE_HW, 3000, VGND_X + STRIPE_HW, DIE_H - 3000)),
 ]
 
@@ -208,5 +242,5 @@ os.makedirs("../gds", exist_ok=True)
 os.makedirs("../lef", exist_ok=True)
 ly.write(f"../gds/{TOP}.gds")
 write_lef(f"../lef/{TOP}.lef")
-print(f"wrote gds/{TOP}.gds and lef/{TOP}.lef")
+print(f"wrote gds/{TOP}.gds and lef/{TOP}.lef with {len(PINS)} pins")
 print(f"  core={core.bbox().to_s()}  tile={top.bbox().to_s()}")
