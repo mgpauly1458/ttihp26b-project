@@ -65,6 +65,45 @@ source at the top, the sensible convention but the reverse of the NMOS. Placing
 both at the same rotation silently gives a PMOS with its source on the output
 node. Read the netlist, not the picture.
 
+## Getting through Tiny Tapeout's precheck
+
+The design was DRC and LVS clean well before precheck passed. Every remaining
+failure was about how the GDS is *written*, not about the circuit. In order:
+
+**Every LEF port must also be a polygon on the matching `<layer>.pin`** (50/2
+for Metal4, 126/2 for TopMetal1) containing the LEF rectangle. `pin_check`
+verifies exactly that, so both come from one table in `build_gds.py`.
+
+**The LEF must declare all 51 interface pins**, not just the ones the design
+uses — `clk`, `ena`, `rst_n`, every `ui_in`/`uo_out`/`uio_*` and all eight
+`ua[]`. They are parsed straight out of `tech/tt_analog_1x2.def` so the names,
+layers and positions cannot disagree with the shuttle.
+
+**Power goes on TopMetal1 and must be at least 2.1 µm wide.** The published
+analog spec says Metal4 and 1.2 µm, but that is the sky130 guidance; precheck
+is the authority for IHP.
+
+**The boundary layer is `prBoundary.boundary` (189/4)**, not `.drawing`
+(189/0), which is not on the allowed layer list.
+
+**Strip `HeatTrans` (51/0).** The device PCells draw it and it is not on the
+allowed list. It plays no part in DRC or LVS.
+
+**Write the GDS with `write_context_info` disabled.** KLayout otherwise emits a
+hidden `$$$CONTEXT_INFO$$$` cell holding PCell parameters. `gdstk`, which
+precheck uses, counts it as a second top-level cell and fails the boundary
+check — and because `analog_pin_check` inspects `top_level()[0]`, it was
+examining that cell rather than the tile and wrongly reported `ua[0]` as
+unconnected. One flag fixes two confusing failures.
+
+**An unused `ua[]` pin must have no metal within 0.5 µm of it.** The check
+builds a ring 0.1–0.5 µm outside each pad and treats any TopMetal1 there as a
+connection, cross-checked against `analog_pins` in `info.yaml`. Drawing the pad
+rectangle itself is fine; overhanging it by more than 0.1 µm counts as wired.
+
+`analog/out/pincheck.py` and `out/layercheck.py` reproduce these checks
+locally, which is worth it — a CI round trip is about seven minutes.
+
 **The PMOS and NWell-tap PCells each draw their own NWell**, and where the two
 meet the tie ends up only marginally enclosed, tripping `NW.d` (min NWell space
 to external N+ Activ, 0.31 µm). One generous well over the whole p-side fixes
