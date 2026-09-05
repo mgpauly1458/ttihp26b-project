@@ -1,20 +1,24 @@
 <!---
-
-This file is used to generate your project datasheet. Please fill in the information below and delete any unused
-sections.
-
-You can also include images in this folder and reference them in the markdown. Each image must be less than
-512 kb in size, and the combined size of all images must be less than 1 MB.
+This file is published as your project page. Keep the section headings; the
+docs workflow checks for them.
 -->
 
 ## How it works
 
-Explain how your project works
+Placeholder while the real design is chosen. At present this is the stock
+Tiny Tapeout example: a combinational 8-bit adder that sums the dedicated
+inputs with the bidirectional inputs and presents the result on the dedicated
+outputs. There is no sequential state, so `clk` and `rst_n` are unused.
 
 ## How to test
 
-Explain how to use your project
+Set a value on `ui_in` and another on `uio_in`; `uo_out` shows the low 8 bits
+of their sum, with the carry discarded.
+
+Locally, `cd test && make -B` runs the cocotb bench. On a Basys3 (see
+`fpga/basys3/`), `sw[7:0]` and `sw[15:8]` are the two operands and `led[7:0]`
+plus the 7-segment display show the sum.
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+None.

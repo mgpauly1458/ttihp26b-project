@@ -84,7 +84,7 @@ module tt_basys3_top #(
   wire [7:0] ui_in  = sw[7:0];
   wire [7:0] uio_in = sw[15:8];
 
-  tt_um_example dut (
+  tt_um_mgpauly1458_scratch dut (
       .ui_in   (ui_in),
       .uo_out  (uo_out),
       .uio_in  (uio_in),

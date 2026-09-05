@@ -53,7 +53,7 @@ bitstream that silently doesn't work. Reports land in `build/`:
 - `build.tcl` reads `../../src/project.v` directly. If you add source files,
   list them in **three** places: `info.yaml`, `test/Makefile`
   (`PROJECT_SOURCES`), and the `dut_sources` list in `build.tcl`.
-- If you rename the top module from `tt_um_example`, update the `dut`
+- If you rename the top module from `tt_um_mgpauly1458_scratch`, update the `dut`
   instantiation in `tt_basys3_top.v` to match.
 
 ## What the FPGA will not tell you

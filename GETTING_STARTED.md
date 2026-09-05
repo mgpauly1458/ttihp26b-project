@@ -102,24 +102,25 @@ whether the design fits in a tile.
 
 ## Tile budget
 
-This project is set to **`2x1`** — two tiles side by side, 419.52 x 154.98 um on
-`ihp-sg13g2`. That is the allocation, so it is a ceiling, not a target.
+This project is set to **`1x2`** — the two-tile allocation, 202.08 x 313.74 um
+on `ihp-sg13g2` (one tile wide, two tall).
 
-The full set of valid values for this PDK is larger than the stale comment in
-the stock template suggests. From `tt-support-tools/tech/ihp-sg13g2/tile_sizes.yaml`:
+Note the trap: `tt-support-tools/tech/ihp-sg13g2/tile_sizes.yaml` lists geometry
+for `2x1`, `3x1`, `4x1`, `6x1` and `8x1`, but there is no matching
+`tt_block_<size>_pgvdd.def` template for any of them, so they cannot be hardened
+and CI rejects them. The set you can actually build is:
 
 | tiles | width x height (um) | tiles | width x height (um) |
 |-------|---------------------|-------|---------------------|
-| 1x1   | 202.08 x 154.98     | 4x1   | 854.40 x 154.98     |
-| 1x2   | 202.08 x 313.74     | 4x2   | 854.40 x 313.74     |
-| 2x1   | 419.52 x 154.98     | 6x1   | 1289.28 x 154.98    |
-| 2x2   | 419.52 x 313.74     | 6x2   | 1289.28 x 313.74    |
-| 3x1   | 636.96 x 154.98     | 8x1   | 1724.16 x 154.98    |
-| 3x2   | 636.96 x 313.74     | 8x2   | 1724.16 x 313.74    |
+| 1x1   | 202.08 x 154.98     | 4x2   | 854.40 x 313.74     |
+| 1x2   | 202.08 x 313.74     | 4x4   | 854.40 x 710.64     |
+| 2x2   | 419.52 x 313.74     | 5x4   | 1071.84 x 710.64    |
+| 3x2   | 636.96 x 313.74     | 6x2   | 1289.28 x 313.74    |
+| 3x4   | 636.96 x 710.64     | 6x4   | 1289.28 x 710.64    |
+|       |                     | 8x2   | 1724.16 x 313.74    |
+|       |                     | 8x4   | 1724.16 x 710.64    |
 
-(`3x4`, `4x4`, `5x4`, `6x4` and `8x4` also exist.)
-
-Note these are IHP numbers. The 167x108 um figure quoted in most Tiny Tapeout
+These are IHP numbers. The 167x108 um tile quoted in most Tiny Tapeout
 documentation is sky130 and does not apply here.
 
 If global placement fails with GPL-0302, raise `PL_TARGET_DENSITY_PCT` in
