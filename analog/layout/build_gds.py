@@ -34,7 +34,10 @@ UA_X = {0: 191040, 1: 166560, 2: 142080, 3: 117600, 4: 93120, 5: 68640}
 UA_HW, UA_TOP = 875, 2000
 
 ACTIV, GATPOLY, CONT, METAL1 = (1, 0), (5, 0), (6, 0), (8, 0)
-NWELL, METAL4, TOPMETAL1, PRBOUND = (31, 0), (50, 0), (126, 0), (189, 0)
+NWELL, METAL4, TOPMETAL1 = (31, 0), (50, 0), (126, 0)
+PRBOUND = (189, 4)          # prBoundary.boundary; 189/0 (.drawing) is rejected
+HEATTRANS = (51, 0)         # HeatTrans.drawing, drawn by the device PCells
+PIN_PURPOSE = {"Metal4": (50, 2), "TopMetal1": (126, 2)}
 M1_TEXT = (8, 25)                       # LVS: metal1_text = labels(8, 25)
 
 W_P, W_N, L = "2.0u", "1.0u", "0.13u"
@@ -249,9 +252,26 @@ def write_lef(path):
         fh.write("\n".join(out))
 
 
+# Every LEF port must also appear as a polygon on the matching <layer>.pin,
+# containing the LEF rectangle -- pin_check verifies exactly that.
+for name, use, layer, rect in PINS:
+    box(top, PIN_PURPOSE[layer], *rect)
+
+# The device PCells draw HeatTrans (51/0), which is not on Tiny Tapeout's
+# allowed layer list. Clearing it across every cell keeps the layer check happy;
+# it plays no part in DRC or LVS.
+ly.clear_layer(L_(HEATTRANS))
+
 os.makedirs("../gds", exist_ok=True)
 os.makedirs("../lef", exist_ok=True)
-ly.write(f"../gds/{TOP}.gds")
+
+# KLayout otherwise emits a hidden $$$CONTEXT_INFO$$$ cell holding PCell
+# parameters. gdstk, which precheck uses, counts it as a second top-level cell
+# and fails the boundary check -- and the analog pin check then inspects
+# top_level()[0], which may not be our tile at all.
+save_opts = pya.SaveLayoutOptions()
+save_opts.write_context_info = False
+ly.write(f"../gds/{TOP}.gds", save_opts)
 write_lef(f"../lef/{TOP}.lef")
 print(f"wrote gds/{TOP}.gds and lef/{TOP}.lef with {len(PINS)} pins")
 print(f"  core={core.bbox().to_s()}  tile={top.bbox().to_s()}")
