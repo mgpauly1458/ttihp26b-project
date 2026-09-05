@@ -11,3 +11,13 @@ test/sim_build
 test/__pycache__/
 test/results.xml
 test/gate_level_netlist.v
+
+# Local Python environment for cocotb
+venv/
+
+# Vivado / Basys3 prototype outputs
+fpga/basys3/build/
+fpga/**/.Xil/
+vivado*.jou
+vivado*.log
+*.str
