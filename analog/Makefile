@@ -1,203 +1,285 @@
-# Tile assembly for this Tiny Tapeout mixed-signal project.
+# Analog / mixed-signal flow, one block at a time.
 #
-# This directory owns the analog half AND the merge. The digital half is built
-# next door in ../digital (LibreLane, RTL -> GDS) and arrives here as a macro
-# GDS; `make gds` reads it and drops it into the tile. The dependency is wired
-# up, so `make` here builds the digital half first if it is missing -- but it
-# does NOT rebuild it when the RTL changes. Run `make macro` after editing
-# ../src/ms_hello.v.
+# Every step takes a CELL, so the same commands work for any schematic, layout
+# or block you add later:
 #
-# Every step is a separate target that does exactly one thing, and only when its
-# inputs have actually changed. `make lvs` will not silently re-run the layout
-# build; if the GDS is already current it just runs LVS.
+#   make sim   CELL=inverter          simulate xschem/inverter_tb.sch
+#   make gds   CELL=someblock         build layout/build_someblock.py
+#   make drc   CELL=someblock         DRC that block's GDS
+#   make lvs   CELL=someblock         LVS it against its schematic
 #
-# Run `make help` for the list, or `make -n <target>` to see what a step would
-# do without doing it.
+# CELL defaults to the Tiny Tapeout top module read out of ../info.yaml, so a
+# bare `make drc` still means "the submission tile".
 #
-# Everything runs inside the hpretl/iic-osic-tools container via ./run.sh, so
-# Docker is the only host dependency. The image ships the ihp-sg13g2 PDK,
-# xschem, ngspice, KLayout, magic, netgen and kpex.
+# `make list` shows what is available. `make help` explains the variables.
+#
+# Everything runs in the hpretl/iic-osic-tools container via ./run.sh, so Docker
+# is the only host dependency.
 
-TOP     := tt_um_mgpauly1458_inverter
-TB      := inverter_tb
+# ================================================================ conventions
+#
+#   xschem/<cell>.sch         schematic for <cell>
+#   xschem/<cell>_tb.sch      its testbench
+#   layout/build_<cell>.py    layout generator, writes out/<cell>.gds
+#   out/<cell>.spice          netlist for LVS      (device lines, MM1 ...)
+#   out/<cell>_tb.sim.spice   netlist for ngspice  (subckt calls, XM1 ...)
+#   out/<cell>/drc, /lvs      per-cell run directories, so blocks never collide
+#
+# The two netlist formats are NOT interchangeable; see the netlist rules below.
+
+TT_TOP  := $(shell sed -n 's/^ *top_module: *"\(.*\)".*/\1/p' ../info.yaml)
+MACRO   ?= ms_hello
+
+CELL    ?= $(TT_TOP)
+TB      ?= $(CELL)_tb
+PLOT    ?= sim/plot.py
+
 RUN     := ./run.sh
 GUI     := ./gui.sh
 PDKTECH := /foss/pdks/ihp-sg13g2/libs.tech/klayout/tech
 XSCHEM  := xschem -n -s -q --no_x --rcfile /work/analog/xschem/xschemrc
-MACRO   := ms_hello
 
-# --------------------------------------------------------------- artefacts
-GDS       := ../gds/$(TOP).gds
-LEF       := ../lef/$(TOP).lef
-SIM_NL    := out/$(TB).spice
-LVS_NL    := out/$(TOP).spice
-TILE_NL   := out/$(TOP)_tile.spice
-MACRO_GDS := ../digital/out/$(MACRO).gds
-SIM_DATA  := out/inverter_vtc.data
-SIM_PNG   := ../docs/inverter_sim.png
-LAYOUT_PNG:= ../docs/tile_layout.png
-LAYOUT_PNGS:= $(LAYOUT_PNG) ../docs/inverter_layout.png ../docs/digital_layout.png
-DRC_STAMP := out/drc/.passed
-LVS_STAMP := out/lvs/.passed
-PRE_STAMP := out/.precheck-passed
+# ------------------------------------------------------- per-cell file paths
+# The Tiny Tapeout top is the one cell that is special: its GDS and LEF are
+# committed at the repo root because that is what the shuttle consumes, its
+# builder is named build_gds.py rather than build_<cell>.py, and its LVS
+# reference is the merged analog+digital netlist rather than a plain xschem
+# netlist. Everything else follows the conventions above.
+ifeq ($(CELL),$(TT_TOP))
+  GDS      ?= ../gds/$(TT_TOP).gds
+  LEF      ?= ../lef/$(TT_TOP).lef
+  BUILD    ?= layout/build_gds.py
+  NETLIST  ?= out/$(TT_TOP)_tile.spice
+else
+  GDS      ?= out/$(CELL).gds
+  BUILD    ?= layout/build_$(CELL).py
+  NETLIST  ?= out/$(CELL).spice
+endif
 
-# ----------------------------------------------------------------- sources
-SCH_CELL  := xschem/inverter.sch xschem/inverter.sym xschem/xschemrc
-SCH_TB    := xschem/$(TB).sch $(SCH_CELL)
-SCH_TOP   := xschem/$(TOP).sch $(SCH_CELL)
-LAYOUT_SRC:= layout/build_gds.py tech/tt_analog_1x2.def $(MACRO_GDS)
-CHECK_SRC := checks/tt_precheck.py checks/tt_valid_layers.txt ../info.yaml
+SIM_NL   := out/$(TB).sim.spice
+CELLDIR  := out/$(CELL)
+DRC_OK   := $(CELLDIR)/.drc-passed
+LVS_OK   := $(CELLDIR)/.lvs-passed
+PRE_OK   := out/.precheck-passed
+
+# Schematics are cheap to re-netlist and hard to dependency-track properly
+# (xschem pulls in symbols transitively), so every .sch in the directory is a
+# prerequisite of every netlist. Over-triggering costs a second; under-
+# triggering silently netlists a stale hierarchy.
+SCH_ALL  := $(wildcard xschem/*.sch) $(wildcard xschem/*.sym) xschem/xschemrc
 
 .DEFAULT_GOAL := help
-.PHONY: help macro netlist netlist-sim netlist-lvs netlist-tile sim plot gds \
-        lef drc lvs precheck png design tt all xschem klayout shell ci clean \
-        distclean
+.PHONY: help list netlist netlist-lvs netlist-sim sim plot gds lef drc lvs \
+        precheck png tile-netlist design tt all xschem klayout shell ci \
+        glb gds3d-tech d25 view3d clean distclean
 
-# ==================================================================== help
+# ======================================================================= help
 help:
-	@echo 'Steps (each does one thing, and only if its inputs changed)'
-	@echo '  make netlist-sim   xschem -> out/$(TB).spice        (subckt calls, for ngspice)'
-	@echo '  make netlist-lvs   xschem -> out/$(TOP).spice  (device lines, for LVS)'
-	@echo '  make netlist       both of the above'
-	@echo '  make netlist-tile  whole-tile LVS reference: analog + digital'
-	@echo '  make macro         build the digital half in ../digital (LibreLane)'
-	@echo '  make sim           ngspice DC sweep + transient  -> out/*.data, out/*.raw'
-	@echo '  make plot          waveforms                     -> $(SIM_PNG)'
-	@echo '  make gds           analog + digital macro -> $(GDS) + $(LEF)'
-	@echo '  make png           layout renders                -> ../docs/*_layout.png'
-	@echo '  make drc           KLayout DRC, sg13g2 maximal rule set'
-	@echo '  make lvs           KLayout LVS, whole tile vs the tile netlist'
-	@echo '  make precheck      local stand-in for TT'"'"'s GDS prechecks'
+	@echo 'Usage:  make <target> [CELL=<name>] [TB=<name>] [GDS=<path>] [NETLIST=<path>]'
 	@echo
-	@echo 'Pipelines (just chain the steps above)'
-	@echo '  make design        netlist sim gds drc lvs   -- is the circuit right?'
+	@echo 'Variables'
+	@echo '  CELL     block to act on           (default: $(TT_TOP))'
+	@echo '  TB       testbench schematic       (default: <CELL>_tb)'
+	@echo '  GDS      layout to check           (default: $(GDS))'
+	@echo '  NETLIST  LVS reference netlist     (default: $(NETLIST))'
+	@echo '  BUILD    layout generator          (default: $(BUILD))'
+	@echo '  PLOT     plotting script           (default: $(PLOT))'
+	@echo
+	@echo 'Steps -- each does one thing, and only if its inputs changed'
+	@echo '  make netlist-lvs   xschem -> $(NETLIST)  (device lines)'
+	@echo '  make netlist-sim   xschem -> $(SIM_NL)  (subckt calls)'
+	@echo '  make netlist       both'
+	@echo '  make sim           ngspice on the testbench'
+	@echo '  make plot          waveforms -> ../docs/'
+	@echo '  make gds           $(BUILD) -> $(GDS)'
+	@echo '  make png           render the layout'
+	@echo '  make drc           KLayout DRC on $(GDS)'
+	@echo '  make lvs           KLayout LVS, $(GDS) vs $(NETLIST)'
+	@echo '  make precheck      local stand-in for TT prechecks (top only)'
+	@echo
+	@echo 'Pipelines'
+	@echo '  make design        netlist sim gds drc lvs   -- is the block right?'
 	@echo '  make tt            gds drc lvs precheck      -- will TT accept it?'
 	@echo '  make all           both'
 	@echo
-	@echo 'Interactive'
-	@echo '  make xschem        open the testbench in xschem'
-	@echo '  make klayout       open the tile layout in KLayout'
-	@echo '  make shell         bash prompt inside the container'
-	@echo '  make ci            latest GitHub Actions results for this branch'
+	@echo '3D views of $(CELL)'
+	@echo '  make glb           out/tile_3d.glb, no display needed'
+	@echo '  make d25           KLayout 2.5D viewer      (needs a display)'
+	@echo '  make view3d        GDS3D                    (needs a display)'
+	@echo '  make gds3d-tech    regenerate the GDS3D process file from the PDK'
 	@echo
-	@echo '  make clean         remove out/ (keeps gds/, lef/, docs/)'
-	@echo '  make distclean     also remove the generated GDS, LEF and PNGs'
+	@echo 'Other:  list  xschem  klayout  shell  ci  clean  distclean'
+	@echo 'Force a rerun with  make -B <target>'
+
+list:
+	@echo 'Schematics in xschem/  --  make sim|netlist CELL=<name>'
+	@ls xschem/*.sch 2>/dev/null | sed 's|xschem/||; s|\.sch$$||' | sed 's/^/    /' || true
 	@echo
-	@echo 'Force a step to re-run even if up to date:  make -B <target>'
+	@echo 'Scripts in layout/  --  by convention build_<cell>.py makes out/<cell>.gds,'
+	@echo 'but not every script here is a cell builder; some are utilities.'
+	@ls layout/*.py 2>/dev/null | sed 's|layout/||; s|\.py$$||' | sed 's/^/    /' || true
+	@echo
+	@echo 'Tiny Tapeout top module (the default CELL, built by $(BUILD)):'
+	@echo '    $(TT_TOP)'
 
 out:
 	@mkdir -p out
 
-# ================================================================ netlists
-# Two netlists come out of the same schematics and they are NOT interchangeable.
+$(CELLDIR):
+	@mkdir -p $(CELLDIR)
+
+# =================================================================== netlists
+# Same schematic, two incompatible outputs:
 #
-#   $(SIM_NL)  simulation. Devices are subcircuit calls, "XM1 ... sg13_lv_pmos",
-#              which is what ngspice wants.
-#   $(LVS_NL)  LVS. Devices are device lines, "MM1 ...", selected by
-#              `set lvs_netlist 1`. LVS compares extracted devices and reads the
-#              X-prefixed form as subcircuit instances, so handing it the
-#              simulation netlist fails with no useful diagnostic.
+#   .sim.spice  devices as subcircuit calls, "XM1 ... sg13_lv_pmos". ngspice
+#               wants this.
+#   .lvs.spice  devices as device lines, "MM1 ...", via `set lvs_netlist 1`.
+#               LVS compares extracted devices and reads the X-prefixed form as
+#               subcircuit instances, so giving it the simulation netlist fails
+#               with no useful diagnostic.
 #
-# `set top_subckt 1` wraps the top schematic in .subckt/.ends rather than
+# `set top_subckt 1` wraps the top schematic in .subckt/.ends instead of
 # netlisting it as a flat top level.
+# LVS keeps xschem's natural output name, out/<cell>.spice. Other tooling --
+# checks/build_tile_netlist.py, for one -- expects to find it there.
+out/%.spice: xschem/%.sch $(SCH_ALL) | out
+	$(RUN) bash -lc 'cd /work/analog/xschem && $(XSCHEM) --tcl "set lvs_netlist 1; set top_subckt 1" $*.sch -o /work/analog/out'
+
+out/%.sim.spice: xschem/%.sch $(SCH_ALL) | out
+	$(RUN) bash -lc 'cd /work/analog/xschem && $(XSCHEM) $*.sch -o /work/analog/out'
+	@mv out/$*.spice $@
+
+# Reached when there is no such testbench. The submission top has none, which is
+# why `make design` is a block-level pipeline and `make tt` is the one for the tile.
+out/%.sim.spice:
+	@echo "No testbench xschem/$*.sch."
+	@echo "make sim expects xschem/<CELL>_tb.sch, or pass TB=<name>."
+	@echo "Run 'make list' to see the schematics that exist."
+	@exit 1
+
+netlist-lvs: $(NETLIST)
 netlist-sim: $(SIM_NL)
-$(SIM_NL): $(SCH_TB) | out
-	$(RUN) bash -lc 'cd /work/analog/xschem && $(XSCHEM) $(TB).sch -o /work/analog/out'
+netlist: netlist-lvs netlist-sim
 
-netlist-lvs: $(LVS_NL)
-$(LVS_NL): $(SCH_TOP) | out
-	$(RUN) bash -lc 'cd /work/analog/xschem && $(XSCHEM) --tcl "set lvs_netlist 1; set top_subckt 1" $(TOP).sch -o /work/analog/out'
-
-# The reference netlist for the WHOLE tile: the xschem inverter and the
-# LibreLane macro, reconciled against the PDK's transistor-level standard cells.
-# See checks/build_tile_netlist.py for why none of the three sources is usable
-# as it stands.
-netlist-tile: $(TILE_NL)
-$(TILE_NL): $(LVS_NL) $(MACRO_GDS) checks/build_tile_netlist.py | out
+# The Tiny Tapeout top's LVS reference is not a plain xschem netlist: the tile
+# also contains the hardened digital macro, so the analog netlist and the
+# macro's netlist are merged. Hence the extra rule for it.
+out/$(TT_TOP)_tile.spice: out/$(TT_TOP).spice ../digital/out/$(MACRO).spice checks/build_tile_netlist.py | out
 	$(RUN) python3 checks/build_tile_netlist.py
 
-netlist: netlist-sim netlist-lvs netlist-tile
+tile-netlist: out/$(TT_TOP)_tile.spice
 
-# ============================================================== simulation
-# DC sweep for the transfer curve plus a transient into a 10fF load. The
-# .control block lives in the testbench schematic -- edit it there, not here.
-sim: $(SIM_DATA)
-$(SIM_DATA): $(SIM_NL)
-	$(RUN) bash -lc 'cd /work/analog/out && ngspice -b $(TB).spice'
+# ================================================================= simulation
+# The analysis lives in the testbench schematic's .control block -- edit it
+# there, not here.
+sim: $(SIM_NL)
+	$(RUN) bash -lc 'cd /work/analog/out && ngspice -b $(TB).sim.spice'
 
-plot: $(SIM_PNG)
-$(SIM_PNG): $(SIM_DATA) sim/plot.py
-	$(RUN) python3 sim/plot.py
+plot: sim
+	$(RUN) python3 $(PLOT)
 
-# ================================================================== layout
-# The digital half. Delegated rather than duplicated: ../digital owns the
-# LibreLane config and stages the macro into ../digital/out. `macro` always
-# re-hardens; the file rule only fires when the macro is missing, so an
-# unrelated `make` here never spends a minute in LibreLane.
-macro:
-	$(MAKE) -C ../digital
-
-$(MACRO_GDS):
-	$(MAKE) -C ../digital
-
-# One script places the analog PCells, merges in the digital macro, routes
-# between the two blocks and the tile interface, and emits the LEF from the same
-# constants -- so the LEF can never describe geometry the GDS lacks. That is
-# also why there is no separate `make lef`.
+# ===================================================================== layout
 gds: $(GDS)
-$(GDS): $(LAYOUT_SRC) | out
+
+# Generic blocks: layout/build_<cell>.py -> out/<cell>.gds
+out/%.gds: layout/build_%.py | out
+	$(RUN) klayout -b -r $<
+
+# Reached only when the rule above cannot fire because there is no generator for
+# this cell. Without it make says "No rule to make target 'out/foo.gds'", which
+# does not tell you what to create.
+out/%.gds:
+	@echo "No layout generator for CELL=$*."
+	@echo "Expected layout/build_$*.py, writing out/$*.gds."
+	@echo "Run 'make list' to see what exists, or pass GDS=<path> to use a"
+	@echo "layout that is built some other way."
+	@exit 1
+
+# The tile. Its builder also emits the LEF from the same constants, which is why
+# there is no separate `make lef` -- the two must not be able to drift.
+../gds/$(TT_TOP).gds: layout/build_gds.py tech/tt_analog_1x2.def | out
 	$(RUN) klayout -b -r layout/build_gds.py
 
+../lef/$(TT_TOP).lef: ../gds/$(TT_TOP).gds ;
 lef: $(LEF)
-$(LEF): $(GDS) ;
 
-# render.py writes three views in one pass; the tile image stands in for all of
-# them as the make target.
-png: $(LAYOUT_PNG)
-$(LAYOUT_PNG): $(GDS) layout/render.py
+png: $(GDS) layout/render.py
 	$(RUN) klayout -b -z -r layout/render.py
 
-# ================================================================= signoff
-drc: $(DRC_STAMP)
-$(DRC_STAMP): $(GDS)
-	@rm -rf out/drc && mkdir -p out/drc
-	$(RUN) bash -lc 'python3 $(PDKTECH)/drc/run_drc.py --path=/work/gds/$(TOP).gds \
-	    --topcell=$(TOP) --run_dir=/work/analog/out/drc --no_density --no_offgrid'
+# ==================================================================== signoff
+drc: $(DRC_OK)
+$(DRC_OK): $(GDS) | $(CELLDIR)
+	@rm -rf $(CELLDIR)/drc && mkdir -p $(CELLDIR)/drc
+	$(RUN) bash -lc 'python3 $(PDKTECH)/drc/run_drc.py --path=/work/analog/$(GDS) \
+	    --topcell=$(CELL) --run_dir=/work/analog/$(CELLDIR)/drc --no_density --no_offgrid'
 	@touch $@
 
 # --disable_tap_extraction keeps the well and substrate ties out of the device
 # list. Without it they extract as ntap1/ptap1 resistors with the transistor
 # bulks on unnamed nets, which no hand-drawn schematic will ever match.
-lvs: $(LVS_STAMP)
-$(LVS_STAMP): $(GDS) $(TILE_NL)
-	@rm -rf out/lvs && mkdir -p out/lvs
-	$(RUN) bash -lc 'python3 $(PDKTECH)/lvs/run_lvs.py --layout=/work/gds/$(TOP).gds \
-	    --netlist=/work/analog/$(TILE_NL) --topcell=$(TOP) \
-	    --run_dir=/work/analog/out/lvs --disable_tap_extraction'
+lvs: $(LVS_OK)
+$(LVS_OK): $(GDS) $(NETLIST) | $(CELLDIR)
+	@rm -rf $(CELLDIR)/lvs && mkdir -p $(CELLDIR)/lvs
+	$(RUN) bash -lc 'python3 $(PDKTECH)/lvs/run_lvs.py --layout=/work/analog/$(GDS) \
+	    --netlist=/work/analog/$(NETLIST) --topcell=$(CELL) \
+	    --run_dir=/work/analog/$(CELLDIR)/lvs --disable_tap_extraction'
 	@touch $@
 
-# Catches the GDS-shaped mistakes without a ~7 minute CI round trip. Not the
-# authority: CI runs the real precheck, which checks more than this.
-precheck: $(PRE_STAMP)
-$(PRE_STAMP): $(GDS) $(LEF) $(CHECK_SRC)
+# Only meaningful for the submission tile: it reads ../info.yaml and checks the
+# committed gds/ and lef/.
+precheck: $(PRE_OK)
+$(PRE_OK): ../gds/$(TT_TOP).gds ../lef/$(TT_TOP).lef checks/tt_precheck.py \
+           checks/tt_valid_layers.txt ../info.yaml
 	$(RUN) python3 checks/tt_precheck.py
 	@touch $@
 
-# =============================================================== pipelines
+# ================================================================== pipelines
+# Block-level: needs a testbench, so run it as `make design CELL=<block>`.
+# For the submission tile, which has no testbench, use `make tt`.
 design: netlist sim gds drc lvs
-	@echo '=== design pipeline complete: simulated, DRC clean, LVS matching ==='
+	@echo '=== $(CELL): simulated, DRC clean, LVS matching ==='
 
 tt: gds drc lvs precheck
 	@echo '=== TT pipeline clear locally -- push and let CI confirm ==='
 
 all: design tt
 
-# ============================================================= interactive
+# ============================================================== 3D viewing
+# Three views of the same stack. GDS3D and KLayout's 2.5D view both need an X
+# display; the glTF export does not, which is why it exists -- reach for it over
+# ssh or when the container cannot get to the display.
+#
+# All three read the same layer heights: KLayout's come from the PDK's
+# libs.tech/klayout/tech/d25/sg13g2_beol.lyd25, and GDS3D's process file is
+# generated from that same file by build_gds3d_tech.py, so the views agree by
+# construction.
+GLB       := out/tile_3d.glb
+GDS3D_TECH:= tech/sg13g2_gds3d.txt
+
+glb: $(GLB)
+$(GLB): $(GDS) layout/build_glb.py $(GDS3D_TECH) | out
+	$(RUN) python3 layout/build_glb.py
+
+# The process file is a tool configuration rather than a build artefact, so it is
+# committed; regenerate it only if the PDK revises a layer height.
+gds3d-tech:
+	$(RUN) python3 layout/build_gds3d_tech.py
+
+# -n loads the PDK *technology*, which is what registers the 2.5D macro; -l would
+# only load the layer properties. The viewer then lives under
+# sg13g2_menu > SG13G2 PDK > BEOL 2.5D Viewer, and wants a selection first.
+d25:
+	$(GUI) klayout -n sg13g2 /work/analog/$(GDS)
+
+view3d: $(GDS3D_TECH)
+	$(GUI) GDS3D -p /work/analog/$(GDS3D_TECH) -i /work/analog/$(GDS) -t $(CELL)
+
+# ================================================================ interactive
 xschem:
 	$(GUI) xschem --rcfile /work/analog/xschem/xschemrc /work/analog/xschem/$(TB).sch
 
 klayout:
-	$(GUI) klayout -e -l $(PDKTECH)/sg13g2.lyp /work/gds/$(TOP).gds
+	$(GUI) klayout -e -l $(PDKTECH)/sg13g2.lyp /work/analog/$(GDS)
 
 shell:
 	$(GUI) bash
@@ -212,4 +294,4 @@ clean:
 	rm -rf out
 
 distclean: clean
-	rm -f $(GDS) $(LEF) $(SIM_PNG) $(LAYOUT_PNGS)
+	rm -f ../gds/$(TT_TOP).gds ../lef/$(TT_TOP).lef
