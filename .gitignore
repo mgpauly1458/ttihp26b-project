@@ -27,3 +27,7 @@ analog/out/
 
 # stray container cache (XDG_CACHE_HOME), should live under analog/out/
 /out/
+
+# LibreLane run directories; digital/out/ is the staged result and IS committed,
+# because analog/layout/build_gds.py reads the macro GDS from there.
+digital/runs/

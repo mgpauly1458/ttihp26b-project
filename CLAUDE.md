@@ -147,6 +147,66 @@ The eighteen unused digital outputs are tied to VGND, which the analog spec
 requires ("Connect any unused `uo_out`, `uio_out` and `uio_oe` pins to GND") and
 no precheck tests for.
 
+## Seeing it in 3D
+
+| | needs a display | |
+|---|---|---|
+| TT's hosted viewer | no | already published by CI, see below |
+| `make d25` | yes | KLayout 2.5D view, PDK's own BEOL stack |
+| `make view3d` | yes | GDS3D |
+| `make glb` | **no** | `analog/out/tile_3d.glb`, any glTF viewer |
+
+The `viewer` job in `gds.yaml` already pushes every build to
+`gds-viewer.tinytapeout.com` (3D) and `gds-explorer.tinytapeout.com`
+(layer-by-layer) and publishes a redirect on GitHub Pages; the links appear in
+the Actions run summary. That is the authoritative view. The local ones exist to
+avoid the ~7 minute CI round trip.
+
+All three local viewers read the same layer heights. KLayout's come from
+`libs.tech/klayout/tech/d25/sg13g2_beol.lyd25`; GDS3D's process file is
+*generated* from that same file by `analog/layout/build_gds3d_tech.py`, because
+no open PDK in the container ships one (checked ihp-sg13g2, sky130A,
+gf180mcuD) even though the container's own `gds3d.sh` wrapper expects
+`$PDKPATH/libs.tech/gds3d/gds3d_tech.txt`.
+
+`make d25` uses `klayout -n sg13g2`, not `-l <lyp>`: only loading the
+technology registers the PDK's 2.5D macro. It then lives under
+`sg13g2_menu > SG13G2 PDK > BEOL 2.5D Viewer`, and wants a selection first.
+
+## X11 out of the container: fixed, and how it broke
+
+**Snap-packaged Docker cannot see `/tmp`.** Both a snap `docker` and an apt
+`docker-ce` were installed and running, and the snap daemon owned
+`/var/run/docker.sock`. Snap confinement only lets paths under `$HOME` through,
+so `-v /tmp/.X11-unix:/tmp/.X11-unix` silently mounted an *empty* directory —
+the repo mount worked, the X socket did not, and no container could reach the
+display. Qt's account of this is worthless: "could not load the Qt platform
+plugin xcb", then a segfault.
+
+Resolved on 2026-09-06 with:
+
+```
+sudo snap stop --disable docker      # snap docker.dockerd now disabled+inactive
+sudo systemctl restart docker.socket docker.service
+```
+
+The second command matters and is easy to miss: stopping the snap daemon deletes
+`/run/docker.sock`, and `docker.socket` goes on reporting itself active while the
+file is gone, so the client fails with "no such file or directory" until the
+socket unit is restarted. Verified afterwards: server 29.1.3 (docker-ce, not the
+snap's 29.6.1), `X1` visible inside a container, `xdpyinfo` connects, and both
+GDS3D and KLayout hold a window open.
+
+If a GUI target ever fails again, `analog/gui.sh` probes the display first and
+distinguishes the two causes -- an empty `/tmp` mount (this bug) versus a
+refused connection (`xhost +local:`).
+
+**Pass `--device /dev/dri`.** Without it Mesa cannot load the platform driver and
+falls back to `llvmpipe` software rendering. `gui.sh` passes it when the render
+nodes exist; this machine then reports `Mesa Intel(R) Iris(R) Xe Graphics`
+instead. `gui.sh` also adds `-t` only when a terminal is present, so the GUI
+targets do not fail with "the input device is not a TTY" under a script.
+
 ---
 
 # Traps, and what they cost

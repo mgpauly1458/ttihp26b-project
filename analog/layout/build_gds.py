@@ -1,13 +1,22 @@
-"""Build the Tiny Tapeout analog tile containing a hand-drawn CMOS inverter.
+"""Build the Tiny Tapeout mixed-signal tile.
 
     klayout -b -r analog/layout/build_gds.py
 
-Produces gds/<TOP>.gds. Two cells:
+Produces gds/<TOP>.gds. Three cells:
 
-  inverter_core   the transistors, their taps, and the local interconnect,
-                  plus four Metal1 landing pads (A, Y, VDD, VSS)
-  <TOP>           the tile: core + Metal4 power stripes + via stacks up to
-                  TopMetal1 + routing out to the ua[] pads
+  inverter_core   the hand-drawn analog inverter: transistors, their taps, the
+                  local interconnect, and four Metal1 landing pads
+                  (A, Y, VDD, VSS)
+  ms_hello        the digital half, read in from digital/out/ms_hello.gds --
+                  RTL hardened by LibreLane into a standard-cell macro
+  <TOP>           the tile: both blocks, the TopMetal1 power stripes, and the
+                  routing that takes the analog nets out to the ua[] pads and
+                  the digital nets up to the Metal4 interface stubs
+
+The two halves are independent circuits sharing a tile, a supply and a
+substrate; nothing is routed between them. That is the smallest honest
+mixed-signal design, and it keeps the two flows -- xschem/ngspice/KLayout for
+the analog, LibreLane for the digital -- separable and separately verifiable.
 
 Coordinates are nm throughout (layout dbu = 1nm).
 
@@ -34,11 +43,17 @@ UA_X = {0: 191040, 1: 166560, 2: 142080, 3: 117600, 4: 93120, 5: 68640}
 UA_HW, UA_TOP = 875, 2000
 
 ACTIV, GATPOLY, CONT, METAL1 = (1, 0), (5, 0), (6, 0), (8, 0)
+METAL2, METAL3 = (10, 0), (30, 0)
 NWELL, METAL4, TOPMETAL1 = (31, 0), (50, 0), (126, 0)
 PRBOUND = (189, 4)          # prBoundary.boundary; 189/0 (.drawing) is rejected
 HEATTRANS = (51, 0)         # HeatTrans.drawing, drawn by the device PCells
 PIN_PURPOSE = {"Metal4": (50, 2), "TopMetal1": (126, 2)}
-M1_TEXT = (8, 25)                       # LVS: metal1_text = labels(8, 25)
+# LVS reads net names off a .text purpose per metal layer:
+#   metal1_text = labels(8, 25), metal2_text = labels(10, 25),
+#   metal3_text = labels(30, 25), metal4_text = labels(50, 25).
+# Labels anywhere else are silently ignored.
+M1_TEXT, M4_TEXT = (8, 25), (50, 25)
+MACRO_TEXT_LAYERS = [(8, 25), (10, 25), (30, 25), (50, 25)]
 
 W_P, W_N, L = "2.0u", "1.0u", "0.13u"
 Y_PTAP, Y_NMOS, Y_PMOS, Y_NTAP = -1400, 0, 2400, 4800
@@ -53,6 +68,38 @@ PAD_VSS = ( -800, -3800,  1000, -700)
 
 CORE_X, CORE_Y = 178000, 40000          # where the core sits in the tile
 
+# ------------------------------------------------------- tile interface pins
+# The 51 pins of the tile interface are parsed out of the DEF template rather
+# than hand-written: that guarantees the names, layers and positions agree with
+# what the shuttle expects, both for the geometry drawn below and for the LEF
+# emitted at the end.
+DEF_TEMPLATE = "tech/tt_analog_1x2.def"
+DEF_LAYER_GDS = {"Metal4": METAL4, "TopMetal1": TOPMETAL1}
+
+PIN_RE = re.compile(
+    r"-\s+(\S+)\s+\+\s+NET\s+\S+\s+\+\s+DIRECTION\s+(\S+)\s+\+\s+USE\s+(\S+)"
+    r"\s*\+\s*PORT\s*\+\s*LAYER\s+(\S+)\s+\(\s*(-?\d+)\s+(-?\d+)\s*\)"
+    r"\s*\(\s*(-?\d+)\s+(-?\d+)\s*\)\s*\+\s*PLACED\s+\(\s*(-?\d+)\s+(-?\d+)\s*\)",
+    re.S,
+)
+
+
+def def_pins(path):
+    """Yield (name, direction, use, layer, (x1, y1, x2, y2)) for each DEF pin."""
+    with open(path) as fh:
+        text = fh.read()
+    for name, direction, use, layer, ox1, oy1, ox2, oy2, px, py in PIN_RE.findall(text):
+        px, py = int(px), int(py)
+        yield (name, direction, use, layer,
+               (px + int(ox1), py + int(oy1), px + int(ox2), py + int(oy2)))
+
+
+pins = list(def_pins(DEF_TEMPLATE))
+if len(pins) != 51:
+    raise SystemExit(f"expected 51 pins in {DEF_TEMPLATE}, parsed {len(pins)}")
+
+DEF_PIN_RECT = {name: rect for name, _, _, _, rect in pins}
+
 ly = pya.Layout()
 ly.dbu = 0.001
 lib = pya.Library.library_by_name("SG13_dev", "sg13g2")
@@ -66,8 +113,8 @@ def box(cell, layer, x1, y1, x2, y2):
     cell.shapes(L_(layer)).insert(pya.Box(x1, y1, x2, y2))
 
 
-def label(cell, text, x, y):
-    cell.shapes(L_(M1_TEXT)).insert(pya.Text(text, pya.Trans(pya.Point(x, y))))
+def label(cell, text, x, y, layer=M1_TEXT):
+    cell.shapes(L_(layer)).insert(pya.Text(text, pya.Trans(pya.Point(x, y))))
 
 
 def pcell(cell, name, x, y, **params):
@@ -184,41 +231,179 @@ def ua_route(net_x, net_y, ua_index):
 ua_route(AX, AY, 1)     # input  A -> ua[1], exits left
 ua_route(YX, YY, 0)     # output Y -> ua[0], exits right
 
+# ============================================================== digital macro
+# The RTL half. digital/out/ms_hello.gds is produced by LibreLane
+# (cd digital && make); it is a 50x50um standard-cell macro whose five signal
+# pins sit on Metal2 along its north edge and whose supply reaches Metal4 as
+# two VPWR and two VGND straps.
+#
+# It goes in the empty upper-left of the tile: clear of the analog core (bottom
+# right), clear of the ua[] TopMetal1 routing (bottom edge), and clear in x of
+# both TopMetal1 power stripes so the stripes never run over it.
+MACRO = "ms_hello"
+MACRO_GDS = "../digital/out/ms_hello.gds"
+MACRO_W = MACRO_H = 50000
+MACRO_X, MACRO_Y = 21600, 240000
+
+# Pin centres in macro-local coordinates, from the LibreLane LEF. Each pin is a
+# 400nm-wide Metal2 rectangle spanning y = 49600..50000.
+MACRO_PIN_X = {"clk": 5280, "rst_n": 14880, "a": 24480,
+               "y_comb": 34080, "y_reg": 43680}
+MACRO_PIN_HW, MACRO_PIN_Y = 200, 49600                 # local, from the LEF
+
+# Supply strap centres and extent, also from the LEF.
+MACRO_VPWR_X = (15660 + 17860) // 2, (35660 + 37860) // 2
+MACRO_VGND_X = (21860 + 24060) // 2, (41860 + 44060) // 2
+MACRO_STRAP_HW = 1100
+MACRO_STRAP_Y0 = 14900                                 # local, from the LEF
+
+ly.read(MACRO_GDS)
+macro = ly.cell(MACRO)
+if macro is None:
+    raise SystemExit(f"{MACRO_GDS} does not contain a cell named {MACRO}")
+if (macro.bbox().width(), macro.bbox().height()) != (MACRO_W, MACRO_H):
+    raise SystemExit(f"{MACRO} is {macro.bbox().to_s()}, expected "
+                     f"{MACRO_W}x{MACRO_H} -- update MACRO_W/MACRO_H")
+
+# LibreLane draws prBoundary over the macro die. Left in place it would appear
+# inside the tile's own boundary as a second, smaller boundary rectangle, which
+# is exactly what Tiny Tapeout's boundary precheck looks at. The tile draws its
+# own prBoundary over the full die, so drop the macro's.
+macro.shapes(L_(PRBOUND)).clear()
+
+# LibreLane labels the macro's nets, including "clk", "rst_n" and its supplies,
+# and the standard cells carry pin labels of their own. Those nets are the same
+# physical nets the tile labels from the outside, so leaving both in place puts
+# two names on one net and LVS keeps whichever it likes -- which is how the top
+# level ends up looking as though it is missing a port. The tile's own labels
+# are the ones that have to win, so the macro's are removed.
+for _idx in (L_(t) for t in MACRO_TEXT_LAYERS):
+    macro.shapes(_idx).clear()
+    for _sub in macro.called_cells():
+        ly.cell(_sub).shapes(_idx).clear()
+
+top.insert(pya.CellInstArray(macro.cell_index(),
+                             pya.Trans(pya.Point(MACRO_X, MACRO_Y))))
+
+
+def macro_pin_x(name):
+    return MACRO_X + MACRO_PIN_X[name]
+
+
+# ------------------------------------------------- digital signal routing
+# Every net crosses the tile the same way, and the layer assignment is what
+# makes it tractable:
+#
+#   Metal4  vertical, from the interface stub on the top edge down to the bus
+#   Metal3  horizontal, one bus per net, each at its own y
+#   Metal2  vertical, from the bus down to the macro pin
+#
+# Because the two vertical layers are never the horizontal one, a vertical run
+# may cross any bus it likes. Only bus-to-bus (all parallel, distinct y) and
+# spur-to-spur (all parallel, distinct x) spacing has to be reasoned about, and
+# both fall out for free. Route them all on one layer and the ordering
+# constraints become a puzzle with no solution.
+BUS_HW = 1000           # Metal3, 2.0um wide -- also covers the 1.11um Metal3
+                        # pad of a 3x3 Metal3->TopMetal1 stack
+SPUR_HW = 150           # Metal4, 0.3um wide, matching the DEF interface stubs
+BUS_PITCH = 3000
+
+STUB_Y = DIE_H          # the interface stubs run up to the top edge
+
+# net -> (bus y, interface stub, macro pin). Order is free; see above.
+DIGITAL_NETS = [
+    ("clk",       298000, "clk",       "clk"),
+    ("rst_n",     301000, "rst_n",     "rst_n"),
+    ("a",         304000, "ui_in[0]",  "a"),
+    ("y_comb",    307000, "uo_out[0]", "y_comb"),
+    ("y_reg",     310000, "uo_out[1]", "y_reg"),
+]
+
+# The unused digital outputs. Tiny Tapeout's analog spec is explicit that these
+# must not float: "Connect any unused uo_out, uio_out and uio_oe pins to GND."
+GND_BUS_Y = 295000
+GND_TIED = ([f"uo_out[{i}]" for i in range(2, 8)]
+            + [f"uio_out[{i}]" for i in range(8)]
+            + [f"uio_oe[{i}]" for i in range(8)])
+
+
+def stub_x(name):
+    """Centre x of an interface stub, from the DEF template."""
+    x1, _, x2, _ = DEF_PIN_RECT[name]
+    return (x1 + x2) // 2
+
+
+def drop_from_stub(name, bus_y):
+    """Metal4 from the top-edge stub down to bus_y, and a via into the bus."""
+    x = stub_x(name)
+    box(top, METAL4, x - SPUR_HW, bus_y - BUS_HW, x + SPUR_HW, STUB_Y)
+    pcell(top, "via_stack", x, bus_y,
+          b_layer="Metal3", t_layer="Metal4", vn_columns=1, vn_rows=2)
+    return x
+
+
+def rise_to_macro(pin, bus_y):
+    """Metal2 from the macro pin up to bus_y, and a via into the bus.
+
+    The riser is exactly as wide as the pin, so it inherits the clearances
+    LibreLane's own router already signed off inside the macro.
+    """
+    x = macro_pin_x(pin)
+    box(top, METAL2, x - MACRO_PIN_HW, MACRO_Y + MACRO_PIN_Y,
+        x + MACRO_PIN_HW, bus_y + BUS_HW)
+    pcell(top, "via_stack", x, bus_y,
+          b_layer="Metal2", t_layer="Metal3", vn_columns=1, vn_rows=2)
+    return x
+
+
+for _net, bus_y, stub, pin in DIGITAL_NETS:
+    xs = (drop_from_stub(stub, bus_y), rise_to_macro(pin, bus_y))
+    box(top, METAL3, min(xs), bus_y - BUS_HW, max(xs), bus_y + BUS_HW)
+    # Name the net for LVS, on the Metal4 stub, under the tile interface name.
+    label(top, stub, stub_x(stub), STUB_Y - 500, layer=M4_TEXT)
+
+# The ground bus collects every unused output and ends on the VGND stripe.
+gnd_xs = [drop_from_stub(name, GND_BUS_Y) for name in GND_TIED] + [VGND_X]
+box(top, METAL3, min(gnd_xs), GND_BUS_Y - BUS_HW, max(gnd_xs), GND_BUS_Y + BUS_HW)
+pcell(top, "via_stack", VGND_X, GND_BUS_Y,
+      b_layer="Metal3", t_layer="TopMetal1", vn_columns=3, vn_rows=3)
+
+# -------------------------------------------------- digital supply routing
+# The macro's straps interleave VPWR, VGND, VPWR, VGND, so a horizontal bar on
+# one layer cannot reach both nets without crossing the other. The two feeds
+# therefore leave the macro on different layers, in the empty band below it:
+# VGND on Metal4, VPWR on Metal3, one under the other. VGND's bar also passes
+# under the VDPWR TopMetal1 stripe on its way to x = VGND_X, which is only
+# harmless because it is not on TopMetal1.
+VGND_FEED_Y, VPWR_FEED_Y = 232000, 236000
+FEED_HW = MACRO_STRAP_HW
+
+
+def strap_feed(strap_xs, feed_y, layer, stripe_x, b_layer):
+    """Drop each strap to feed_y, run across to stripe_x, and via up to it."""
+    for sx in strap_xs:
+        x = MACRO_X + sx
+        box(top, METAL4, x - FEED_HW, feed_y - FEED_HW,
+            x + FEED_HW, MACRO_Y + MACRO_STRAP_Y0 + 1000)
+        if layer is METAL3:
+            pcell(top, "via_stack", x, feed_y,
+                  b_layer="Metal3", t_layer="Metal4", vn_columns=3, vn_rows=3)
+    xs = [MACRO_X + sx for sx in strap_xs] + [stripe_x]
+    box(top, layer, min(xs), feed_y - FEED_HW, max(xs), feed_y + FEED_HW)
+    pcell(top, "via_stack", stripe_x, feed_y,
+          b_layer=b_layer, t_layer="TopMetal1", vn_columns=3, vn_rows=3)
+
+
+strap_feed(MACRO_VGND_X, VGND_FEED_Y, METAL4, VGND_X, "Metal4")
+strap_feed(MACRO_VPWR_X, VPWR_FEED_Y, METAL3, VDPWR_X, "Metal3")
+
 # ------------------------------------------------------------------- output
 # Tiny Tapeout's precheck requires the LEF to declare every pin in the tile
-# interface, not just the ones this design connects to. Rather than hand-write
-# 51 entries, parse them straight out of the DEF template: that guarantees the
-# names, layers and positions agree with what the shuttle expects, and it draws
-# the matching metal in the GDS so the LEF is not describing geometry that
-# isn't there.
-DEF_TEMPLATE = "tech/tt_analog_1x2.def"
-DEF_LAYER_GDS = {"Metal4": METAL4, "TopMetal1": TOPMETAL1}
-
-PIN_RE = re.compile(
-    r"-\s+(\S+)\s+\+\s+NET\s+\S+\s+\+\s+DIRECTION\s+(\S+)\s+\+\s+USE\s+(\S+)"
-    r"\s*\+\s*PORT\s*\+\s*LAYER\s+(\S+)\s+\(\s*(-?\d+)\s+(-?\d+)\s*\)"
-    r"\s*\(\s*(-?\d+)\s+(-?\d+)\s*\)\s*\+\s*PLACED\s+\(\s*(-?\d+)\s+(-?\d+)\s*\)",
-    re.S,
-)
-
-
-def def_pins(path):
-    """Yield (name, direction, use, layer, (x1, y1, x2, y2)) for each DEF pin."""
-    with open(path) as fh:
-        text = fh.read()
-    for name, direction, use, layer, ox1, oy1, ox2, oy2, px, py in PIN_RE.findall(text):
-        px, py = int(px), int(py)
-        yield (name, direction, use, layer,
-               (px + int(ox1), py + int(oy1), px + int(ox2), py + int(oy2)))
-
-
-pins = list(def_pins(DEF_TEMPLATE))
-if len(pins) != 51:
-    raise SystemExit(f"expected 51 pins in {DEF_TEMPLATE}, parsed {len(pins)}")
-
-# Draw every interface pin. The ones this design uses (ua[0], ua[1]) already
-# have routing on them; redrawing the DEF rectangle just merges with it. The
-# rest are unconnected stubs, which is what an unused tile input should be.
+# interface, not just the ones this design connects to, and every declared pin
+# must be backed by real metal, so draw every one of them. The pins this design
+# drives (ua[0..1], uo_out[0..1]) and the ones tied to ground already have
+# routing on them and the DEF rectangle just merges with it; what is left are
+# the unused inputs, which are legitimately stubs.
 for name, direction, use, layer, rect in pins:
     box(top, DEF_LAYER_GDS[layer], *rect)
 

@@ -1,0 +1,281 @@
+# GDS3D process file for ihp-sg13g2.
+#
+# GENERATED -- do not edit. Regenerate with:
+#     cd analog && make gds3d-tech
+#
+# Derived from /foss/pdks/ihp-sg13g2/libs.tech/klayout/tech/d25/sg13g2_beol.lyd25,
+# the PDK's own 2.5D stack definition, so GDS3D and KLayout's 2.5D view
+# show the same heights and the same colours. The one exception is NWell,
+# which the BEOL-only PDK stack does not cover -- see EXTRA in the
+# generator; its depth is illustrative.
+#
+# Format: one LayerStart/LayerEnd block per layer. Height is the bottom
+# of the slab in um and Thickness its extent; Red/Green/Blue and Filter
+# are 0..1, Filter being transparency -- turn it up if the upper metals
+# hide what you are trying to see.
+
+# Dropped as duplicate geometry: Cont->Gatpoly, Rhigh, Rppd.
+
+# NOT from the PDK stack: depth is illustrative, not a process value
+LayerStart: NWell
+Layer: 31
+Datatype: 0
+Height: -0.600
+Thickness: 0.600
+Red: 0.550
+Green: 0.350
+Blue: 0.750
+Filter: 0.35
+Metal: 0
+Show: 1
+LayerEnd
+
+LayerStart: Activ
+Layer: 1
+Datatype: 0
+Height: 0.000
+Thickness: 0.400
+Red: 0.000
+Green: 1.000
+Blue: 0.000
+Filter: 0.35
+Metal: 0
+Show: 1
+LayerEnd
+
+# GatPoly, resistor variants merged
+LayerStart: GatPoly
+Layer: 5
+Datatype: 0
+Height: 0.400
+Thickness: 0.140
+Red: 0.000
+Green: 0.000
+Blue: 1.000
+Filter: 0.35
+Metal: 0
+Show: 1
+LayerEnd
+
+# PolyRes, resistor variants merged
+LayerStart: PolyRes
+Layer: 128
+Datatype: 0
+Height: 0.400
+Thickness: 0.140
+Red: 0.667
+Green: 0.000
+Blue: 0.000
+Filter: 0.35
+Metal: 0
+Show: 1
+LayerEnd
+
+# Cont, both variants merged
+LayerStart: Cont
+Layer: 6
+Datatype: 0
+Height: 0.400
+Thickness: 0.640
+Red: 0.000
+Green: 1.000
+Blue: 1.000
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Metal1
+Layer: 8
+Datatype: 0
+Height: 1.040
+Thickness: 0.420
+Red: 0.224
+Green: 0.749
+Blue: 1.000
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Via1
+Layer: 19
+Datatype: 0
+Height: 1.460
+Thickness: 0.540
+Red: 0.800
+Green: 0.800
+Blue: 1.000
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Metal2
+Layer: 10
+Datatype: 0
+Height: 2.000
+Thickness: 0.490
+Red: 0.800
+Green: 0.800
+Blue: 0.851
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Via2
+Layer: 29
+Datatype: 0
+Height: 2.490
+Thickness: 0.540
+Red: 1.000
+Green: 0.216
+Blue: 0.212
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Metal3
+Layer: 30
+Datatype: 0
+Height: 3.030
+Thickness: 0.490
+Red: 0.847
+Green: 0.000
+Blue: 0.000
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Via3
+Layer: 49
+Datatype: 0
+Height: 3.520
+Thickness: 0.540
+Red: 0.608
+Green: 0.663
+Blue: 0.251
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Metal4
+Layer: 50
+Datatype: 0
+Height: 4.060
+Thickness: 0.490
+Red: 0.576
+Green: 0.910
+Blue: 0.216
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Via4
+Layer: 66
+Datatype: 0
+Height: 4.550
+Thickness: 0.540
+Red: 0.871
+Green: 0.675
+Blue: 0.369
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: Metal5
+Layer: 67
+Datatype: 0
+Height: 5.090
+Thickness: 0.490
+Red: 0.863
+Green: 0.820
+Blue: 0.275
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: TopVia1
+Layer: 125
+Datatype: 0
+Height: 5.580
+Thickness: 0.850
+Red: 1.000
+Green: 0.902
+Blue: 0.749
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: MIM
+Layer: 36
+Datatype: 0
+Height: 5.604
+Thickness: 0.150
+Red: 0.149
+Green: 0.549
+Blue: 0.420
+Filter: 0.35
+Metal: 0
+Show: 1
+LayerEnd
+
+LayerStart: Vmim
+Layer: 129
+Datatype: 0
+Height: 5.754
+Thickness: 0.676
+Red: 0.753
+Green: 0.753
+Blue: 0.753
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: TopMetal1
+Layer: 126
+Datatype: 0
+Height: 6.430
+Thickness: 2.000
+Red: 1.000
+Green: 0.902
+Blue: 0.749
+Filter: 0.6
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: TopVia2
+Layer: 133
+Datatype: 0
+Height: 8.430
+Thickness: 2.800
+Red: 1.000
+Green: 0.502
+Blue: 0.000
+Filter: 0.35
+Metal: 1
+Show: 1
+LayerEnd
+
+LayerStart: TopMetal2
+Layer: 134
+Datatype: 0
+Height: 11.230
+Thickness: 3.000
+Red: 1.000
+Green: 0.502
+Blue: 0.000
+Filter: 0.6
+Metal: 1
+Show: 1
+LayerEnd

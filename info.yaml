@@ -1,10 +1,10 @@
 # Tiny Tapeout project information
 project:
-  title:        "Hand-drawn CMOS inverter"      # Project title
+  title:        "Mixed-signal hello world"      # Project title
   author:       "Maxwell Pauly"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "A single hand-laid-out CMOS inverter, as an end-to-end analog flow test"      # One line description of what your project does
-  language:     "Analog" # other examples include Verilog, Amaranth, VHDL, etc
+  description:  "A hand-laid-out CMOS inverter and a LibreLane-hardened RTL inverter sharing one tile"      # One line description of what your project does
+  language:     "Mixed-signal (Verilog + Analog)" # other examples include Verilog, Amaranth, VHDL, etc
   clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? On ihp-sg13g2 a 1x1 tile is 202.08 x 154.98 uM.
@@ -23,12 +23,13 @@ project:
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "project.v"
+    - "ms_hello.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
+  ui[0]: "Digital inverter input"
   ui[1]: ""
   ui[2]: ""
   ui[3]: ""
@@ -38,8 +39,8 @@ pinout:
   ui[7]: ""
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
+  uo[0]: "~ui[0], combinational"
+  uo[1]: "~ui[0], registered on clk"
   uo[2]: ""
   uo[3]: ""
   uo[4]: ""
