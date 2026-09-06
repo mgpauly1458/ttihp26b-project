@@ -15,10 +15,15 @@ mutually exclusive. Both options are kept alive on separate branches; merging
 | branch | project | state |
 |---|---|---|
 | `main` | digital Verilog (`ttihp-verilog-template`), plus a Basys3 harness in `fpga/` and a cocotb bench in `test/` | CI green |
-| `analog-inverter` | analog custom-GDS, a hand-drawn CMOS inverter | CI green, all 10 prechecks pass |
+| `analog-inverter` | **mixed-signal** custom-GDS: a hand-drawn CMOS inverter *and* a LibreLane-hardened RTL inverter in one tile | DRC, LVS and local precheck clean; CI not yet run on the mixed-signal tile |
 
 Only `main` has `test/` and `fpga/`; only `analog-inverter` has `analog/`,
-`gds/` and `lef/`. Don't be surprised when a file is missing — check the branch.
+`digital/`, `gds/` and `lef/`. Don't be surprised when a file is missing —
+check the branch.
+
+Note the branch name predates the digital half and is now a bit narrow. It is
+still a *custom GDS* submission — TT's own digital hardening flow never runs;
+LibreLane is invoked locally and its macro is merged into a hand-built tile.
 
 ## Tile budget: it is `1x2`, not `2x1`
 
@@ -40,18 +45,30 @@ readiness check.
 
 ---
 
-# The analog flow (`analog-inverter` branch)
+# The flow (`analog-inverter` branch)
 
-Everything lives in `analog/` and runs inside the `hpretl/iic-osic-tools`
-container via `analog/run.sh`, which mounts the repo root at `/work`. **Docker
-is the only host dependency** — the image already ships the `ihp-sg13g2` PDK,
-xschem, ngspice, KLayout, magic, netgen and kpex.
+Two halves, two directories, one tile.
+
+| | builds | with |
+|---|---|---|
+| `digital/` | `ms_hello`, a standard-cell macro, from `src/ms_hello.v` | LibreLane 3.1 |
+| `analog/` | the inverter, **and the merged tile** | xschem, ngspice, KLayout |
+
+Both run inside the `hpretl/iic-osic-tools` container via their own `run.sh`,
+which mounts the repo root at `/work`. **Docker is the only host dependency** —
+the image already ships the `ihp-sg13g2` PDK, LibreLane, xschem, ngspice,
+KLayout, magic, netgen and kpex.
 
 ```bash
 cd analog
 make help      # every target, with one-line descriptions
-make all       # both pipelines end to end
+make all       # both pipelines end to end, RTL and schematic through to signoff
 ```
+
+`analog/Makefile` has a file dependency on `digital/out/ms_hello.gds`, so
+`make` in `analog/` builds the digital half first if it is missing. It does not
+rebuild it when the RTL changes — run `make macro` (or `cd digital && make`)
+after editing `src/ms_hello.v`.
 
 ## Two pipelines, deliberately separate
 
@@ -66,14 +83,39 @@ perfectly correct and still be rejected by precheck, which is exactly what
 happened here: the circuit was DRC and LVS clean well before precheck passed,
 and every remaining failure was about how the GDS is *written*.
 
-Individual steps: `netlist`, `sim`, `plot`, `gds`, `drc`, `lvs`, `precheck`,
-`png`. Interactive: `xschem`, `klayout`, `shell`, `ci`.
+Individual steps: `macro`, `netlist`, `tile-netlist`, `sim`, `plot`, `gds`,
+`drc`, `lvs`, `precheck`, `png`. Interactive: `xschem`, `klayout`, `shell`,
+`ci`.
+
+`make lvs` now checks the **whole tile** — both blocks and every net of the
+merge — against a reference netlist assembled by
+`analog/checks/build_tile_netlist.py`. That is the check that actually catches a
+mis-wired merge; DRC never will. It runs in strict port mode with
+`flag_missing_ports`, and it has been confirmed to have teeth: swapping
+`uo_out[0]` and `uo_out[1]` in the reference makes it fail.
 
 Both PDK runners exit non-zero on failure (verified empirically with a
 deliberately shorted layout and a mismatched netlist), so `make` genuinely
 gates rather than printing errors and carrying on.
 
 ## What the current design is
+
+Two inverters that reach the same tile by different routes, sharing only the
+supply and the substrate. No signal crosses between them — that is deliberate,
+so each half stays independently verifiable.
+
+### The digital half
+
+`src/ms_hello.v`: `y_comb = ~a` combinational, `y_reg` the same inversion
+registered on `clk`. The register earns its keep by forcing CTS and STA to run
+instead of the design collapsing to one gate. Six logic cells survive — an
+inverter, a reset flop and four buffers — in a 50 × 50 µm macro.
+
+`digital/README.md` explains why the LibreLane config departs from the defaults
+(absolute die, Metal4-only PDN, `RT_MAX_LAYER` Metal3, all pins north) and lists
+the pin coordinates `analog/layout/build_gds.py` hard-codes.
+
+### The analog half
 
 A single CMOS inverter — the smallest circuit that still exercises every step.
 
@@ -87,9 +129,23 @@ A single CMOS inverter — the smallest circuit that still exercises every step.
 | pins | `ua[1]` = input (gate), `ua[0]` = output (drain) |
 
 The devices are PDK PCells, so they are correct by construction; only the
-interconnect is hand-drawn. `analog/layout/build_gds.py` builds the core and
-the tile and emits the LEF **from the same constants**, so the LEF can never
-describe geometry the GDS does not have.
+interconnect is hand-drawn. `analog/layout/build_gds.py` builds the core, merges
+the macro, routes the tile and emits the LEF **from the same constants**, so the
+LEF can never describe geometry the GDS does not have.
+
+### The merge
+
+The routing works because the two directions are on different layers: Metal4
+vertical from the top-edge interface stubs, Metal3 horizontal (one bus per net,
+each at its own `y`), Metal2 vertical down to the macro pins. A vertical run may
+then cross any bus. On one layer the ordering constraints do not always have a
+solution; this is the whole trick. The supplies split the same way — VGND leaves
+the macro on Metal4, VDPWR on Metal3 — because the macro's straps interleave and
+a single-layer bar cannot reach one net without shorting the other.
+
+The eighteen unused digital outputs are tied to VGND, which the analog spec
+requires ("Connect any unused `uo_out`, `uio_out` and `uio_oe` pins to GND") and
+no precheck tests for.
 
 ---
 
@@ -112,15 +168,56 @@ substrate ties extract as `ntap1`/`ptap1` *resistors*, with both transistor bulk
 terminals on unnamed nets routed through them. No hand-drawn schematic matches
 that.
 
-**LVS net labels must be `Text` on layer 8/25.** The deck reads them via
-`metal1_text = labels(8, 25)` and attaches them with
-`connect(metal1_con, metal1_text)`. Labels on any other layer are silently
-ignored and the extracted netlist comes back with unnamed nets.
+**LVS net labels must be `Text` on a `.text` purpose, one per metal layer.**
+The deck defines `metal1_text = labels(8, 25)`, `metal2_text = labels(10, 25)`,
+`metal3_text = labels(30, 25)`, `metal4_text = labels(50, 25)`,
+`topmetal1_text = labels(126, 25)`, and attaches each with
+`connect(<layer>_con, <layer>_text)`. Labels anywhere else are silently ignored
+and the extracted netlist comes back with unnamed nets. The analog nets are
+named on Metal1, the digital ones on their Metal4 interface stubs.
 
 **The PMOS and NMOS symbols have opposite D/S pin order.** The PMOS puts its
 source at the top — the sensible convention, but the reverse of the NMOS.
 Placing both at the same rotation silently gives a PMOS with its source on the
 output node. Read the netlist, not the picture.
+
+## Merging a LibreLane macro into a hand-built tile
+
+**Strip the macro's labels, or the top level loses ports.** LibreLane names the
+macro's nets — `clk`, `rst_n`, the supplies — and the standard cells carry pin
+labels of their own, on 8/25, 10/25, 30/25 and 50/25. Those are the same
+physical nets the tile labels from outside, so leaving both in place puts two
+names on one net; LVS keeps whichever it likes and the top level then looks as
+though a port is missing. `build_gds.py` clears them from the macro cell and
+every cell it calls.
+
+**Strip the macro's `prBoundary` too.** It would otherwise sit inside the tile's
+own boundary as a second, smaller boundary rectangle — exactly what TT's
+boundary precheck inspects.
+
+**Three netlists, three incompatible conventions.** A whole-tile LVS reference
+has to reconcile the PDK standard cells (transistor-level, but written as
+`X`-prefix subcircuit calls), the LibreLane macro netlist (right structure, but
+every standard cell is an *empty black-box* subcircuit) and the xschem inverter
+(already right). `checks/build_tile_netlist.py` rewrites the first to `M`-prefix
+device lines, drops the black boxes from the second so the real cells are
+picked up, and writes a new top level. The `X`-versus-`M` trap is the same one
+xschem sets, met a second time.
+
+**Don't leave the unused digital outputs floating.** The analog spec says to tie
+`uo_out`, `uio_out` and `uio_oe` to GND. Nothing in DRC, LVS or precheck checks
+this, so it is silent until it is silicon.
+
+**Configure the macro's PDN away from the defaults.** The PDK default puts
+straps on TopMetal1 and TopMetal2, which is where the tile's own power stripes
+and analog routing live. `FP_PDN_MULTILAYER: false` with
+`PDN_VERTICAL_LAYER: Metal4` gives Metal1 rails plus Metal4 straps and nothing
+else, which the tile can reach with an ordinary via stack.
+
+**Mind LibreLane's floorplan margins on a small die.** The default left/right
+margin is 12 site widths and top/bottom 4 site heights. At 44 × 34 µm that left
+a core 3.76 µm tall and floorplanning failed with `IFP-0002`, because a row is
+3.78 µm. 50 × 50 µm is comfortable.
 
 ## DRC
 
@@ -216,6 +313,12 @@ pads. It becomes worth doing on a block with real internal routing.
 
 - Generated artefacts go in `analog/out/`, which is gitignored. Anything that
   must be committed (`gds/`, `lef/`, `docs/*.png`) is written outside it.
+- `digital/runs/` is gitignored; `digital/out/` **is committed**, because
+  `analog/layout/build_gds.py` reads the macro GDS from there and the tile must
+  be rebuildable without re-running LibreLane.
+- The RTL lives in `src/ms_hello.v`, not under `digital/`, because Tiny Tapeout
+  expects source files in `src/` and `info.yaml` lists it. `digital/config.json`
+  reaches back up to it.
 - `analog/checks/tt_valid_layers.txt` is vendored from tt-support-tools at the
   commit the shuttle pins; refresh it if the shuttle moves.
 - Don't hand-edit `lef/` — it is generated by `make gds`.
