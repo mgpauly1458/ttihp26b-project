@@ -12,5 +12,5 @@ exec docker run --rm \
     -v "$(git rev-parse --show-toplevel):/work" -w /work/analog \
     --user "$(id -u):$(id -g)" \
     -e PDK=ihp-sg13g2 \
-    -e XDG_CACHE_HOME=/work/out/.cache \
+    -e XDG_CACHE_HOME=/work/analog/out/.cache \
     "$IMAGE" --skip "$@"

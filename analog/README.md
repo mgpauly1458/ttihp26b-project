@@ -7,10 +7,36 @@ dependency.
 
 ```bash
 cd analog
-make            # netlist, simulate, build GDS+LEF, DRC, LVS
-make xschem     # schematic / testbench GUI
-make klayout    # layout GUI
+make help       # every target, one line each
+make all        # both pipelines, end to end
 ```
+
+Two pipelines, answering different questions:
+
+| target | what it answers | steps |
+|---|---|---|
+| `make design` | is the circuit right, and does the layout match it? | netlist → sim → gds → drc → lvs |
+| `make tt` | will Tiny Tapeout accept it? | drc → lvs → precheck |
+
+They overlap on DRC and LVS but are not the same check. This design was DRC and
+LVS clean long before precheck passed; everything that remained was about how
+the GDS is *written*, not about the circuit.
+
+| step | does |
+|---|---|
+| `make netlist` | xschem → SPICE, both the simulation and the LVS netlist |
+| `make sim` | ngspice DC sweep + transient |
+| `make plot` | waveform figure → `../docs/inverter_sim.png` |
+| `make gds` | layout → `../gds/*.gds` and `../lef/*.lef` |
+| `make drc` | KLayout DRC, sg13g2 maximal rule set |
+| `make lvs` | KLayout LVS, layout vs the xschem netlist |
+| `make precheck` | local stand-in for TT's GDS prechecks |
+| `make png` | render the layout |
+| `make xschem` / `make klayout` / `make shell` | GUIs and a container prompt |
+| `make ci` | latest GitHub Actions results for this branch |
+
+Both PDK runners exit non-zero on failure, so `make` genuinely stops rather than
+printing errors and continuing.
 
 ## What is here
 
@@ -22,7 +48,12 @@ xschem/tt_um_..._inverter.sch           tile wrapper, renames the ports to
                                         ua[0]/ua[1]/VDPWR/VGND for LVS
 layout/build_gds.py                     builds the core and the tile, and
                                         emits the LEF from the same constants
+layout/render.py                        layout -> PNG
 sim/plot.py                             waveform figure
+checks/tt_precheck.py                   local stand-in for TT's GDS prechecks
+checks/tt_valid_layers.txt              allowlist vendored from tt-support-tools
+tech/tt_analog_1x2.def                  TT's tile template; pin names, layers
+                                        and positions are parsed from it
 ```
 
 ## Tile construction
@@ -101,8 +132,10 @@ builds a ring 0.1–0.5 µm outside each pad and treats any TopMetal1 there as a
 connection, cross-checked against `analog_pins` in `info.yaml`. Drawing the pad
 rectangle itself is fine; overhanging it by more than 0.1 µm counts as wired.
 
-`analog/out/pincheck.py` and `out/layercheck.py` reproduce these checks
-locally, which is worth it — a CI round trip is about seven minutes.
+`make precheck` (`checks/tt_precheck.py`) reproduces the layer, boundary, pin
+and analog-pin checks locally, which is worth it — a CI round trip is about
+seven minutes. It is a convenience, not the authority: CI runs the real
+precheck, which also does DRC, zero-area, cell-name and Verilog-syntax checks.
 
 **The PMOS and NWell-tap PCells each draw their own NWell**, and where the two
 meet the tie ends up only marginally enclosed, tripping `NW.d` (min NWell space
