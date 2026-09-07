@@ -1,3 +1,4 @@
-docs/*.png filter=lfs diff=lfs merge=lfs -text
-*.gds filter=lfs diff=lfs merge=lfs -text
-*.glb filter=lfs diff=lfs merge=lfs -text
+# Binary artefacts are committed as plain git objects, NOT through Git LFS:
+# Tiny Tapeout's build clones the repository without LFS, and a pointer file
+# in place of analog/macro/*.gds makes Magic fail to read the macro
+# (CI run 34158145310). The files are small (the GDS is 160 KB).

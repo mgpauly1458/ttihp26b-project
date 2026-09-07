@@ -25,7 +25,9 @@ LVS_OK  := out/lvs/.passed
 
 .DEFAULT_GOAL := help
 .PHONY: help gds drc drc-density lvs lvs-diff sim plot lib png macro all \
-        sch sch-png netlist-sch lvs-sch xschem klayout shell clean
+        sch sch-png netlist-sch lvs-sch xschem klayout shell clean \
+        verify verify-blocks verify-dac verify-bias verify-stage verify-nand \
+        verify-buffer verify-ring verify-report
 
 help:
 	@echo 'Analog block: $(MACRO)'
@@ -43,6 +45,9 @@ help:
 	@echo '  make sch          xschem/make_sch.py -> xschem/*.sch, *.sym  (the schematic)'
 	@echo '  make sch-png      render every sheet -> ../docs/sch_*.png'
 	@echo '  make lvs-sch      netlist the schematic flat and LVS it against the layout'
+	@echo
+	@echo '  make verify       corners + Monte Carlo + noise, every block then the whole macro'
+	@echo '                    (verify-dac, -bias, -stage, -nand, -buffer, -ring, -report; VERIFY_JOBS=$(VERIFY_JOBS))'
 	@echo
 	@echo '  make macro        gds lib drc lvs      -- ready for LibreLane?'
 	@echo '  make all          macro sim plot png'
@@ -143,6 +148,28 @@ plot: $(SWEEP) char/plot_sweep.py
 lib: $(LIB)
 $(LIB): $(SIM_NL) char/characterize.py
 	$(RUN) python3 char/characterize.py
+
+# ------------------------------------------------------------ verification
+# Corners, Monte Carlo and noise, block by block and then the whole macro.
+# docs/analog_verification.md is the strategy; `make verify` regenerates the
+# results appendix docs/analog_verification_results.md and docs/verify_*.png.
+VERIFY_JOBS ?= 14
+BLOCKS := out/blocks/blocks.spice
+
+verify-blocks: $(BLOCKS)
+$(BLOCKS): $(SCH) verify/netlist_blocks.py
+	$(RUN) python3 verify/netlist_blocks.py
+
+verify-dac verify-bias verify-stage verify-nand verify-buffer: $(BLOCKS)
+	$(RUN) python3 verify/$(subst verify-,,$@).py --jobs $(VERIFY_JOBS)
+
+verify-ring: $(SIM_NL)
+	$(RUN) python3 verify/ring.py --jobs $(VERIFY_JOBS)
+
+verify-report:
+	python3 verify/report.py
+
+verify: verify-dac verify-bias verify-stage verify-nand verify-buffer verify-ring verify-report
 
 # --------------------------------------------------------------- pipelines
 macro: gds lib drc lvs
