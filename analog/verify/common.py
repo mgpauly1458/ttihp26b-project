@@ -19,7 +19,8 @@ share, so each test file is only the circuit and the measurements.
                        mm_ok=1 on every finger so mismatch applies to it
     code_bits(...)     eight B-sources that turn one swept voltage into the
                        binary code, so a single .dc runs all 256 codes
-    run_decks(...)     the parallel ngspice runner
+    run_decks(...)     the parallel ngspice runner (VERIFY_REUSE=1 re-reads
+                       finished runs whose deck is unchanged, for re-analysis)
     meas(...)          read `name = value` lines out of a log
     table(...)         a Markdown table from rows
 """
@@ -141,11 +142,16 @@ def run_decks(decks, jobs=None, tag=""):
         d = os.path.join(base, name)
         os.makedirs(d, exist_ok=True)
         path = os.path.join(d, "deck.spice")
+        logpath = os.path.join(d, "ngspice.log")
+        # VERIFY_REUSE=1: re-analyse finished runs instead of simulating again
+        if os.environ.get("VERIFY_REUSE") and os.path.exists(logpath) and \
+                os.path.exists(path) and open(path).read() == text:
+            return name, (open(logpath).read(), d)
         with open(path, "w") as fh:
             fh.write(text)
         p = subprocess.run(["ngspice", "-b", "deck.spice"], capture_output=True, text=True, cwd=d)
         log = p.stdout + p.stderr
-        with open(os.path.join(d, "ngspice.log"), "w") as fh:
+        with open(logpath, "w") as fh:
             fh.write(log)
         return name, (log, d)
 

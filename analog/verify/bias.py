@@ -103,6 +103,14 @@ noise v(vbp) Vdd dec 10 1k 1G
 setplot noise8
 let vbp_tot_1k = onoise_total
 echo "vbp_1kHz=$&vbp_tot_1k"
+noise v(vbn) Vdd dec 10 1k 1Meg
+setplot noise10
+let vbn_lf = onoise_total
+echo "vbn_lf=$&vbn_lf"
+noise v(vbp) Vdd dec 10 1k 1Meg
+setplot noise12
+let vbp_lf = onoise_total
+echo "vbp_lf=$&vbp_lf"
 .endc
 .end
 """
@@ -201,24 +209,28 @@ def main():
         log, d = res[f"noise_code{k}"]
         vbn1, vbn1k = C.meas(log, "vbn_1Hz"), C.meas(log, "vbn_1kHz")
         vbp1, vbp1k = C.meas(log, "vbp_1Hz"), C.meas(log, "vbp_1kHz")
+        vbnlf, vbplf = C.meas(log, "vbn_lf"), C.meas(log, "vbp_lf")
         if vbn1k is None:
             print("noise failed at code", k, log[-500:]); continue
         # one LSB step of the same node, from the DC sweep
         d_vbn = abs(ref["vbn"][k + 1] - ref["vbn"][k]) if ref and k < 255 else abs(ref["vbn"][k] - ref["vbn"][k - 1])
         d_vbp = abs(ref["vbp"][k + 1] - ref["vbp"][k]) if ref and k < 255 else abs(ref["vbp"][k] - ref["vbp"][k - 1])
-        nrows.append([k, vbn1k * 1e6, vbn1 * 1e6, d_vbn * 1e3, 100 * vbn1k / d_vbn,
-                      vbp1k * 1e6, vbp1 * 1e6, d_vbp * 1e3, 100 * vbp1k / d_vbp])
+        nrows.append([k, vbn1k * 1e6, vbn1 * 1e6, vbnlf * 1e6, d_vbn * 1e3, 100 * vbn1k / d_vbn, 100 * vbnlf / d_vbn,
+                      vbp1k * 1e6, vbp1 * 1e6, vbplf * 1e6, d_vbp * 1e3, 100 * vbp1k / d_vbp, 100 * vbplf / d_vbp])
         try:
             spectra[k] = C.read_wrdata(os.path.join(d, "vbn_spec.txt"))
         except FileNotFoundError:
             pass
-    hdr = ["code", "vbn noise uVrms 1k-1G", "1-1G", "vbn LSB step mV", "noise/LSB % (1k-1G)",
-           "vbp noise uVrms 1k-1G", "1-1G", "vbp LSB step mV", "noise/LSB %"]
+    hdr = ["code", "vbn noise uVrms 1k-1G", "1-1G", "1k-1M", "vbn LSB step mV", "noise/LSB % (1k-1G)", "noise/LSB % (1k-1M)",
+           "vbp noise uVrms 1k-1G", "1-1G", "1k-1M", "vbp LSB step mV", "noise/LSB % (1k-1G)", "noise/LSB % (1k-1M)"]
     md.append("\n## Bias chain: noise at the bias nodes (typical, 27 C, 1.2 V)\n")
-    md.append(C.table(hdr, nrows, ["%d", "%.1f", "%.1f", "%.2f", "%.2f", "%.1f", "%.1f", "%.2f", "%.2f"]))
+    md.append(C.table(hdr, nrows, ["%d", "%.1f", "%.1f", "%.1f", "%.2f", "%.1f", "%.2f", "%.1f", "%.1f", "%.1f", "%.2f", "%.1f", "%.2f"]))
     md.append("\nIntegrated output noise (rms) of the bias nodes with the code held, from ngspice `.noise` (PSP thermal + flicker; ngspice reports onoise_total as the rms voltage). "
               "\"LSB step\" is how far the node moves for one code step at that code; noise/LSB is the rms noise as a "
-              "percentage of that step, i.e. how much of the 8-bit control the bias noise blurs.\n")
+              "percentage of that step. The 1 kHz-1 GHz figure is everything the node carries; most of it is white noise "
+              "above 1 MHz, which the ring turns into period jitter that a reciprocal count averages (ring.py measures "
+              "that directly). The 1 kHz-1 MHz figure is the slow part that behaves like a code error within one "
+              "measurement, and is the one to compare with a code step.\n")
     C.write_csv(os.path.join(C.OUT, "bias_noise.csv"), hdr, nrows)
 
     # ---- figure -----------------------------------------------------------------

@@ -64,9 +64,9 @@ def dut_exposed(mismatch=False):
     return f".include {dst}\n"
 
 
-def deck(models, vdd, code, mismatch=False, expose=False, noise_ina=None, noise_nt=None, n_run=N_RUN, n_meas=N_MEAS):
+def deck(models, vdd, code, mismatch=False, expose=False, noise_ina=None, noise_nt=None, n_run=N_RUN, n_meas=N_MEAS, step_div=150):
     T = 1 / C.f_nom(code)
-    t_en, tstop, tmeas, step = N_HOLD * T, n_run * T, (n_run - n_meas) * T, T / 150
+    t_en, tstop, tmeas, step = N_HOLD * T, n_run * T, (n_run - n_meas) * T, T / step_div
     ports = f"{C.CODE_PORTS} enable clk_out VPWR 0" + (" vbp vbn" if expose else "")
     inc = dut_exposed(mismatch) if expose else C.dut(mismatch)
     noise = f"Inz 0 vbp trnoise({noise_ina:.4g} {noise_nt:.4g} 0 0)\n" if noise_ina else ""
@@ -210,7 +210,7 @@ def main():
                     push.append([k, lo["f"] / 1e6, mid["f"] / 1e6, hi["f"] / 1e6, 100 * (hi["f"] - lo["f"]) / mid["f"] / 0.24])
                 tc = table.get((C.pvt_name(c, -40, 1.2), k)); th = table.get((C.pvt_name(c, 125, 1.2), k))
                 if tc and th and mid:
-                    push[-1] += [tc["f"] / 1e6, th["f"] / 1e6, 1e4 * (th["f"] - tc["f"]) / mid["f"] / 165]
+                    push[-1] += [tc["f"] / 1e6, th["f"] / 1e6, 1e6 * (th["f"] - tc["f"]) / mid["f"] / 165]
         md.append("\n**Supply pushing and temperature coefficient** (typical process):\n")
         md.append(C.table(["code", "f @1.08 V", "f @1.20 V", "f @1.32 V", "%/V", "f @-40 C", "f @125 C", "ppm/C"],
                           push, ["%d", "%.1f", "%.1f", "%.1f", "%.1f", "%.1f", "%.1f", "%.0f"]))
@@ -356,8 +356,8 @@ wrdata sv.txt onoise_spectrum
             nt = T / 50
             ina = inj[k][0] / (2 * nt) ** 0.5           # one-sided PSD S = 2 NA^2 NT
             n_run = 640
-            decks[f"tj_code{k}_noise"] = deck(C.corner(), 1.2, k, expose=True, noise_ina=ina, noise_nt=nt, n_run=n_run, n_meas=600)
-            decks[f"tj_code{k}_quiet"] = deck(C.corner(), 1.2, k, expose=True, noise_ina=None, noise_nt=nt, n_run=n_run, n_meas=600)
+            decks[f"tj_code{k}_noise"] = deck(C.corner(), 1.2, k, expose=True, noise_ina=ina, noise_nt=nt, n_run=n_run, n_meas=600, step_div=600)
+            decks[f"tj_code{k}_quiet"] = deck(C.corner(), 1.2, k, expose=True, noise_ina=None, noise_nt=nt, n_run=n_run, n_meas=600, step_div=600)
         res = C.run_decks(decks, a.jobs, tag="ring_jitter")
         jrows = []
         for k in CODES_NOISE:

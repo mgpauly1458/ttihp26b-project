@@ -167,6 +167,18 @@ percent at the codes that matter (`analog_verification_results.md`, bias
 chain). Unequal stage currents change the duty cycle slightly and the
 frequency to second order; nothing depends on the ratio being exactly 48.
 
+**Concern: flicker noise of the small bias devices.** MND and MPM are single
+0.5 um and 1 um fingers of L = 0.5 um. Their flicker noise appears directly
+on `vbn`: the verification finds about 110-125 uV rms of slow (1 kHz-1 MHz)
+noise on `vbn` at every code, which at the top codes is a quarter of one
+code step of that node (the fast, white part is far larger but becomes
+period jitter that the counter averages). *Assessment:* it is the largest
+noise term in the block, worth roughly a tenth of an LSB in frequency at
+the top codes and far less at the bottom, and it is slow enough that
+repeated measurements average it. *Mitigation next time:* make MND and MPM
+several times wider and longer at the same ratio (flicker noise scales as
+1/WL, and the bias chain has area to spare beside the diode).
+
 **The internal strap bug.** The PMOS PCell's source/drain columns are
 strapped along one edge of the device; the first version strapped along the
 edge that joins the *other* set of columns. DRC is silent about this: it is
