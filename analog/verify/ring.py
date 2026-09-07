@@ -96,11 +96,16 @@ meas tran vmin min v(clk_out) from=$&tm
 
 
 def frequency(log):
-    ts = [C.meas(log, f"t{k}") for k in range(1, KMAX + 1)]
-    ts = [t for t in ts if t is not None]
+    """1 / median edge-to-edge interval. ngspice's `rise=N from=` occasionally
+    returns one bogus crossing time (seen: t1 later than t2 at one PVT
+    point); the median of the intervals ignores a single wrong edge where
+    (last - first) / (n - 1) would not."""
+    ts = sorted(t for t in (C.meas(log, f"t{k}") for k in range(1, KMAX + 1)) if t is not None)
     if len(ts) < 2:
         return None, len(ts)
-    return (len(ts) - 1) / (ts[-1] - ts[0]), len(ts)
+    d = sorted(b - a for a, b in zip(ts, ts[1:]))
+    med = d[len(d) // 2] if len(d) % 2 else (d[len(d) // 2 - 1] + d[len(d) // 2]) / 2
+    return 1 / med, len(ts)
 
 
 def parse(log, code):

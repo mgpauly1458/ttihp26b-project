@@ -127,6 +127,12 @@ line. Two things do this, both physical and both worth measuring:
 - **The ring has a delay floor.** Above ~15 µA per stage the starve devices
   are no longer the bottleneck and the inverters' own delay takes over.
 
+Over the full PVT box (5 process corners, -40 to 125 °C, 1.08 to 1.32 V)
+the frequency at any code spans a factor of about 3: code 255 runs 184 MHz
+at ss/125 °C/1.08 V and 544 MHz at ff/-40 °C/1.32 V; die-to-die sigma is
+about 5.5 %. The map stays monotonic at every corner and in every
+Monte Carlo sample (`docs/analog_verification.md`).
+
 The code-to-frequency map is monotonic throughout, which is what the
 instrument needs. The compression is a known, simulated shape that the
 measured curve can be compared against.
