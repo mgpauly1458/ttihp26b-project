@@ -22,10 +22,11 @@ The circuit
 -----------
     DAC       255 unit NMOS fingers (W=0.15 L=8um), gate driven straight by a
               code bit, binary weighted 1..128, all drains on node vbp. Plus
-              one always-on unit (gate on VPWR) so code 0 still oscillates.
-    bias      vbp is the diode-connected wide PMOS Mp0 (24 x 1um/0.5um), so
-              I_dac sets the PMOS starve voltage. Mp1 (1um/0.5um, gate vbp)
-              mirrors I_dac/24 into the diode NMOS Mn0, giving vbn.
+              two always-on units (gate on VPWR) so code 0 still oscillates.
+    bias      vbp is the diode-connected wide PMOS MPD (24 x 2um/0.5um), so
+              I_dac sets the PMOS starve voltage; each stage's 1um starve
+              PMOS gets I_dac/48. MPM (1um/0.5um, gate vbp) mirrors the same
+              current into the diode NMOS MND, giving vbn.
     ring      NAND (enable, feedback) + 10 inverters, each stage starved top
               and bottom by a 1um/0.5um PMOS on vbp and a 0.5um/0.5um NMOS on
               vbn. 11 inverting stages.
@@ -105,7 +106,8 @@ WU, LU = 0.15, 8.0             # DAC unit finger
 WPS, LPS = 1.0, 0.5            # PMOS starve / mirror
 WNS, LNS = 0.5, 0.5            # NMOS starve / mirror
 WPI, WNI, LI = 0.5, 0.3, 0.13  # inverter devices
-NG_MP0 = 24                    # diode PMOS fingers: DAC-to-stage ratio
+NG_MP0, WP0F = 24, 2.0         # diode PMOS: 24 fingers of 2um -> DAC-to-stage ratio 48
+NG_ON = 2                      # always-on DAC units, so code 0 still oscillates
 WNAND = 0.6                    # NAND series NMOS
 WBP2, WBN2 = 2.0, 1.0          # output inverter
 
@@ -348,15 +350,16 @@ DAC_VGND_BOT = y0
 DAC_VGND_TOP = DAC_Y + (NPAIRS - 1) * PAIR_PITCH + VGND_BAR[0]
 
 # substrate tie islands under every VGND bar: one in the middle column and
-# one at the row's left end, so no finger is more than LU.b (20um) from a tie.
+# one at each end of the row, so no finger is more than LU.b (20um) from a tie.
 # The bars are extended left over the second island; the poly-bar jogs sit
 # in other y slots so nothing collides.
 TIE_X = DAC_X + 300 + NG_SPLIT * 8440 + (TIE_GAP - TIE_W) // 2
 TIE_XL = DAC_X - 1000 - TIE_W
+TIE_XR = DAC_X + ROW_W + 400
 for pair in range(NPAIRS + 1):
     yb = DAC_VGND_BOT + pair * PAIR_PITCH
     box(macro, METAL1, TIE_XL - 100, yb, DAC_X + 100, yb + 300)
-    for tx in (TIE_X, TIE_XL):
+    for tx in (TIE_X, TIE_XL, TIE_XR):
         box(macro, ACTIV, tx, yb, tx + TIE_W, yb + 300)
         box(macro, PSD, tx - PSD_ENC, yb - PSD_ENC, tx + TIE_W + PSD_ENC, yb + 300 + PSD_ENC)
         cont(macro, tx + 150, yb + 150)
@@ -564,20 +567,26 @@ class Row:
 
 row = Row(macro, RX + 600)
 
-# --- always-on unit: NMOS 0.15/8, gate on VPWR, drain on vbp ---------------
-don = Mos(macro, "DON", "nmos", row.x, ry(0), WU, LU, 1, ["VGND", "vbp"], "VPWR")
-row.strap_down(don.pad(0))
-row.strap_to(don.pad(1), Y_BP + 80)
+# --- always-on units: NMOS 0.15/8 fingers, gate on VPWR, drain on vbp -------
+don_cols = ["VGND" if k % 2 == 0 else "vbp" for k in range(NG_ON + 1)]
+don = Mos(macro, "DON", "nmos", row.x, ry(0), WU, LU, NG_ON, don_cols, "VPWR")
 p1, p2 = slot_pad(Y_BP)
-d1 = don.pad(1)
-box(macro, METAL1, d1[0] - 80, ry(p1), d1[2] + 80, ry(p2))
-via12(macro, (d1[0] + d1[2]) // 2, ry(Y_BP) + 80)
-row.vbp_x.append((d1[0] + d1[2]) // 2)
-# gate: poly stub up from the gate's top edge, contact in slot A, Metal1 straight
-# up through the (empty) PMOS row to the VPWR rail
-g = don.gate_box()
-gx = g[0] + 150
-box(macro, GATPOLY, g[0], g[3] - 10, g[0] + 300, ry(Y_IN) + 80 + CNT // 2 + CNT_ENC)
+for k, net in enumerate(don_cols):
+    if net == "VGND":
+        row.strap_down(don.pad(k))
+    else:
+        row.strap_to(don.pad(k), Y_BP + 80)
+        d1 = don.pad(k)
+        box(macro, METAL1, d1[0] - 80, ry(p1), d1[2] + 80, ry(p2))
+        via12(macro, (d1[0] + d1[2]) // 2, ry(Y_BP) + 80)
+        row.vbp_x.append((d1[0] + d1[2]) // 2)
+# gate: a poly bar over the fingers' top ends joins them; a stub rises from it
+# to a contact in slot A, and Metal1 goes straight up through the (empty)
+# PMOS row to the VPWR rail
+g0, gl = don.gate_box(0), don.gate_box(NG_ON - 1)
+box(macro, GATPOLY, g0[0], g0[3] - 10, gl[2], g0[3] + 300)
+gx = g0[0] + 150
+box(macro, GATPOLY, g0[0], g0[3] + 290, g0[0] + 300, ry(Y_IN) + 80 + CNT // 2 + CNT_ENC)
 cont(macro, gx, ry(Y_IN) + 80)
 box(macro, METAL1, gx - 130, ry(Y_IN) - 70, gx + 130, ry(VPWR_RAIL[0]) + 10)
 row.x = don.right + 600
@@ -585,7 +594,7 @@ row.x = don.right + 600
 # --- bias: MPD diode PMOS (24 fingers), MND diode NMOS, MPM mirror PMOS -------
 # (named so they cannot collide with the stages' MP<i>/MN<i>)
 mp0_cols = ["VPWR" if k % 2 == 0 else "vbp" for k in range(NG_MP0 + 1)]
-mp0 = Mos(macro, "MPD", "pmos", row.x, ry(YP), WPS, LPS, NG_MP0, mp0_cols, "vbp")
+mp0 = Mos(macro, "MPD", "pmos", row.x, ry(YP), WP0F, LPS, NG_MP0, mp0_cols, "vbp")
 for k, net in enumerate(mp0_cols):
     if net == "VPWR":
         row.strap_up(mp0.pad(k))
@@ -692,7 +701,7 @@ for x in range(RAIL_X1 + 1500, RAIL_X2 - 1500, 9000):
             cont(macro, x + dx, y + dy)
 
 # --- macro outline ---------------------------------------------------------
-W = X_RIGHT + 2600
+W = max(X_RIGHT, RAIL_X2) + 2600
 H = ry(VPWR_RAIL[1]) + 2600
 W = -(-W // SITE_W) * SITE_W
 H = -(-H // ROW_H) * ROW_H

@@ -6,7 +6,7 @@ MACRO tt_analog_ring
   CLASS BLOCK ;
   FOREIGN tt_analog_ring 0 0 ;
   ORIGIN 0 0 ;
-  SIZE 86.400 BY 56.700 ;
+  SIZE 90.720 BY 56.700 ;
   SYMMETRY X Y ;
   SITE CoreSite ;
   PIN code[0]
@@ -105,7 +105,7 @@ MACRO tt_analog_ring
     ANTENNADIFFAREA 1.020 LAYER Metal3 ;
     PORT
       LAYER Metal3 ;
-        RECT 85.200 45.300 86.400 45.700 ;
+        RECT 89.520 45.300 90.720 45.700 ;
     END
   END clk_out
   PIN VPWR
@@ -114,7 +114,7 @@ MACRO tt_analog_ring
     SHAPE ABUTMENT ;
     PORT
       LAYER Metal4 ;
-        RECT 0.000 50.450 86.400 52.850 ;
+        RECT 0.000 50.450 90.720 52.850 ;
     END
   END VPWR
   PIN VGND
@@ -123,24 +123,24 @@ MACRO tt_analog_ring
     SHAPE ABUTMENT ;
     PORT
       LAYER Metal4 ;
-        RECT 0.000 42.150 86.400 44.550 ;
+        RECT 0.000 42.150 90.720 44.550 ;
     END
   END VGND
   OBS
     LAYER Metal1 ;
-        RECT 0.000 0.000 86.400 56.700 ;
+        RECT 0.000 0.000 90.720 56.700 ;
     LAYER Metal2 ;
         RECT 0.000 0.000 4.000 1.400 ;
-        RECT 11.200 0.000 86.400 1.400 ;
-        RECT 0.000 1.400 86.400 56.700 ;
+        RECT 11.200 0.000 90.720 1.400 ;
+        RECT 0.000 1.400 90.720 56.700 ;
     LAYER Metal3 ;
-        RECT 0.000 0.000 86.400 45.100 ;
-        RECT 0.000 45.100 85.000 45.900 ;
-        RECT 0.000 45.900 86.400 56.700 ;
+        RECT 0.000 0.000 90.720 45.100 ;
+        RECT 0.000 45.100 89.320 45.900 ;
+        RECT 0.000 45.900 90.720 56.700 ;
     LAYER Metal4 ;
-        RECT 0.000 0.000 86.400 41.950 ;
-        RECT 0.000 44.750 86.400 50.250 ;
-        RECT 0.000 53.050 86.400 56.700 ;
+        RECT 0.000 0.000 90.720 41.950 ;
+        RECT 0.000 44.750 90.720 50.250 ;
+        RECT 0.000 53.050 90.720 56.700 ;
   END
 END tt_analog_ring
 

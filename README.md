@@ -27,6 +27,7 @@ silicon will be a statement about the silicon.
 ## Layout
 
 ```
+analog/         the analog ring oscillator macro for slot 7 (analog/README.md)
 src/            synthesisable RTL (Tiny Tapeout requires src/)
 src/rings/      structural ring netlists, and the analog stub
 sim/            behavioural ring model, cell stand-ins, every testbench
@@ -45,6 +46,7 @@ make test                # every module testbench, in build order
 make test_measure_core   # or one at a time
 make sweep               # 8 rings x 256 codes -> build/sweep.csv, docs/sweep*.png
 make cocotb              # the CI testbench
+make macro               # the analog block: layout, Liberty, DRC, LVS (Docker)
 ```
 
 Each testbench prints `RESULT: PASS` or `RESULT: FAIL`.

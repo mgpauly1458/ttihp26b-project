@@ -48,7 +48,7 @@ library (tt_analog_ring) {
   }
 
   cell (tt_analog_ring) {
-    area : 4898.8800;
+    area : 5143.8240;
     is_macro_cell : true;
     dont_touch : true;
     dont_use : true;
@@ -68,49 +68,49 @@ library (tt_analog_ring) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 0.009559;
+        capacitance : 0.009553;
       }
       pin (code[1]) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 0.019144;
+        capacitance : 0.019122;
       }
       pin (code[2]) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 0.038376;
+        capacitance : 0.038296;
       }
       pin (code[3]) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 0.077061;
+        capacitance : 0.076776;
       }
       pin (code[4]) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 0.155296;
+        capacitance : 0.154198;
       }
       pin (code[5]) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 0.315049;
+        capacitance : 0.310843;
       }
       pin (code[6]) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 0.646043;
+        capacitance : 0.631038;
       }
       pin (code[7]) {
         direction : "input";
         related_power_pin : VPWR;
         related_ground_pin : VGND;
-        capacitance : 1.342192;
+        capacitance : 1.295058;
       }
     }
 
@@ -118,19 +118,19 @@ library (tt_analog_ring) {
       direction : "input";
       related_power_pin : VPWR;
       related_ground_pin : VGND;
-      capacitance : 0.002223;
+      capacitance : 0.002224;
     }
 
     /* Free-running clock output. Measured on the running ring at code 128:
-       324 MHz into 0.001 pF, 324 MHz into 0.3 pF.
-       20-80 % transitions against load (ns): rise 0.042, 0.081, 0.26, 0.695; fall 0.038, 0.077, 0.248, -2.431
-       at loads 0.001, 0.0234, 0.108, 0.3 pF. */
+       216 MHz into 0.001 pF, 216 MHz into 0.108 pF.
+       20-80 % transitions against load (ns): rise 0.055, 0.093, 0.141, 0.262; fall 0.05, 0.087, 0.134, 0.251
+       at loads 0.001, 0.0234, 0.05, 0.108 pF. */
     pin (clk_out) {
       direction : "output";
       related_power_pin : VPWR;
       related_ground_pin : VGND;
-      max_capacitance : 0.3;
-      max_transition : 1.0425;
+      max_capacitance : 0.108;
+      max_transition : 0.3930;
     }
   }
 }

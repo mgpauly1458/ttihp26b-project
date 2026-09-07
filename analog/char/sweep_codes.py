@@ -57,7 +57,8 @@ meas tran vout_avg avg v(clk_out) from=$&thalf
 
 
 def run(args, code):
-    d = os.path.join(ROOT, "out", "sweep")
+    # one directory per output file, so parallel sweeps never share decks
+    d = os.path.splitext(os.path.abspath(args.out))[0] + ".d"
     os.makedirs(d, exist_ok=True)
     path = os.path.join(d, f"code{code}.spice")
     with open(path, "w") as fh:
