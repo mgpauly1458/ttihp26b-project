@@ -111,9 +111,9 @@ the short version:
   LVS checks the drawn metal against what the script meant, and ngspice
   simulates the same netlist.
 - Interface `code[7:0]`, `enable`, `clk_out`, `VPWR`, `VGND`; blackbox in
-  `analog/macro/tt_analog_ring.v`. Simulated 3.6 MHz (code 0) to 440 MHz
-  (code 255), monotonic, compressing above code ~32 for reasons the README
-  explains. `code[7]` presents 1.3 pF; the Liberty says so.
+  `analog/macro/tt_analog_ring.v`. Simulated 3.8 MHz (code 0) to 332 MHz
+  (code 255), monotonic, 2 MHz/code at the bottom and compressing to 63 %
+  of that line at the top, for reasons the README explains. `code[7]` presents 1.3 pF; the Liberty says so.
 - `clk_out` has no timing arc: it is a clock source, `create_clock` it.
 - Density is not checked at block level; the tile's signoff does that.
 

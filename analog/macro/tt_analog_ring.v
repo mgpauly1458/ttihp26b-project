@@ -6,13 +6,13 @@
 //   timing in analog/lib/tt_analog_ring.lib): an 11-stage current-starved
 //   ring oscillator whose starving current comes from a binary-weighted
 //   bank of 255 unit NMOS transistors switched straight by the code bits,
-//   plus one always-on unit so code 0 still runs. Everything analog is
+//   plus two always-on units so code 0 still runs. Everything analog is
 //   inside; every port is a rail-to-rail digital signal.
 //
 // Interface (the same as every other ring in src/rings/)
 //   code    [7:0]  binary weighted, bit 7 widest. Higher code = more
 //                  current = higher frequency. Simulated (typical corner,
-//                  27 C): 3.6 MHz at code 0, ~7 MHz at 1, ~440 MHz at 255.
+//                  27 C): 3.8 MHz at code 0, 5.8 MHz at 1, 332 MHz at 255.
 //                  DC control: change it only while enable is low or
 //                  between measurements. Note the input capacitance doubles
 //                  per bit (code[7] is over a picofarad); the Liberty file

@@ -34,9 +34,9 @@ Everything analog lives inside; every port is a rail-to-rail digital signal.
 
 ```
  code[7:0] ──▶ 255 unit NMOS, binary weighted ──┐
-              (+1 always-on unit, gate on VPWR)  │ I_dac
+              (+2 always-on units, gate on VPWR) │ I_dac
                                                  ▼
-                          diode PMOS MPD (24 × 1/0.5) ── vbp ──▶ PMOS starve of every stage
+                          diode PMOS MPD (24 × 2/0.5) ── vbp ──▶ PMOS starve of every stage
                           PMOS mirror MPM (1/0.5)  ─▶ diode NMOS MND (0.5/0.5) ── vbn ──▶ NMOS starve of every stage
 
  enable ──▶ starved NAND ─▶ 10 starved inverters ─┐
@@ -52,12 +52,14 @@ signal, so there is no bias voltage, no reference and no start-up question:
 a finger is either fully on or off, and the total current is proportional to
 the number that are on. The long channel is what keeps a fully-on finger
 down to about 2 µA; at minimum length the same finger would sink 100 µA and
-the array would burn 25 mW. One extra finger with its gate on VPWR keeps the
-ring alive at code 0, so a dead ring is distinguishable from code 0.
+the array would burn 25 mW. Two extra fingers with their gate on VPWR keep
+the ring alive at code 0, so a dead ring is distinguishable from code 0.
 
 **The bias.** `vbp` is the diode-connected PMOS MPD, 24 fingers of
-1 µm / 0.5 µm. Each ring stage's PMOS starve device is one such finger, so
-a stage gets I_dac / 24. MPM, another single finger, mirrors that current
+2 µm / 0.5 µm. Each ring stage's PMOS starve device is a single
+1 µm / 0.5 µm finger, so a stage gets I_dac / 48. The diode is that wide
+on purpose: the wider it is, the less its gate voltage moves with current,
+and the less the DAC's drain node sags (see the compression below). MPM, another single finger, mirrors that current
 into the diode-connected NMOS MND, whose gate voltage `vbn` drives the
 stages' NMOS starve devices. One DAC, one place to debug, eleven copies of
 the same current.
@@ -81,33 +83,35 @@ Typical corner, 1.2 V, 27 °C, `clk_out` into 15 fF (`make sim`):
 
 | code | f / MHz | supply current / µA |
 |---|---|---|
-| 0 | 3.6 | 32 |
-| 1 | 7.4 | 14 |
-| 8 | 34.8 | 43 |
-| 32 | 121 | 138 |
-| 128 | 325 | 356 |
-| 255 | 440 | 554 |
+| 0 | 3.8 | 12 |
+| 1 | 5.8 | 17 |
+| 8 | 20.2 | 54 |
+| 32 | 68.5 | 117 |
+| 64 | 126 | 207 |
+| 128 | 216 | 364 |
+| 255 | 332 | 621 |
 
 ![](../docs/analog_ring_sweep.png)
 
-The curve is linear to about code 24 (3.9 MHz per code) and compresses
-after that: at full scale the frequency is 45 % of the straight line. Two
-things do this, both physical and both worth measuring:
+The curve is linear at the bottom (2.0 MHz per code) and compresses
+gently after that: at full scale the frequency is 63 % of the straight
+line. Two things do this, both physical and both worth measuring:
 
 - **The DAC units are in triode.** Their drain sits on the diode node, which
-  falls from 0.83 V at code 1 to 0.36 V at code 255 as the diode carries more
+  falls from 0.84 V at code 1 to 0.46 V at code 255 as the diode carries more
   current, and a triode transistor's current follows its drain voltage. That
   is the "channel-length modulation, the whole business" the brief asked to
-  characterise, only more so. A cascode or a regulated drain would fix it at
-  the price of a real analog bias loop.
-- **The ring has a delay floor.** Above ~25 µA per stage the starve devices
+  characterise, only more so. With 1 µm diode fingers instead of 2 µm the
+  node fell to 0.36 V and full scale was 45 % of the line; a cascode or a
+  regulated drain would remove it at the price of a real analog bias loop.
+- **The ring has a delay floor.** Above ~15 µA per stage the starve devices
   are no longer the bottleneck and the inverters' own delay takes over.
 
 The code-to-frequency map is monotonic throughout, which is what the
 instrument needs. The compression is a known, simulated shape that the
 measured curve can be compared against.
 
-Supply current is essentially the DAC current: 2.2 µA per unit at full
+Supply current is essentially the DAC current: 2.4 µA per unit at full
 scale, plus a few tens of µA for the mirror and the running ring. It is
 drawn whenever the code is non-zero, whether or not `enable` is high, so
 park the code at zero between measurements.
@@ -122,7 +126,7 @@ park the code at zero between measurements.
 | `VPWR`, `VGND` | Metal4 bars across the full width | for the tile's PDN to via down to |
 
 **Input capacitance doubles per bit**, measured: 9.6 fF on `code[0]`,
-1.34 pF on `code[7]`, 2.2 fF on `enable`. The Liberty carries these numbers,
+1.30 pF on `code[7]`, 2.2 fF on `enable`. The Liberty carries these numbers,
 so LibreLane sizes and buffers the drivers itself; a slow edge on a code bit
 is harmless, it is a DC control.
 
@@ -134,8 +138,8 @@ standard-cell rings need their loops declared.
 
 ## Layout
 
-86.4 × 56.7 µm: 180 CoreSite widths by 15 rows, so it lands row-aligned in
-the tile. `docs/macro_layout.png` is the whole block, `docs/ring_row_layout.png`
+90.72 × 56.7 µm: 189 CoreSite widths by 15 rows, so it lands row-aligned
+in the tile. `docs/macro_layout.png` is the whole block, `docs/ring_row_layout.png`
 and `docs/dac_rows_layout.png` are close-ups.
 
 **The DAC** is 34 rows of unit fingers (16 rows of 8 for bit 7, 8 for bit 6,
@@ -145,9 +149,9 @@ between its rows and a Metal1 VGND bar with the neighbouring pair. A row's
 gates are joined by a poly bar contacted at the row's left end and jogged
 in Metal1 to a vertical Metal2 code bus, which runs straight down to the
 pins on the south edge. Each row is split in two around a column of p+
-substrate-tie islands, one under every VGND bar, with a second column of
-islands at the rows' left ends: the latch-up rule wants a tie within 20 µm
-of every finger, and the rows are 69 µm long.
+substrate-tie islands, one under every VGND bar, with two more columns of
+islands at the rows' ends: the latch-up rule wants a tie within 20 µm of
+every finger, and the rows are 69 µm long.
 
 **The ring row** is laid out like an oversized standard cell: NMOS devices
 along the bottom, PMOS along the top, a VGND rail under and a VPWR rail
@@ -157,7 +161,7 @@ jogs, the `vbn` line, the `vbp` line, the feedback line and the enable line,
 the last four on Metal2. Each stage is `[NMOS starve | NMOS] / [PMOS starve
 | PMOS]` with its output strap on the right, so the jog to the next stage's
 input pad never crosses anything but poly. The row holds, left to right:
-the always-on unit, the 24-finger diode MPD (with MND and MPM), the NAND,
+the always-on units, the 24-finger diode MPD (with MND and MPM), the NAND,
 the ten stages and the output buffer, whose Metal3 output runs east to the
 pin.
 
@@ -177,7 +181,7 @@ windows and the two power bars.
 `make drc` runs the PDK's maximal KLayout rule set with density disabled
 (`--no_density`): **0 violations**. `make lvs` runs the PDK's KLayout LVS
 against the generated netlist with tap extraction disabled: **netlists
-match**, 332 transistor fingers.
+match**, 333 transistor fingers.
 
 Density is deliberately not checked at block level (`make drc-density`
 reports it, expectedly failing): metal density is a property of the whole
