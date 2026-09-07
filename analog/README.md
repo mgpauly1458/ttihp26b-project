@@ -11,9 +11,15 @@ are three committed files:
 | `macro/tt_analog_ring.lef` | its abstract, for placement and routing | the same script, from the same constants |
 | `lib/tt_analog_ring.lib` | its Liberty model, for synthesis and STA | `make lib` |
 
-plus `macro/tt_analog_ring.v`, the blackbox the RTL instantiates, and
-`spice/tt_analog_ring.spice`, the transistor-level netlist the layout
-generator writes alongside the GDS.
+plus `spice/tt_analog_ring.spice`, the transistor-level netlist the layout
+generator writes alongside the GDS. The blackbox the RTL instantiates is
+`src/rings/tt_analog_ring.v` (ring slot 7), and `src/config.json` places and
+powers the macro; `docs/constraints.md` has the clock it becomes.
+
+Two more documents belong to this block: `docs/analog_layout_notes.md`
+(layout strategy, concerns, mitigations) and `docs/analog_verification.md`
+(corners, Monte Carlo and noise, with the generated results in
+`docs/analog_verification_results.md`; `make verify` reruns them).
 
 The **schematic** is in `xschem/`: `tt_analog_ring.sch` is the top, with
 `csro_dac`, `csro_nand`, `csro_stage` and `csro_inv` as sub-sheets. Open it
@@ -31,6 +37,7 @@ cd analog
 make help       # every target, one line each
 make macro      # gds + lib + drc + lvs: what the tile needs
 make sim plot   # frequency vs. code sweep -> ../docs/analog_ring_sweep.png
+make verify     # corners, Monte Carlo, noise: every block, then the whole macro (~1 h)
 make png        # layout figures -> ../docs/
 ```
 
@@ -202,12 +209,20 @@ tile, which is where the flow's own signoff DRC checks it. The inverter
 macro on `main` passed that check placed inside a tile, and this block has
 far more metal.
 
+## Verification
+
+`make verify` runs `verify/*.py`: the DAC, the bias chain, one stage, the
+NAND and the output buffer each on its xschem sheet (the drawing LVS proved
+equal to the layout), then the whole macro on the generator's netlist, over
+5 process corners x 3 temperatures x 3 supplies, mismatch and process Monte
+Carlo, and ngspice `.noise`. `docs/analog_verification.md` explains what each
+test asks and what the answers mean; `docs/analog_verification_results.md`
+is the generated table set. The Liberty file is still characterised at the
+typical corner only: the macro has no timing arc, and the input
+capacitances it carries move little with corner.
+
 ## What the generator does not do yet
 
-- **Corners.** Only `mos_tt` at 27 °C is simulated and characterised. The
-  ring's frequency is expected to move a lot over process, supply and
-  temperature; that is the point of the instrument, and `make sim
-  CORNER=mos_ss TEMP=85` etc. is how to get the expected numbers.
 - **Parasitic extraction.** The row is dense enough that wire capacitance
   will shift the frequency by some percent; kpex is in the container and
   the previous block's notes on `main` describe the shape of a `make pex`.

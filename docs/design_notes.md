@@ -113,6 +113,19 @@ netlists. `sim/`, `scripts/` and `docs/` are as specified.
 
 ## Gate-level simulation
 
-Zero-delay ring loops hang a gate-level simulation; see constraints.md.
-Tiny Tapeout's `gl_test` CI job will not pass until that is addressed.
-The RTL `test` job does.
+Zero-delay ring loops hang a gate-level simulation. The cocotb bench
+therefore keeps `ena` low (which gates every ring enable in ring_mux)
+until it has selected ring 7, the analog macro, whose behavioural model is
+compiled in beside the gate-level netlist because the macro is a blackbox
+there too. It never selects a standard-cell slot. Tiny Tapeout's `gl_test`
+job runs that bench on the hardened netlist with iverilog 13.
+
+## The analog macro's arrival
+
+Slot 7 stopped being a stub when the macro was integrated (see
+`src/rings/tt_analog_ring.v`, `src/config.json`, `src/constraints.sdc`).
+Its simulation model has no dead zone (two always-on DAC units keep it at
+3.8 MHz at code 0) and runs to 332 MHz at code 255, so the "dead code"
+tests became "slow code" tests: code 0 through tap 3 with N = 200 takes
+421 us and a 40 us timeout reports, as it should. The sweep uses tap 1 for
+this ring so both ends fit inside its timeout.

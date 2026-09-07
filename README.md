@@ -9,17 +9,24 @@ analog macro) share one reciprocal counter, so ring-to-ring differences are
 real differences. Built for characterising trimmable oscillators on real
 silicon: sweep 256 codes × 8 rings × temperatures × chips from a script.
 
-**This branch is the simulation phase.** The measurement chain is verified
-against a behavioural ring model with a deliberately unpleasant transfer
-curve (dead zone, offset, nonlinear), so that any strange number from real
-silicon will be a statement about the silicon.
+The measurement chain was verified against a behavioural ring model with a
+deliberately unpleasant transfer curve (dead zone, offset, nonlinear), so
+that any strange number from real silicon will be a statement about the
+silicon. Slot 7 is the hand-drawn analog block: a current-starved ring
+oscillator with an 8-bit current DAC, built in `analog/` and imported into
+the tile as a hard macro. The tile hardens clean (STA, DRC, LVS, antenna),
+passes Tiny Tapeout's precheck, and the analog block has been simulated over
+process corners, Monte Carlo and noise (see the two analog documents below).
 
 - [docs/info.md](docs/info.md) — what it is, how to use it (the project page)
 - [docs/registers.md](docs/registers.md) — register map, the formula, settings
 - [docs/pinmap.md](docs/pinmap.md) — pins, protocol, parallel-vs-SPI tradeoff
 - [docs/rings.md](docs/rings.md) — the ring population
 - [docs/design_notes.md](docs/design_notes.md) — decisions and open questions
-- [docs/constraints.md](docs/constraints.md) — what hardening will need
+- [docs/constraints.md](docs/constraints.md) — the timing constraints and what they cover
+- [analog/README.md](analog/README.md) — the analog block: circuit, interface, how to build it
+- [docs/analog_layout_notes.md](docs/analog_layout_notes.md) — its layout: strategy, concerns, mitigations
+- [docs/analog_verification.md](docs/analog_verification.md) — its verification: corners, Monte Carlo, noise, and the results
 - [CLAUDE.md](CLAUDE.md) — working notes
 
 ![sweep](docs/sweep.png)
@@ -29,7 +36,7 @@ silicon will be a statement about the silicon.
 ```
 analog/         the analog ring oscillator macro for slot 7 (analog/README.md)
 src/            synthesisable RTL (Tiny Tapeout requires src/)
-src/rings/      structural ring netlists, and the analog stub
+src/rings/      structural ring netlists, and the analog macro's blackbox
 sim/            behavioural ring model, cell stand-ins, every testbench
 scripts/        sweep plotting
 docs/           register map, pin map, rings, notes, sweep plots
@@ -47,6 +54,9 @@ make test_measure_core   # or one at a time
 make sweep               # 8 rings x 256 codes -> build/sweep.csv, docs/sweep*.png
 make cocotb              # the CI testbench
 make macro               # the analog block: layout, Liberty, DRC, LVS (Docker)
+make -C analog verify    # the analog block: corners, Monte Carlo, noise (Docker, ~1 h)
+make tools harden        # LibreLane the tile locally, as CI does (venv + Docker)
+make precheck            # Tiny Tapeout's precheck on the result
 ```
 
 Each testbench prints `RESULT: PASS` or `RESULT: FAIL`.

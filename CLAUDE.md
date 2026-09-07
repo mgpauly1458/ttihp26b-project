@@ -37,7 +37,8 @@ on the Tiny Tapeout pins. `src/project.v`'s header has the block diagram.
 ```
 analog/         the ring oscillator macro: generator, netlists, GDS/LEF/lib
 src/            RTL (Tiny Tapeout needs src/; the brief's rtl/ is this)
-src/rings/      structural ring netlists (cells by name) + analog stub
+src/rings/      structural ring netlists (cells by name) + the analog
+                macro's blackbox (tt_analog_ring.v)
 sim/            ring_model.v (ground truth), sg13g2_cells_sim.v (delay
                 stand-ins), tb_*.v, tb_pins.vh (host protocol helpers)
 scripts/        plot_sweep.py
@@ -80,18 +81,26 @@ Enable a structural ring only after its chain has flushed its power-up X
 - Tiny Tapeout's tooling accepts `source_files` in subdirectories of
   `src/` (`os.path.join(src_dir, filename)`).
 
+## Hardened
+
+`make harden` (LibreLane 3.0.5 in the venv, PDK at `~/pdk`, as CI) is clean:
+0 setup/hold violations at all three corners, Magic DRC 0, LVS clean,
+antenna clean, lint clean; `make precheck` passes. `src/constraints.sdc`
+carries the ring clocks (see `docs/constraints.md`); `src/config.json`
+places and powers the analog macro. Slot 7 is `src/rings/tt_analog_ring.v`,
+the blackbox of the macro in `analog/`.
+
+The gate-level CI job runs the same cocotb bench on the netlist. It passes
+because the bench keeps `ena` low until ring 7 (the macro, whose model is
+compiled in beside the netlist) is selected: a zero-delay standard-cell
+ring loop would otherwise hang iverilog. Never select slots 0..6 in that
+bench.
+
 ## Not done yet
 
-- Hardening. Nothing has been through LibreLane on this branch. Expect
-  Verilator `UNOPTFLAT` on the rings and unconstrained ring clocks; see
-  `docs/constraints.md` for the plan.
-- Gate-level CI job (`gl_test`) will hang on zero-delay ring loops.
-- Region constraints for the rings, especially slots 1..3 at corners.
-- Integrating the analog ring macro (slot 7). The block itself is done
-  and clean (see below); it is not yet instantiated in the tile. Import it
-  the way `main` imports its inverter: `(* blackbox *)` + `MACROS` in
-  `src/config.json`. `main`'s CLAUDE.md lists every trap that cost time
-  doing that; `analog/README.md` has the block-specific ones.
+- Region constraints for the rings, especially slots 1..3 at corners. The
+  placer put them where density suited it.
+- Parasitic extraction of the analog block (`analog/README.md`).
 - Decision: a ninth, tri-state-inverter ring (`sg13g2_einvn_*` exists).
 - Decision: approve or change the pin map (`docs/pinmap.md`).
 
@@ -111,7 +120,7 @@ the short version:
   LVS checks the drawn metal against what the script meant, and ngspice
   simulates the same netlist.
 - Interface `code[7:0]`, `enable`, `clk_out`, `VPWR`, `VGND`; blackbox in
-  `analog/macro/tt_analog_ring.v`. Simulated 3.8 MHz (code 0) to 332 MHz
+  `src/rings/tt_analog_ring.v`. Simulated 3.8 MHz (code 0) to 332 MHz
   (code 255), monotonic, 2 MHz/code at the bottom and compressing to 63 %
   of that line at the top, for reasons the README explains. `code[7]` presents 1.3 pF; the Liberty says so.
 - `clk_out` has no timing arc: it is a clock source, `create_clock` it.
@@ -120,6 +129,12 @@ the short version:
   LVS-checked against the GDS by `make -C analog lvs-sch`. Renders in
   `docs/sch_*.png`.
 - Density is not checked at block level; the tile's signoff does that.
+- `make -C analog verify` runs the verification suite (`analog/verify/`):
+  every block on its xschem sheet and then the whole netlist, over the 45
+  PVT points, mismatch and process Monte Carlo, and `.noise`. Strategy in
+  `docs/analog_verification.md`, generated results in
+  `docs/analog_verification_results.md`. Layout strategy and concerns in
+  `docs/analog_layout_notes.md`.
 
 Things learned building it:
 
@@ -143,18 +158,45 @@ Things learned building it:
 - **Device names in the generated netlist must be unique**: ngspice bails
   on duplicates with "device already exists"; KLayout LVS silently does not
   care.
+- **ngspice `.noise` needs `ac 1` on its input source** or it aborts with
+  "no AC value"; its `onoise_total` is the rms voltage (V), not V^2; and
+  `meas ... deriv` is "currently not supported": take a slope from two
+  threshold crossings instead.
+- **One `.dc` can sweep all 256 codes**: eight B-sources turn the swept
+  voltage into the code bits with `floor()` (`verify/common.py`).
+
+Things learned integrating it:
+
+- **Git LFS breaks the shuttle build.** Tiny Tapeout's action checks out
+  without LFS; the macro GDS arrived as a pointer file and Magic failed
+  with "Error while reading cell (UNNAMED)". Binaries are plain blobs now.
+- **The ring clocks reach the 16-bit window counter through tap 0.** With
+  clocks only at the ring sources, STA timed measure_core at the raw
+  11-stage ring rate and failed by 1.5 ns. Named `(* keep *)` buffers in
+  ring_mux and ring_divider give the SDC pins to put the selected and the
+  divided clock on; the divided one is constrained to 250 MHz, which is
+  the instrument's usage rule (fast rings through tap >= 1).
+- **A PDN strap clipped by the macro edge gets no via** (PDN-0110). Place
+  the macro so its edges clear the TopMetal1 straps (16.48 + 38.87n um for
+  VPWR, 6.2 um further for VGND, 2.2 um wide).
+- **`flow/run.sh` gives the container a HOME under analog/out**; the
+  image's login shell needs a `.bashrc` there or exits with code 2 before
+  running anything.
 
 ## Tiny Tapeout flow
 
-Unchanged from the template. `make tools` clones `tt/` and builds the
-venv; `make harden`, `make precheck`, `make cocotb`. `main`'s CLAUDE.md
-has the full local-hardening story (LibreLane 3.0.5 in the venv, not the
-container's dev build; PDK at `~/pdk`). Push → CI builds → submit the repo
-URL at app.tinytapeout.com before the deadline.
+`make tools` clones `tt/` and builds the venv; `make harden` (about three
+minutes), `make precheck`, `make cocotb`. `main`'s CLAUDE.md has the full
+local-hardening story (LibreLane 3.0.5 in the venv, not the container's
+dev build; PDK at `~/pdk`). Push → CI builds (gds, precheck, gl_test,
+viewer, test, docs) → submit the repo URL at app.tinytapeout.com before the
+deadline. The only things `src/config.json` adds to the template are the
+macro block and the SDC files; the SDC sources LibreLane's base.sdc.
 
 ## Conventions
 
-- `docs/*.png` and `*.gds` go through Git LFS (`.gitattributes`).
+- `docs/*.png` and `*.gds` are plain git objects, deliberately not LFS
+  (`.gitattributes` says why).
 - `tt/`, `venv/`, `build/`, `runs/`, `tt_submission/` are not committed.
 - Cell stand-in delays in `sim/sg13g2_cells_sim.v` and the expected
   periods in `sim/tb_rings.v` must agree; both say so.
