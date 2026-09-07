@@ -125,7 +125,7 @@ module tb_top;
     if (result !== first_result) begin $display("  FAIL: shadow changed"); errors = errors + 1; end
     wait_done;
 
-    // Ring 7 at code 0 is 3.8 MHz: 200 periods at tap 3 take 421 us, the
+    // Ring 7 at code 0 is 2.0 MHz: 200 periods at tap 3 take 800 us, the
     // timeout is 2000 reference cycles = 40 us. Must report, not hang.
     $display("--- 7. Slow code times out through the pins");
     measure(3'd7, 8'd0, 3'd3, 16'd200, 16'd2000);

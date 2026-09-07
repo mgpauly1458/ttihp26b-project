@@ -16,8 +16,10 @@
 //
 // Interface (the same as every other ring in src/rings/)
 //   code    [7:0]  binary weighted, bit 7 widest. Higher code = more
-//                  current = higher frequency. Simulated (typical corner,
-//                  27 C): 3.8 MHz at code 0, 5.8 MHz at 1, 332 MHz at 255.
+//                  current = higher frequency. Simulated post-layout
+//                  (kpex parasitics, typical corner, 27 C): 2.0 MHz at
+//                  code 0, 18 MHz at 16, 164 MHz at 255; the pre-layout
+//                  netlist runs twice as fast (analog/README.md).
 //                  No dead zone: the two always-on units keep it running at
 //                  code 0, so a dead ring is distinguishable from code 0.
 //                  The input capacitance doubles per bit (code[7] is over a
@@ -55,8 +57,8 @@ module tt_analog_ring (
 
 `ifdef SIM
   ring_model #(
-      .F_MIN_HZ  (3.8e6),
-      .F_MAX_HZ  (332.0e6),
+      .F_MIN_HZ  (2.0e6),
+      .F_MAX_HZ  (164.0e6),
       .DEAD_CODE (0)
   ) u_model (
       .code    (code),

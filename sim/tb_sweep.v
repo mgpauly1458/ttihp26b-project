@@ -47,8 +47,8 @@ module tb_sweep;
 
   // Divider tap used for each ring. Rings 0-4 and 6 sit at or below
   // ~450 MHz; ring 5 (11 stages) is the fast one. Ring 7, the analog macro,
-  // spans 3.8 MHz to 332 MHz: tap 1 keeps code 0 inside the timeout
-  // (200 x 2 / 3.8 MHz = 105 us) and still gives 60 counts at code 255.
+  // spans 2.0 MHz to 164 MHz (post-layout): tap 1 keeps code 0 inside the
+  // timeout (200 x 2 / 2.0 MHz = 200 us) and still gives 122 counts at 255.
   function [2:0] tap_for_ring;
     input [2:0] ring;
     case (ring)

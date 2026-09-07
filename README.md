@@ -16,7 +16,8 @@ silicon. Slot 7 is the hand-drawn analog block: a current-starved ring
 oscillator with an 8-bit current DAC, built in `analog/` and imported into
 the tile as a hard macro. The tile hardens clean (STA, DRC, LVS, antenna),
 passes Tiny Tapeout's precheck, and the analog block has been simulated over
-process corners, Monte Carlo and noise (see the two analog documents below).
+process corners, Monte Carlo and noise, pre and post layout, and with the
+tile's supply and crosstalk around it (see the two analog documents below).
 
 - [docs/info.md](docs/info.md) — what it is, how to use it (the project page)
 - [docs/registers.md](docs/registers.md) — register map, the formula, settings

@@ -13,7 +13,7 @@ interface (`code[7:0]`, `enable`, `clk_out`), including the analog macro.
 | 4 | `ring_21_hd` | 21 | `nand2_2` + 20 × `inv_8` | ignored | drive strength vs. frequency, tempco, supply pushing |
 | 5 | `ring_11_min` | 11 | `nand2_1` + 10 × `inv_1` | ignored | frequency scales with stage count as predicted (expect ≈ 21/11 × slot 0) |
 | 6 | `ring_tap` | 5..19 | `nand2_1` + 18 × `inv_1` + 2 × `mux4_1` + `mux2_1` | **bits [2:0]** select the feedback tap; 0 = 19 stages (slowest), 7 = 5 stages (fastest); bits [7:3] ignored | coarse cell-level trim: monotonicity and step size |
-| 7 | `tt_analog_ring` | 11 | hand-drawn hard macro (`analog/`) | **all 8 bits**, binary weighted current DAC; no dead zone, 3.8 MHz at code 0 | the headline ring, see `analog/README.md` |
+| 7 | `tt_analog_ring` | 11 | hand-drawn hard macro (`analog/`) | **all 8 bits**, binary weighted current DAC; no dead zone, 2 MHz at code 0 and 164 MHz at 255 post-layout | the headline ring, see `analog/README.md` |
 
 Every ring's output goes through a `buf_1` so the mux never loads the loop
 node directly.

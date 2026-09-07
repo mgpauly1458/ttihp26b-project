@@ -31,10 +31,10 @@ in slot 7 a hand-drawn analog block: an 11-stage current-starved ring whose
 current comes from an 8-bit binary-weighted array of 255 long-channel
 transistors switched directly by the trim code, plus two always-on units
 so code 0 still runs. It is a hard macro placed inside the digital tile;
-simulated it runs from 3.8 MHz at code 0 to 332 MHz at code 255 at the
-typical corner, monotonically, and spans roughly a factor of three over
-process, supply and temperature. One 8-bit trim code is broadcast to all
-eight rings.
+simulated with its extracted parasitics it runs from 2 MHz at code 0 to
+164 MHz at code 255 at the typical corner, monotonically, and spans
+roughly a factor of three over process, supply and temperature. One 8-bit
+trim code is broadcast to all eight rings.
 
 ## How to test
 
@@ -57,8 +57,8 @@ Interface: `ui_in[2:0]` is a write address, `ui_in[3]` a write strobe,
 Two rules of use. The divided ring (after `TAP_SEL`) must stay below
 250 MHz, which is what the window logic is timed for: `TAP_SEL` = 3 is
 safe for every ring at every corner; 2 is enough below 1 GHz. And the analog
-ring (slot 7) at low codes is slow: at code 0 it runs about 3.8 MHz, so
-200 periods through tap 3 take 420 us, longer than a 16000-cycle timeout
+ring (slot 7) at low codes is slow: at code 0 it runs about 2 MHz, so
+200 periods through tap 3 take 800 us, longer than a 16000-cycle timeout
 at 50 MHz; use tap 0 or 1 for low codes, or raise `TIMEOUT` (up to 65535
 cycles, 1.3 ms). Change the code only between measurements.
 

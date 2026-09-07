@@ -12,7 +12,8 @@ that a dead code times out rather than hangs.
 
 The rings are sim/ring_model.v instances here (compiled in by -DSIM), so
 the "right answer" is known exactly: ring 7, the analog macro's behavioural
-model, runs at 332 MHz at code 255 and 3.8 MHz at code 0.
+model, runs at 164 MHz at code 255 and 2.0 MHz at code 0 (its post-layout
+simulation).
 
 Gate level (GATES=yes) runs the same tests on the hardened netlist. There
 the seven standard-cell rings are real cells with zero delay, and a
@@ -33,7 +34,7 @@ ST_DONE, ST_BUSY, ST_TIMEOUT, ST_IGNORED = 1, 2, 4, 8
 
 T_REF_NS = 20          # 50 MHz, as declared in info.yaml
 F_REF = 1e9 / T_REF_NS
-F_RING7_MAX = 332e6    # src/rings/tt_analog_ring.v, F_MAX_HZ at code 255
+F_RING7_MAX = 164e6    # src/rings/tt_analog_ring.v, F_MAX_HZ at code 255
 
 
 def ui(addr=0, we=0, rsel=0):
@@ -113,7 +114,7 @@ async def test_id(dut):
 
 @cocotb.test()
 async def test_one_measurement(dut):
-    """Ring 7 at code 255 is 332 MHz in the model; tap 3, N=200 -> count 241 +/-1."""
+    """Ring 7 at code 255 is 164 MHz in the model; tap 3, N=200 -> count 488 +/-1."""
     await start(dut)
     status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
     assert not (status & ST_TIMEOUT), "unexpected timeout"
@@ -124,7 +125,7 @@ async def test_one_measurement(dut):
 
 @cocotb.test()
 async def test_slow_code_times_out(dut):
-    """Code 0 runs at 3.8 MHz: 200 periods at tap 3 take 421 us, the timeout
+    """Code 0 runs at 2.0 MHz: 200 periods at tap 3 take 800 us, the timeout
     is 40 us. timeout_error, not a hang, and the instrument recovers."""
     await start(dut)
     status, _ = await measure(dut, ring=7, code=0, tap=3, n=200, timeout=2000)
