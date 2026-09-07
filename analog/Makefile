@@ -23,6 +23,8 @@ LEF     := macro/$(MACRO).lef
 LIB     := lib/$(MACRO).lib
 SIM_NL  := spice/$(MACRO).spice
 LVS_NL  := spice/$(MACRO).lvs.spice
+PEX_RAW := out/pex/$(MACRO)_pex.spice
+PEX_SIM := out/pex/$(MACRO).pex.spice
 SWEEP   := out/sweep.csv
 DRC_OK  := out/drc/.passed
 LVS_OK  := out/lvs/.passed
@@ -32,7 +34,7 @@ LVS_OK  := out/lvs/.passed
         sch sch-png netlist-sch lvs-sch xschem klayout shell clean \
         verify verify-blocks verify-dac verify-bias verify-stage verify-nand \
         verify-buffer verify-ring verify-report verify-env verify-env-post \
-        pex sim-post verify-ring-post lib-post \
+        pex sim-post verify-ring-post \
         glb gds3d-tech d25 view3d
 
 help:
@@ -45,7 +47,7 @@ help:
 	@echo '  make lvs-diff     list what did not match in the last LVS run'
 	@echo '  make sim          ngspice: frequency and current vs. code -> $(SWEEP)'
 	@echo '  make plot         $(SWEEP) -> ../docs/analog_ring_sweep.png'
-	@echo '  make lib          ngspice characterisation -> $(LIB)'
+	@echo '  make lib          ngspice characterisation of the POST-LAYOUT netlist -> $(LIB) (runs pex)'
 	@echo '  make png          layout figures -> ../docs/'
 	@echo
 	@echo '  make sch          xschem/make_sch.py -> xschem/*.sch, *.sym  (the schematic)'
@@ -59,7 +61,6 @@ help:
 	@echo '  make pex          kpex parasitics of $(MACRO) -> $(PEX_SIM)'
 	@echo '  make sim-post     parasitics per block + pre/post-layout side by side -> ../docs/analog_ring_sim_post.png'
 	@echo '  make verify-ring-post  the whole-block verification on the extracted netlist'
-	@echo '  make lib-post     re-characterise the Liberty on the extracted netlist (the shipped one)'
 	@echo
 	@echo '  make macro        gds lib drc lvs      -- ready for LibreLane?'
 	@echo '  make all          macro sim plot png'
@@ -163,9 +164,12 @@ plot: $(SWEEP) char/plot_sweep.py
 	$(RUN) python3 char/plot_sweep.py $(SWEEP) ../docs/analog_ring_sweep.png
 
 # --------------------------------------------------------- characterisation
+# The shipped Liberty is characterised on the POST-LAYOUT netlist: the code
+# pins' capacitance includes their buses (16..90 % more than the gates alone)
+# and clk_out's edges include its wire. `make lib` therefore runs kpex first.
 lib: $(LIB)
-$(LIB): $(SIM_NL) char/characterize.py
-	$(RUN) python3 char/characterize.py
+$(LIB): $(PEX_SIM) char/characterize.py
+	$(RUN) python3 char/characterize.py --netlist $(PEX_SIM) --out out/char_post
 
 # ------------------------------------------------------------ verification
 # Corners, Monte Carlo and noise, block by block and then the whole macro.
@@ -201,9 +205,6 @@ verify-env-post: $(PEX_SIM)
 # kpex (2.5D) extracts the parasitic capacitances of the flat macro against
 # the LVS netlist; build_sim_post.py rewrites its output so ngspice can run
 # it in the pre-layout netlist's place (same subckt name and ports).
-PEX_RAW := out/pex/$(MACRO)_pex.spice
-PEX_SIM := out/pex/$(MACRO).pex.spice
-
 pex: $(PEX_SIM)
 $(PEX_RAW): $(GDS) $(LVS_NL)
 	@rm -rf out/pex && mkdir -p out/pex
@@ -224,10 +225,6 @@ sim-post: $(PEX_SIM)
 verify-ring-post: $(PEX_SIM)
 	$(RUN) python3 verify/ring.py --netlist $(PEX_SIM) --tag ring_post --fscale 0.5 --jobs $(VERIFY_JOBS)
 
-# The shipped Liberty is characterised on the post-layout netlist: the code
-# pins' capacitance includes the buses, clk_out's edges include its wire.
-lib-post: $(PEX_SIM) char/characterize.py
-	$(RUN) python3 char/characterize.py --netlist $(PEX_SIM) --out out/char_post
 
 # --------------------------------------------------------------- pipelines
 macro: gds lib drc lvs
