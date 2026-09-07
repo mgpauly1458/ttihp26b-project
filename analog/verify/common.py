@@ -35,6 +35,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "out", "verify")
 DOCS = os.path.join(os.path.dirname(ROOT), "docs")
+# One thread per ngspice process: the parallelism is across decks, and the
+# container's default of 8 threads each oversubscribes the machine eightfold.
+# A .spiceinit in the run directory replaces the container's, so it repeats
+# what that one does: the PDK's OSDI models and the HSPICE-compatibility
+# switch the PDK's netlists rely on.
+SPICEINIT = """set num_threads=1
+set ngbehavior=hsa
+set ng_nomodcheck
+set enable_noisy_r
+osdi /foss/pdks/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+osdi /foss/pdks/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+osdi /foss/pdks/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+"""
 MODELS = os.path.join(os.environ.get("PDK_ROOT", "/foss/pdks"),
                       os.environ.get("PDK", "ihp-sg13g2"),
                       "libs.tech/ngspice/models/cornerMOSlv.lib")
@@ -99,8 +112,8 @@ def dut(mismatch=False):
     decks rather than editing the LVS reference."""
     if not mismatch:
         return f".include {DUT_NETLIST}\n"
-    path = os.path.join(OUT, "tt_analog_ring.mm.spice")
-    if not os.path.exists(path):
+    path = os.path.join(OUT, os.path.basename(DUT_NETLIST).replace(".spice", ".mm.spice"))
+    if not os.path.exists(path) or os.path.getmtime(path) < os.path.getmtime(DUT_NETLIST):
         os.makedirs(OUT, exist_ok=True)
         with open(DUT_NETLIST) as fh, open(path, "w") as out:
             for line in fh:
@@ -149,6 +162,11 @@ def run_decks(decks, jobs=None, tag=""):
             return name, (open(logpath).read(), d)
         with open(path, "w") as fh:
             fh.write(text)
+        # the container's spinit sets num_threads=8; one thread per deck, the
+        # parallelism is across decks (a .spiceinit in the cwd overrides spinit)
+        with open(os.path.join(d, ".spiceinit"), "w") as fh:
+            # a local .spiceinit replaces $HOME/.spiceinit, so repeat the PDK settings it carries
+            fh.write(SPICEINIT)
         p = subprocess.run(["ngspice", "-b", "deck.spice"], capture_output=True, text=True, cwd=d)
         log = p.stdout + p.stderr
         with open(logpath, "w") as fh:

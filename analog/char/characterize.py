@@ -32,6 +32,19 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "out", "char")
 NETLIST = os.path.join(ROOT, "spice", "tt_analog_ring.spice")
 LIB = os.path.join(ROOT, "lib", "tt_analog_ring.lib")
+# One thread per ngspice process: the parallelism is across decks, and the
+# container's default of 8 threads each oversubscribes the machine eightfold.
+# A .spiceinit in the run directory replaces the container's, so it repeats
+# what that one does: the PDK's OSDI models and the HSPICE-compatibility
+# switch the PDK's netlists rely on.
+SPICEINIT = """set num_threads=1
+set ngbehavior=hsa
+set ng_nomodcheck
+set enable_noisy_r
+osdi /foss/pdks/ihp-sg13g2/libs.tech/ngspice/osdi/psp103.osdi
+osdi /foss/pdks/ihp-sg13g2/libs.tech/ngspice/osdi/psp103_nqs.osdi
+osdi /foss/pdks/ihp-sg13g2/libs.tech/ngspice/osdi/r3_cmc.osdi
+"""
 MODELS = os.path.join(os.environ.get("PDK_ROOT", "/foss/pdks"),
                       os.environ.get("PDK", "ihp-sg13g2"),
                       "libs.tech/ngspice/models/cornerMOSlv.lib")
@@ -98,6 +111,8 @@ def run(name, text):
     path = os.path.join(OUT, name + ".spice")
     with open(path, "w") as fh:
         fh.write(text)
+    with open(os.path.join(OUT, ".spiceinit"), "w") as fh:
+        fh.write(SPICEINIT)   # one thread per deck (the pool is the parallelism), plus the container spiceinit settings this file replaces
     p = subprocess.run(["ngspice", "-b", path], capture_output=True, text=True, cwd=OUT)
     return p.stdout + p.stderr
 
@@ -116,6 +131,14 @@ def lef_size():
 
 
 def main():
+    global NETLIST, LIB, OUT
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--netlist", default=NETLIST, help="netlist to characterise (default: the pre-layout one; give the kpex post-layout netlist for the shipped Liberty)")
+    ap.add_argument("--lib", default=LIB)
+    ap.add_argument("--out", default=OUT, help="work directory")
+    a = ap.parse_args()
+    NETLIST, LIB, OUT = os.path.abspath(a.netlist), os.path.abspath(a.lib), os.path.abspath(a.out)
     with ThreadPoolExecutor(8) as ex:
         cap_logs = list(ex.map(lambda p: run("cin_" + re.sub(r"\W", "", p), cap_deck(p)), INPUTS))
         out_logs = list(ex.map(lambda l: run(f"out_{l}", out_deck(l)), LOADS))

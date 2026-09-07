@@ -170,6 +170,50 @@ Liberty's `max_capacitance`), all 45 points: high and low levels reached,
   means are read from the edge times. The same run without the source gives
   the simulator's numerical floor, reported beside it.
 
+### Post-layout (`make pex`, `make sim-post`, `make verify-ring-post`)
+
+kpex (2.5D) extracts the parasitic capacitances of the flat macro against
+its LVS netlist; `layout/build_sim_post.py` rewrites the result so ngspice
+can run it in the pre-layout netlist's place (same subcircuit, same ports;
+the labelled internal nets keep their names). Then:
+
+- **Attribution** (`verify/pex.py`): the capacitors sorted by net and by
+  block - DAC and code buses, bias nodes, ring stage outputs, enable,
+  output buffer - beside the device capacitance each net already carries.
+  A flat layout has no block cells to extract one by one; its nets are
+  labelled, so a block is a group of nets and gets its own number.
+- **The same circuit twice**: the macro pre and post layout at typical,
+  codes 0, 16, 128, 255, with the block-level quantities read off the
+  running ring's internal nodes: every stage's delay, the NAND's, the
+  buffer's, the ripple the ring induces on `vbp` and `vbn`, and the RC
+  settling of a code bus driven through 500 ohm.
+- **The whole-block run again** on the extracted netlist: all 45 PVT
+  points, Monte Carlo and noise, exactly as pre-layout.
+- **The environment run again** (section below) on the extracted netlist.
+- **The shipped Liberty** (`make lib-post`) is characterised on the
+  extracted netlist, so the code pins' capacitance includes their buses.
+
+kpex 2.5D extracts capacitance only. Metal resistance (the DAC's 0.3 um
+Metal1 bars carrying tens of microamps, sub-millivolt drops) is argued in
+`analog_layout_notes.md` rather than simulated.
+
+### Environment (`make verify-env`, `make verify-env-post`)
+
+The tile around the macro, built as sources (`verify/environment.py`):
+50 MHz square ripple of 10, 30 and 100 mV peak-to-peak on VPWR; 10 mV rms
+broadband random noise on VPWR; a 50 mV supply step mid-run; 30 mV
+peak-to-peak ground bounce; a full-swing 50 MHz aggressor coupled through
+20 fF onto `code[0]`, `code[7]` and `enable` (the victims driven through
+500 ohm, as the tile's buffers would) and through 30 fF onto `clk_out`;
+and a 5 ns `enable` edge. Each case runs 300 periods at codes 16 and 255
+against a quiet reference, and reports the mean frequency shift (what the
+counter reads), the period jitter, the jitter of 50-period means, and for
+the enable and output cases whether the stopped ring stays stopped and
+whether extra edges appear at the divider's threshold. The amplitudes are
+worst-case for a 1.2 V digital tile on a shared supply; the results are
+bounds, and the supply-pushing number from the corner run says how to
+convert any measured shift back into a supply excursion.
+
 ## 4. What is approximate, and what is not covered
 
 - **Noise in transient is injected, not intrinsic.** ngspice has no device
@@ -186,12 +230,15 @@ Liberty's `max_capacitance`), all 45 points: high and low levels reached,
   small DAC bits) is not in the PDK's models and therefore not in the Monte
   Carlo. The random DNL results carry margin for a systematic component of
   the same size; see `analog_layout_notes.md`, section 4.
-- **No parasitic extraction.** Wire capacitance on the stage nodes will
-  shift the frequency by some percent; the instrument calibrates the map on
-  the bench.
-- **Supply noise** is characterised as static pushing (df/dVDD), not as
-  injected supply ripple. The tile shares one supply with the digital
-  logic; the pushing number is what turns an observed shift into a supply
+- **Parasitic extraction is capacitance only** (kpex 2.5D), from a
+  2.5D model of the BEOL stack, not silicon-correlated. It changes the
+  answer a lot for this block (section 5): the ring's wiring is comparable
+  to its minimum-size devices. Resistance is not extracted.
+- **The environment model is sources, not the tile.** Ripple, bounce and
+  crosstalk are injected at chosen amplitudes; nothing here simulates the
+  digital netlist's actual current profile or the real routing next to the
+  macro's pins. The amplitudes are chosen high, and the pushing number from
+  the corner run turns any measured shift into an equivalent supply
   excursion.
 - **The Liberty file** is characterised at the typical corner only. The
   macro has no timing arc (clk_out is a clock source), and its input

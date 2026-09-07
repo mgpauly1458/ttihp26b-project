@@ -167,6 +167,23 @@ percent at the codes that matter (`analog_verification_results.md`, bias
 chain). Unequal stage currents change the duty cycle slightly and the
 frequency to second order; nothing depends on the ratio being exactly 48.
 
+**Concern: the wiring is as big as the devices.** The stage inverters are
+minimum-length 0.5 um and 0.3 um devices; each stage output carries about
+1 fF of gate and drain and, extracted, another 1.7 fF of wiring: the output
+strap, its Metal1 jog across the row gap, and coupling to the neighbouring
+straps and to the `vbp`/`vbn`/`enable` lines it passes under. Post-layout
+the ring runs at about half its pre-layout frequency (164 MHz against
+332 MHz at code 255, typical; `analog_verification.md`, post-layout
+section). *Assessment:* nothing depends on the absolute scale - the tile
+measures whatever the ring does, monotonicity and the noise picture are
+unchanged, and the slower ring is if anything easier on the divider - but
+the pre-layout numbers in the earlier notes are optimistic by a factor of
+two, and the shipped Liberty is now characterised on the extracted netlist.
+*Mitigation next time:* widen the stage inverters two to three times (the
+starve devices set the current, so the frequency at a given code hardly
+changes with inverter width once the wiring dominates), and shorten the
+output straps by moving the jog slot next to the NMOS strip.
+
 **Concern: flicker noise of the small bias devices.** MND and MPM are single
 0.5 um and 1 um fingers of L = 0.5 um. Their flicker noise appears directly
 on `vbn`: the verification finds about 110-125 uV rms of slow (1 kHz-1 MHz)

@@ -55,6 +55,8 @@ def dut_exposed(mismatch=False):
     top-level source can touch the bias node (for the noise injection)."""
     src = C.dut(mismatch).split()[1]
     dst = os.path.join(C.OUT, os.path.basename(src).replace(".spice", ".exposed.spice"))
+    if os.path.exists(dst) and os.path.getmtime(dst) < os.path.getmtime(src):
+        os.remove(dst)
     if not os.path.exists(dst):
         with open(src) as fh, open(dst, "w") as out:
             for line in fh:
@@ -138,17 +140,27 @@ def main():
     ap.add_argument("--skip-corners", action="store_true")
     ap.add_argument("--skip-mc", action="store_true")
     ap.add_argument("--skip-noise", action="store_true")
+    ap.add_argument("--netlist", default=None, help="simulate this netlist instead of spice/tt_analog_ring.spice (e.g. the kpex post-layout one)")
+    ap.add_argument("--tag", default="ring", help="name of the output files and run directories")
+    ap.add_argument("--pvt", default="all", choices=["all", "signoff"], help="all 45 PVT points or the 3 signoff corners")
+    ap.add_argument("--fscale", type=float, default=1.0, help="scale the nominal-frequency table used to size the transients (post-layout is slower)")
     a = ap.parse_args()
+    if a.fscale != 1.0:
+        C.F_NOM = {k: v * a.fscale for k, v in C.F_NOM.items()}
     codes = [int(c) for c in a.codes.split(",")]
+    if a.netlist:
+        C.DUT_NETLIST = os.path.abspath(a.netlist)
+    pvt = C.PVT if a.pvt == "all" else C.SIGNOFF
+    tag = a.tag
     md = []
 
     # ---- 1. corners ---------------------------------------------------------------
     if not a.skip_corners:
-        decks = {f"{C.pvt_name(c, t, v)}_code{k}": deck(C.corner(c, t), v, k) for c, t, v in C.PVT for k in codes}
-        res = C.run_decks(decks, a.jobs, tag="ring")
+        decks = {f"{C.pvt_name(c, t, v)}_code{k}": deck(C.corner(c, t), v, k) for c, t, v in pvt for k in codes}
+        res = C.run_decks(decks, a.jobs, tag=tag)
         rows = []
         table = {}
-        for c, t, v in C.PVT:
+        for c, t, v in pvt:
             n = C.pvt_name(c, t, v)
             for k in codes:
                 log, d = res[f"{n}_code{k}"]
@@ -160,7 +172,7 @@ def main():
                              m["clk_dis"], m["vhold"], m["tstart"], m["vmax"], m["vmin"]])
         hdr = ["PVT", "corner", "temp", "vdd", "code", "f_hz", "edges", "idd_run_A", "idd_dis_A", "vbp", "vbn",
                "clk_dis_V", "clk_hold_min_V", "tstart_s", "vmax", "vmin"]
-        C.write_csv(os.path.join(C.OUT, "ring_corners.csv"), hdr, rows)
+        C.write_csv(os.path.join(C.OUT, f"{tag}_corners.csv"), hdr, rows)
 
         # stage.py prediction at typical, if available
         pred = {}
@@ -173,8 +185,8 @@ def main():
         md.append("The macro's own netlist (the LVS reference), clk_out into 15 fF, released from enable=0 and "
                   "measured over the last 16 of 40 nominal periods.\n\n**Signoff corners:**\n")
         sig = []
-        for pvt in C.SIGNOFF:
-            n = C.pvt_name(*pvt)
+        for sp in C.SIGNOFF:
+            n = C.pvt_name(*sp)
             for k in codes:
                 m = table.get((n, k))
                 if m:
@@ -182,7 +194,7 @@ def main():
                                 m["tstart"] * 1e9 if m["tstart"] else None, pred.get((n, k))])
         md.append(C.table(["PVT", "code", "f MHz", "Idd running uA", "Idd disabled uA", "vbp V", "vbn V", "start-up ns", "stage.py predicts MHz"],
                           sig, [None, "%d", "%.2f", "%.1f", "%.1f", "%.3f", "%.3f", "%.1f", "%.1f"]))
-        md.append("\n**All 45 PVT points**, frequency extremes per code, and monotonicity:\n")
+        md.append(f"\n**All {len(pvt)} PVT points**, frequency extremes per code, and monotonicity:\n")
         ext = []
         for k in codes:
             rk = [(n, m) for (n, kk), m in table.items() if kk == k]
@@ -190,12 +202,12 @@ def main():
             ext.append([k, lo[1]["f"] / 1e6, lo[0], hi[1]["f"] / 1e6, hi[0], hi[1]["f"] / lo[1]["f"]])
         md.append(C.table(["code", "slowest MHz", "at", "fastest MHz", "at", "fast/slow"], ext, ["%d", "%.2f", None, "%.2f", None, "%.2f"]))
         nonmono = []
-        for c, t, v in C.PVT:
+        for c, t, v in pvt:
             n = C.pvt_name(c, t, v)
             fs = [table[(n, k)]["f"] for k in codes if (n, k) in table]
             if any(b <= a_ for a_, b in zip(fs, fs[1:])):
                 nonmono.append(n)
-        md.append(f"\nf(code) monotonic over the codes simulated at {45 - len(nonmono)} of 45 PVT points"
+        md.append(f"\nf(code) monotonic over the codes simulated at {len(pvt) - len(nonmono)} of {len(pvt)} PVT points"
                   + (f"; NOT at {', '.join(nonmono)}" if nonmono else "") + ".\n")
         # stopped ring, start-up, pushing
         held = [m for m in table.values()]
@@ -225,20 +237,24 @@ def main():
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+            def curve(n, style, label):
+                ks = [k for k in codes if (n, k) in table]
+                if ks:
+                    ax[0].plot(ks, [table[(n, k)]["f"] / 1e6 for k in ks], style, label=label)
             for cc in C.CORNERS:
-                n = C.pvt_name(cc, 27, 1.2)
-                ax[0].plot(codes, [table[(n, k)]["f"] / 1e6 for k in codes if (n, k) in table], "o-", label=cc[4:])
+                curve(C.pvt_name(cc, 27, 1.2), "o-", cc[4:])
             for t, v, ls in [(125, 1.08, "--"), (-40, 1.32, ":")]:
-                n = C.pvt_name("mos_tt", t, v)
-                ax[0].plot(codes, [table[(n, k)]["f"] / 1e6 for k in codes if (n, k) in table], "k" + ls + "o", label=f"tt {t} C {v} V")
+                curve(C.pvt_name("mos_tt", t, v), "k" + ls + "o", f"tt {t} C {v} V")
+            for sp in C.SIGNOFF[1:]:
+                curve(C.pvt_name(*sp), "^-", C.pvt_name(*sp))
             ax[0].set_xlabel("code"); ax[0].set_ylabel("f / MHz"); ax[0].grid(alpha=.3); ax[0].legend(fontsize=8)
             ax[0].set_title("frequency vs code, corners")
             for k in [0, 16, 255]:
-                fs = sorted(table[(C.pvt_name(c, t, v), k)]["f"] / 1e6 for c, t, v in C.PVT if (C.pvt_name(c, t, v), k) in table)
+                fs = sorted(table[(C.pvt_name(c, t, v), k)]["f"] / 1e6 for c, t, v in pvt if (C.pvt_name(c, t, v), k) in table)
                 ax[1].plot(fs, [k] * len(fs), "|", ms=14, label=f"code {k}")
             ax[1].set_xscale("log"); ax[1].set_xlabel("f / MHz over the 45 PVT points"); ax[1].set_ylabel("code")
             ax[1].grid(alpha=.3, which="both"); ax[1].legend(fontsize=8); ax[1].set_title("PVT spread")
-            fig.tight_layout(); fig.savefig(os.path.join(C.DOCS, "verify_ring_corners.png"), dpi=110)
+            fig.tight_layout(); fig.savefig(os.path.join(C.DOCS, f"verify_{tag}_corners.png"), dpi=110)
         except ImportError:
             pass
 
@@ -251,7 +267,7 @@ def main():
         for s in range(a.stat):
             for k in CODES_STAT:
                 decks[f"st{s}_code{k}"] = deck(C.mc("stat", 6000 + s), 1.2, k)
-        res = C.run_decks(decks, a.jobs, tag="ring_mc")
+        res = C.run_decks(decks, a.jobs, tag=f"{tag}_mc")
         mm = {}
         for s in range(a.mc):
             fs = {k: parse(res[f"mm{s}_code{k}"][0], k)["f"] for k in CODES_MM}
@@ -262,9 +278,9 @@ def main():
             fs = {k: parse(res[f"st{s}_code{k}"][0], k)["f"] for k in CODES_STAT}
             if all(fs.values()):
                 st[s] = fs
-        C.write_csv(os.path.join(C.OUT, "ring_mm.csv"), ["sample"] + [f"f{k}" for k in CODES_MM],
+        C.write_csv(os.path.join(C.OUT, f"{tag}_mm.csv"), ["sample"] + [f"f{k}" for k in CODES_MM],
                     [[s] + [fs[k] for k in CODES_MM] for s, fs in mm.items()])
-        C.write_csv(os.path.join(C.OUT, "ring_stat.csv"), ["sample"] + [f"f{k}" for k in CODES_STAT],
+        C.write_csv(os.path.join(C.OUT, f"{tag}_stat.csv"), ["sample"] + [f"f{k}" for k in CODES_STAT],
                     [[s] + [fs[k] for k in CODES_STAT] for s, fs in st.items()])
         if mm:
             md.append(f"\n## Whole block: mismatch Monte Carlo, {len(mm)} samples (mos_tt_mismatch, 27 C, 1.2 V)\n")
@@ -308,7 +324,7 @@ def main():
             if mm:
                 ax[2].hist([fs[0] / 1e6 for fs in mm.values()], bins=20, alpha=.7, label="mismatch")
             ax[2].set_xlabel("f(0) / MHz"); ax[2].legend(); ax[2].set_title("code 0")
-            fig.tight_layout(); fig.savefig(os.path.join(C.DOCS, "verify_ring_mc.png"), dpi=110)
+            fig.tight_layout(); fig.savefig(os.path.join(C.DOCS, f"verify_{tag}_mc.png"), dpi=110)
         except ImportError:
             pass
 
@@ -333,7 +349,7 @@ wrdata sv.txt onoise_spectrum
 .endc
 .end
 """
-        res = C.run_decks(decks, a.jobs, tag="ring_noise")
+        res = C.run_decks(decks, a.jobs, tag=f"{tag}_noise")
         inj = {}
         nrows = []
         for k in CODES_NOISE:
@@ -363,7 +379,7 @@ wrdata sv.txt onoise_spectrum
             n_run = 640
             decks[f"tj_code{k}_noise"] = deck(C.corner(), 1.2, k, expose=True, noise_ina=ina, noise_nt=nt, n_run=n_run, n_meas=600, step_div=600)
             decks[f"tj_code{k}_quiet"] = deck(C.corner(), 1.2, k, expose=True, noise_ina=None, noise_nt=nt, n_run=n_run, n_meas=600, step_div=600)
-        res = C.run_decks(decks, a.jobs, tag="ring_jitter")
+        res = C.run_decks(decks, a.jobs, tag=f"{tag}_jitter")
         jrows = []
         for k in CODES_NOISE:
             for kind in ["quiet", "noise"]:
@@ -392,9 +408,9 @@ wrdata sv.txt onoise_spectrum
                   "by the node's impedance from an `ac` analysis. Flicker noise below 10 MHz is not injected: the "
                   "bias node's own time constant already filters it into slow drift, which a reciprocal count "
                   "averages, and the stage's own thermal jitter is in stage.py.\n")
-        C.write_csv(os.path.join(C.OUT, "ring_jitter.csv"), ["code", "run", "periods", "mean_period_s", "sigma_period_s", "ppm", "sigma_50mean_s", "ppm50"], jrows)
+        C.write_csv(os.path.join(C.OUT, f"{tag}_jitter.csv"), ["code", "run", "periods", "mean_period_s", "sigma_period_s", "ppm", "sigma_50mean_s", "ppm50"], jrows)
 
-    C.write_md("ring", "".join(md))
+    C.write_md(tag, "".join(md))
 
 
 if __name__ == "__main__":

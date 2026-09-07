@@ -13,6 +13,10 @@ RUN     := ./run.sh
 GUI     := ./gui.sh
 PDKTECH := /foss/pdks/ihp-sg13g2/libs.tech/klayout/tech
 
+# CELL/GDS let `make glb` (and the other 3D views) run against either this
+# macro's own GDS or, from the repo root's `make view`, the hardened tile's
+# final GDS -- see the 3D viewing section below.
+CELL    ?= $(MACRO)
 BUILD   := layout/build_$(MACRO).py
 GDS     := macro/$(MACRO).gds
 LEF     := macro/$(MACRO).lef
@@ -27,7 +31,9 @@ LVS_OK  := out/lvs/.passed
 .PHONY: help gds drc drc-density lvs lvs-diff sim plot lib png macro all \
         sch sch-png netlist-sch lvs-sch xschem klayout shell clean \
         verify verify-blocks verify-dac verify-bias verify-stage verify-nand \
-        verify-buffer verify-ring verify-report
+        verify-buffer verify-ring verify-report verify-env verify-env-post \
+        pex sim-post verify-ring-post lib-post \
+        glb gds3d-tech d25 view3d
 
 help:
 	@echo 'Analog block: $(MACRO)'
@@ -48,9 +54,21 @@ help:
 	@echo
 	@echo '  make verify       corners + Monte Carlo + noise, every block then the whole macro'
 	@echo '                    (verify-dac, -bias, -stage, -nand, -buffer, -ring, -report; VERIFY_JOBS=$(VERIFY_JOBS))'
+	@echo '  make verify-env   the tile as noise: supply ripple, ground bounce, crosstalk (verify-env-post: on the extracted netlist)'
+	@echo
+	@echo '  make pex          kpex parasitics of $(MACRO) -> $(PEX_SIM)'
+	@echo '  make sim-post     parasitics per block + pre/post-layout side by side -> ../docs/analog_ring_sim_post.png'
+	@echo '  make verify-ring-post  the whole-block verification on the extracted netlist'
+	@echo '  make lib-post     re-characterise the Liberty on the extracted netlist (the shipped one)'
 	@echo
 	@echo '  make macro        gds lib drc lvs      -- ready for LibreLane?'
 	@echo '  make all          macro sim plot png'
+	@echo
+	@echo '3D views of $(CELL) (repo root: make view, the hardened submission tile)'
+	@echo '  make glb           out/tile_3d.glb, no display needed'
+	@echo '  make d25           KLayout 2.5D viewer      (needs a display)'
+	@echo '  make view3d        GDS3D                    (needs a display)'
+	@echo '  make gds3d-tech    regenerate the GDS3D process file from the PDK'
 	@echo
 	@echo '  make xschem       open the schematic (needs a display)'
 	@echo '  make klayout      open the layout (needs a display)'
@@ -171,11 +189,87 @@ verify-report:
 
 verify: verify-dac verify-bias verify-stage verify-nand verify-buffer verify-ring verify-report
 
+# The tile around the macro, as sources: supply ripple, ground bounce,
+# crosstalk onto the code, enable and output lines (verify/environment.py).
+verify-env: $(SIM_NL)
+	$(RUN) python3 verify/environment.py --jobs $(VERIFY_JOBS)
+
+verify-env-post: $(PEX_SIM)
+	$(RUN) python3 verify/environment.py --netlist $(PEX_SIM) --tag env_post --jobs $(VERIFY_JOBS)
+
+# ------------------------------------------------------------- post-layout
+# kpex (2.5D) extracts the parasitic capacitances of the flat macro against
+# the LVS netlist; build_sim_post.py rewrites its output so ngspice can run
+# it in the pre-layout netlist's place (same subckt name and ports).
+PEX_RAW := out/pex/$(MACRO)_pex.spice
+PEX_SIM := out/pex/$(MACRO).pex.spice
+
+pex: $(PEX_SIM)
+$(PEX_RAW): $(GDS) $(LVS_NL)
+	@rm -rf out/pex && mkdir -p out/pex
+	$(RUN) kpex --pdk ihp-sg13g2 --2.5D --gds /work/analog/$(GDS) \
+	    --schematic /work/analog/$(LVS_NL) --cell $(MACRO) \
+	    --out_dir /work/analog/out/pex --out_spice /work/analog/$(PEX_RAW) --threads 8
+$(PEX_SIM): $(PEX_RAW) layout/build_sim_post.py
+	python3 layout/build_sim_post.py --pex $(PEX_RAW) --out $@
+
+# Where the parasitics are, block by block, and the same circuit simulated
+# pre and post layout side by side -> ../docs/analog_ring_sim_post.png
+sim-post: $(PEX_SIM)
+	$(RUN) python3 verify/pex.py --pex $(PEX_SIM) --jobs $(VERIFY_JOBS)
+
+# The whole-block corner/Monte Carlo/noise run on the post-layout netlist
+# (~1.3 h). --fscale 0.5: the extracted ring is about half as fast, and the
+# transients are sized from the nominal frequency table.
+verify-ring-post: $(PEX_SIM)
+	$(RUN) python3 verify/ring.py --netlist $(PEX_SIM) --tag ring_post --fscale 0.5 --jobs $(VERIFY_JOBS)
+
+# The shipped Liberty is characterised on the post-layout netlist: the code
+# pins' capacitance includes the buses, clk_out's edges include its wire.
+lib-post: $(PEX_SIM) char/characterize.py
+	$(RUN) python3 char/characterize.py --netlist $(PEX_SIM) --out out/char_post
+
 # --------------------------------------------------------------- pipelines
 macro: gds lib drc lvs
 	@echo '=== $(MACRO): GDS, LEF and Liberty ready for LibreLane; DRC clean, LVS matching ==='
 
 all: macro lvs-sch sim plot png sch-png
+
+# ============================================================== 3D viewing
+# Three views of the same stack. GDS3D and KLayout's 2.5D view both need an X
+# display; the glTF export does not, which is why it exists -- reach for it
+# over ssh or when the container cannot get to the display.
+#
+# All three read the same layer heights: KLayout's come from the PDK's
+# libs.tech/klayout/tech/d25/sg13g2_beol.lyd25, and GDS3D's process file is
+# generated from that same file by build_gds3d_tech.py, so the views agree by
+# construction.
+GLB       := out/tile_3d.glb
+GDS3D_TECH:= tech/sg13g2_gds3d.txt
+
+# Always rebuilt, never treated as up to date from mtimes: the output path is
+# the same regardless of which GDS/CELL made it, so a stale glb from a
+# different CELL (e.g. the macro alone vs. the hardened tile) would otherwise
+# look current and `make view` would silently hand back someone else's model.
+glb: $(GDS) layout/build_glb.py $(GDS3D_TECH) | out
+	$(RUN) python3 layout/build_glb.py $(GDS) $(CELL)
+
+# The process file is a tool configuration rather than a build artefact, so it
+# is committed; regenerate it only if the PDK revises a layer height.
+gds3d-tech:
+	$(RUN) python3 layout/build_gds3d_tech.py
+
+# -n loads the PDK *technology*, which is what registers the 2.5D macro; -l
+# would only load the layer properties. The viewer then lives under
+# sg13g2_menu > SG13G2 PDK > BEOL 2.5D Viewer, and wants a selection first.
+d25:
+	$(GUI) klayout -n sg13g2 /work/analog/$(GDS)
+
+view3d: $(GDS3D_TECH)
+	$(GUI) GDS3D -p /work/analog/$(GDS3D_TECH) -i /work/analog/$(GDS) -t $(CELL)
+
+out:
+	mkdir -p out
 
 # ------------------------------------------------------------- interactive
 klayout:

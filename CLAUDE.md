@@ -164,6 +164,20 @@ Things learned building it:
   threshold crossings instead.
 - **One `.dc` can sweep all 256 codes**: eight B-sources turn the swept
   voltage into the code bits with `floor()` (`verify/common.py`).
+- **The container's ngspice runs 8 threads per process** (its spinit), so
+  a 14-wide sweep of small decks is 112 threads and the machine thrashes
+  (load 177 on 20 cores). A `.spiceinit` in the run directory with
+  `set num_threads=1` fixes it, but it *replaces* the container's, so it
+  must also carry `set ngbehavior=hsa` and the PDK's `osdi` lines or the
+  PSP model is "unknown model type psp103va" (`common.SPICEINIT`).
+- **kpex 2.5D writes `M` device lines naming the PDK's subcircuits**, an
+  unwrapped `.SUBCKT` with every labelled net as a port, `$`-named nets
+  and a VSUBS node. `layout/build_sim_post.py` rewrites all of that.
+- **Post-layout, the ring is half as fast.** The stage outputs carry
+  ~1.7 fF of wiring against ~1 fF of minimum-size devices: 164 MHz instead
+  of 332 MHz at code 255. Nothing functional depends on the scale, but
+  every pre-layout frequency in the older notes is 2x optimistic; the
+  Liberty is characterised on the extracted netlist.
 
 Things learned integrating it:
 
