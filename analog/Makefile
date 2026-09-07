@@ -71,6 +71,7 @@ SCH_ALL  := $(wildcard xschem/*.sch) $(wildcard xschem/*.sym) xschem/xschemrc
 .DEFAULT_GOAL := help
 .PHONY: help list netlist netlist-lvs netlist-sim sim plot gds lef lib drc lvs \
         png design macro all xschem klayout shell ci \
+        pex sim-post plot-post \
         glb gds3d-tech d25 view3d clean distclean
 
 # ======================================================================= help
@@ -96,6 +97,9 @@ help:
 	@echo '  make drc           KLayout DRC on $(GDS)'
 	@echo '  make lvs           KLayout LVS, $(GDS) vs $(NETLIST)'
 	@echo '  make lib           ngspice characterisation -> $(LIB)'
+	@echo '  make pex           kpex parasitics on $(MACRO) -> $(PEX_NL)'
+	@echo '  make sim-post      re-run $(CORE_TB) with the extracted parasitics'
+	@echo '  make plot-post     pre vs. post-layout waveforms -> ../docs/'
 	@echo
 	@echo 'Pipelines'
 	@echo '  make design        netlist sim gds drc lvs   -- is the block right?'
@@ -225,6 +229,51 @@ $(LVS_OK): $(GDS) $(NETLIST) | $(CELLDIR)
 	    --netlist=/work/analog/$(NETLIST) --topcell=$(CELL) \
 	    --run_dir=/work/analog/$(CELLDIR)/lvs --disable_tap_extraction'
 	@touch $@
+
+# ============================================================ post-layout
+# Parasitic extraction and a second pass of the same testbench against it.
+#
+# kpex is pointed at CELL, walks down through everything instanced beneath it
+# (inverter_core included), and emits one flattened subckt: the real devices
+# plus the coupling caps it measured. It can only be pointed at a cell that
+# carries net-name labels for its ports -- here that is the macro
+# (tt_analog_inverter), not inverter_core, which has bare unlabelled pads.
+# There is no separate "PEX the core" step: this run already *is* core-level,
+# since nothing outside the two transistors is a device.
+PEX_NL      := out/$(MACRO)_pex.spice
+PEX_DIR     := $(CELLDIR)/pex
+
+pex: $(PEX_NL)
+$(PEX_NL): $(GDS) $(NETLIST) | $(CELLDIR)
+	@rm -rf $(PEX_DIR) && mkdir -p $(PEX_DIR)
+	$(RUN) kpex --pdk ihp-sg13g2 --2.5D \
+	    --gds /work/analog/$(GDS) --schematic /work/analog/$(NETLIST) \
+	    --cell $(MACRO) --out_dir /work/analog/$(PEX_DIR) \
+	    --out_spice /work/analog/$(PEX_NL)
+
+# The ideal testbench (inverter_tb.sch) instantiates the two-transistor
+# `inverter` subckt by name. build_sim_post.py rewrites a copy of its netlist
+# to instead call a wrapper that pulls in the extracted `tt_analog_inverter`
+# subckt through .include -- same stimulus, same .control block, same
+# measurements, only the device model underneath changes. Output files in the
+# .control block get a `_pex` suffix so a post-layout run never overwrites the
+# ideal run's data.
+CORE        ?= inverter
+CORE_TB     ?= $(CORE)_tb
+POST_SUFFIX ?= pex
+SIM_POST_NL := out/$(CORE_TB)_$(POST_SUFFIX).sim.spice
+
+sim-post: $(SIM_POST_NL)
+	$(RUN) bash -lc 'cd /work/analog/out && ngspice -b $(notdir $(SIM_POST_NL))'
+
+$(SIM_POST_NL): out/$(CORE_TB).sim.spice $(PEX_NL) layout/build_sim_post.py | out
+	$(RUN) python3 layout/build_sim_post.py \
+	    --tb out/$(CORE_TB).sim.spice --pex $(PEX_NL) \
+	    --core $(CORE) --pex-cell $(MACRO) --suffix $(POST_SUFFIX) \
+	    --out $@
+
+plot-post: sim-post
+	$(RUN) python3 sim/plot_post.py
 
 # Tiny Tapeout's precheck runs on the hardened tile, not on this block, so it
 # lives in the top-level Makefile: `make -C .. precheck`.

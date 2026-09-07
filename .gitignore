@@ -22,6 +22,11 @@ vivado*.log
 
 # Analog flow scratch
 analog/out/
+analog/drc_run_*/
+analog/lvs_run_*/
+analog/macro/backups/
+analog/simulations/
+*_extracted.cir
 
 # stray container cache (XDG_CACHE_HOME), should live under analog/out/
 /out/

@@ -3,10 +3,11 @@ G {}
 K {}
 V {}
 S {}
+F {}
 E {}
-N -30 0 -90 0 {lab=A}
+N -90 0 -30 0 {lab=A}
 N 50 0 110 0 {lab=Y}
-N 0 -30 0 -80 {lab=VPWR}
+N 0 -80 0 -30 {lab=VPWR}
 N 0 30 0 80 {lab=VGND}
 C {devices/lab_pin.sym} -90 0 0 1 {name=lin lab=A}
 C {devices/lab_pin.sym} 110 0 0 0 {name=lout lab=Y}
@@ -17,4 +18,4 @@ C {devices/opin.sym} -260 -90 0 0 {name=p1 lab=Y}
 C {devices/iopin.sym} -260 -60 0 0 {name=p2 lab=VPWR}
 C {devices/iopin.sym} -260 -30 0 0 {name=p3 lab=VGND}
 C {devices/title.sym} -260 120 0 0 {name=l1 author="Maxwell Pauly"}
-C {inverter.sym} 0 0 0 0 {name=x1}
+C {/work/analog/xschem/inverter.sym} 0 0 0 0 {name=x1}

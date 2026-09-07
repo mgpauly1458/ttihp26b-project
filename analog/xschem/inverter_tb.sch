@@ -3,23 +3,24 @@ G {}
 K {}
 V {}
 S {}
+F {}
 E {}
-N -30 0 -90 0 {lab=A}
+N -90 0 -30 0 {lab=A}
 N 50 0 200 0 {lab=Y}
-N 0 -30 0 -80 {lab=VDD}
+N 0 -80 0 -30 {lab=VDD}
 N 0 30 0 80 {lab=GND}
-N -300 -130 -300 -170 {lab=VDD}
+N -300 -170 -300 -130 {lab=VDD}
 N -300 -70 -300 -40 {lab=GND}
-N -300 30 -300 0 {lab=A}
+N -300 0 -300 30 {lab=A}
 N -300 90 -300 120 {lab=GND}
 N 200 0 200 30 {lab=Y}
 N 200 90 200 120 {lab=GND}
-C {devices/code_shown.sym} -720 -180 0 0 {name=MODELS only_toplevel=true
+C {devices/code_shown.sym} 190 -560 0 0 {name=MODELS only_toplevel=true
 format="tcleval( @value )"
 value="
 .lib $::env(PDK_ROOT)/$::env(PDK)/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
 "}
-C {devices/code_shown.sym} -720 40 0 0 {name=NGSPICE only_toplevel=true
+C {devices/code_shown.sym} 240 -420 0 0 {name=NGSPICE only_toplevel=true
 value="
 .control
 save all
@@ -52,4 +53,4 @@ C {devices/lab_pin.sym} -90 0 0 1 {name=la lab=A}
 C {devices/lab_pin.sym} 130 0 0 0 {name=ly lab=Y}
 C {devices/capa.sym} 200 60 0 0 {name=CL value=10f}
 C {devices/title.sym} -720 200 0 0 {name=l1 author="Maxwell Pauly"}
-C {inverter.sym} 0 0 0 0 {name=x1}
+C {/work/analog/xschem/inverter.sym} 0 0 0 0 {name=x1}

@@ -3,16 +3,18 @@ G {}
 K {}
 V {}
 S {}
+F {}
 E {}
-N 20 -40 20 0 {lab=Y}
+N 20 -20 20 0 {lab=Y}
 N 20 -20 80 -20 {lab=Y}
 N 20 -100 80 -100 {lab=VDD}
 N 20 -70 80 -70 {lab=VDD}
 N 20 30 80 30 {lab=VSS}
 N 20 60 80 60 {lab=VSS}
-N -20 -70 -80 -70 {lab=A}
-N -20 30 -80 30 {lab=A}
+N -80 -70 -20 -70 {lab=A}
+N -80 30 -20 30 {lab=A}
 N -80 -70 -80 30 {lab=A}
+N 20 -40 20 -20 {lab=Y}
 C {devices/lab_pin.sym} 80 -100 0 0 {name=lvdds lab=VDD}
 C {devices/lab_pin.sym} 80 -70 0 0 {name=lvddb lab=VDD}
 C {devices/lab_pin.sym} 80 -20 0 0 {name=ly lab=Y}
