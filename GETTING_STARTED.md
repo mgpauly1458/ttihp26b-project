@@ -18,6 +18,13 @@ The GDS build only happens in CI. If the `gds` workflow badge is green and
 precheck passes, your design is submittable. Nothing on your machine produces a
 chip.
 
+**This checkout also runs steps 4's toolchain locally**, because it contains a
+hand-drawn analog macro and iterating on that through CI would be unbearable.
+`make harden` runs the same LibreLane invocation tt-gds-action runs, and
+`make precheck` runs Tiny Tapeout's own precheck script. CI remains the
+authority; local runs just make the loop minutes instead of hours. See
+`CLAUDE.md`.
+
 ## The pin interface
 
 Every project has exactly this interface — you cannot add ports:
