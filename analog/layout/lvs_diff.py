@@ -23,35 +23,56 @@ status_name = {pya.NetlistCrossReference.Match: "match",
                pya.NetlistCrossReference.Skipped: "skipped"}
 
 
+def name_of(o):
+    """pya exposes some of these as properties and some as methods depending
+    on the build; take whichever answers."""
+    v = getattr(o, "name", None)
+    if isinstance(v, str):
+        return v
+    try:
+        return o().name
+    except Exception:
+        return str(v() if callable(v) else v)
+
+
+def v(x):
+    """call it if this build exposes it as a method"""
+    return x() if callable(x) else x
+
+
 def desc_net(n):
     if n is None:
         return "-"
-    return f"{n.expanded_name()} ({n.pin_count()}p {n.terminal_count()}t)"
+    return f"{n.expanded_name()} ({v(n.pin_count)}p {v(n.terminal_count)}t)"
 
 
 def desc_dev(d):
     if d is None:
         return "-"
     terms = []
-    for t in d.each_terminal():
-        terms.append(f"{t.terminal_def().name}={t.net().expanded_name() if t.net() else '?'}")
-    dc = d.device_class() if callable(d.device_class) else d.device_class
-    p = dc.name
-    w = d.parameter("W") if dc.has_parameter("W") else ""
-    return f"{d.expanded_name()} {p} W={w} [{' '.join(terms)}] @({d.trans.disp.x:.2f},{d.trans.disp.y:.2f})"
+    dc = v(d.device_class)
+    for td in v(dc.terminal_definitions):
+        net = d.net_for_terminal(v(td.id))
+        terms.append(f"{name_of(td)}={net.expanded_name() if net else '?'}")
+    p = name_of(d.device_class)
+    try:
+        w = d.parameter("W")
+    except Exception:
+        w = ""
+    return f"{d.expanded_name()} {p} W={w} [{' '.join(terms)}] @({v(d.trans).disp.x:.2f},{v(d.trans).disp.y:.2f})"
 
 
 for cp in xref.each_circuit_pair():
-    print(f"circuit {cp.first.name if cp.first else '-'} / {cp.second.name if cp.second else '-'}: {status_name.get(cp.status, cp.status)}")
+    print(f"circuit {name_of(v(cp.first)) if v(cp.first) else '-'} / {name_of(v(cp.second)) if v(cp.second) else '-'}: {status_name.get(v(cp.status), v(cp.status))}")
     print("-- nets (layout | schematic)")
     for np_ in xref.each_net_pair(cp):
-        if np_.status != pya.NetlistCrossReference.Match:
-            print(f"   {status_name.get(np_.status, np_.status):9} {desc_net(np_.first):40} | {desc_net(np_.second)}")
+        if v(np_.status) != pya.NetlistCrossReference.Match:
+            print(f"   {status_name.get(v(np_.status), v(np_.status)):9} {desc_net(v(np_.first)):40} | {desc_net(v(np_.second))}")
     print("-- devices (layout | schematic)")
     for dp in xref.each_device_pair(cp):
-        if dp.status != pya.NetlistCrossReference.Match:
-            print(f"   {status_name.get(dp.status, dp.status):9} {desc_dev(dp.first)}\n             | {desc_dev(dp.second)}")
+        if v(dp.status) != pya.NetlistCrossReference.Match:
+            print(f"   {status_name.get(v(dp.status), v(dp.status)):9} {desc_dev(v(dp.first))}\n             | {desc_dev(v(dp.second))}")
     print("-- pins")
     for pp in xref.each_pin_pair(cp):
-        if pp.status != pya.NetlistCrossReference.Match:
-            print(f"   {status_name.get(pp.status, pp.status):9} {pp.first.expanded_name() if pp.first else '-'} | {pp.second.expanded_name() if pp.second else '-'}")
+        if v(pp.status) != pya.NetlistCrossReference.Match:
+            print(f"   {status_name.get(v(pp.status), v(pp.status)):9} {v(pp.first).expanded_name() if v(pp.first) else '-'} | {v(pp.second).expanded_name() if v(pp.second) else '-'}")

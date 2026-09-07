@@ -25,7 +25,7 @@ LVS_OK  := out/lvs/.passed
 
 .DEFAULT_GOAL := help
 .PHONY: help gds drc drc-density lvs lvs-diff sim plot lib png macro all \
-        klayout shell clean
+        sch sch-png netlist-sch lvs-sch xschem klayout shell clean
 
 help:
 	@echo 'Analog block: $(MACRO)'
@@ -40,9 +40,14 @@ help:
 	@echo '  make lib          ngspice characterisation -> $(LIB)'
 	@echo '  make png          layout figures -> ../docs/'
 	@echo
+	@echo '  make sch          xschem/make_sch.py -> xschem/*.sch, *.sym  (the schematic)'
+	@echo '  make sch-png      render every sheet -> ../docs/sch_*.png'
+	@echo '  make lvs-sch      netlist the schematic flat and LVS it against the layout'
+	@echo
 	@echo '  make macro        gds lib drc lvs      -- ready for LibreLane?'
 	@echo '  make all          macro sim plot png'
 	@echo
+	@echo '  make xschem       open the schematic (needs a display)'
 	@echo '  make klayout      open the layout (needs a display)'
 	@echo '  make shell        a prompt inside the container'
 	@echo '  make clean        remove out/'
@@ -58,6 +63,40 @@ $(GDS) $(LEF) $(SIM_NL) $(LVS_NL): $(BUILD)
 
 png: $(GDS) layout/render.py
 	$(RUN) klayout -b -z -r layout/render.py
+
+# --------------------------------------------------------------- schematic
+# The layout generator's netlist is the LVS reference (it cannot drift from
+# the GDS). The xschem sheets are the drawing of the same circuit; lvs-sch
+# proves the drawing matches the layout too.
+SCH     := xschem/tt_analog_ring.sch
+SHEETS  := tt_analog_ring csro_stage csro_nand csro_dac csro_inv
+XSCHEM  := xschem --rcfile /work/analog/xschem/xschemrc
+SCH_NL  := out/tt_analog_ring.sch.lvs.spice
+
+sch: $(SCH)
+$(SCH): xschem/make_sch.py
+	python3 xschem/make_sch.py
+
+netlist-sch: $(SCH_NL)
+$(SCH_NL): $(SCH) xschem/wrap_flat.py
+	$(RUN) bash -lc 'cd /work/analog/xschem && $(XSCHEM) -n -s -q --no_x -f \
+	    --tcl "set lvs_netlist 1; set top_subckt 1" tt_analog_ring.sch -o /work/analog/out'
+	python3 xschem/wrap_flat.py out/tt_analog_ring.spice $@
+
+lvs-sch: $(GDS) $(SCH_NL)
+	@rm -rf out/lvs-sch && mkdir -p out/lvs-sch
+	$(RUN) bash -lc 'python3 $(PDKTECH)/lvs/run_lvs.py --layout=/work/analog/$(GDS) \
+	    --netlist=/work/analog/$(SCH_NL) --topcell=$(MACRO) \
+	    --run_dir=/work/analog/out/lvs-sch --disable_tap_extraction'
+
+# xschem renders through a virtual X server; no display needed.
+sch-png: $(SCH)
+	$(RUN) bash -lc 'cd /work/analog/xschem && for f in $(SHEETS); do \
+	    xvfb-run -a $(XSCHEM) -q --command "xschem zoom_full; xschem print png /work/docs/sch_$$f.png" $$f.sch >/dev/null 2>&1; done'
+	@ls ../docs/sch_*.png
+
+xschem:
+	$(GUI) $(XSCHEM) /work/analog/$(SCH)
 
 # ----------------------------------------------------------------- signoff
 drc: $(DRC_OK)
@@ -109,7 +148,7 @@ $(LIB): $(SIM_NL) char/characterize.py
 macro: gds lib drc lvs
 	@echo '=== $(MACRO): GDS, LEF and Liberty ready for LibreLane; DRC clean, LVS matching ==='
 
-all: macro sim plot png
+all: macro lvs-sch sim plot png sch-png
 
 # ------------------------------------------------------------- interactive
 klayout:

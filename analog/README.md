@@ -12,8 +12,16 @@ are three committed files:
 | `lib/tt_analog_ring.lib` | its Liberty model, for synthesis and STA | `make lib` |
 
 plus `macro/tt_analog_ring.v`, the blackbox the RTL instantiates, and
-`spice/tt_analog_ring.spice`, the transistor-level netlist, which is also
-generated and committed because it *is* the schematic (see below).
+`spice/tt_analog_ring.spice`, the transistor-level netlist the layout
+generator writes alongside the GDS.
+
+The **schematic** is in `xschem/`: `tt_analog_ring.sch` is the top, with
+`csro_dac`, `csro_nand`, `csro_stage` and `csro_inv` as sub-sheets. Open it
+with `make xschem`; `docs/sch_*.png` are renders of every sheet
+(`make sch-png`). The sheets are written by `xschem/make_sch.py` from the
+same size constants the layout generator uses, and `make lvs-sch` netlists
+the drawing flat and runs LVS against the GDS, so the picture is proven to
+be the circuit that was laid out.
 
 Everything runs inside the `hpretl/iic-osic-tools` container via `./run.sh`,
 so Docker is the only host dependency.
@@ -72,10 +80,15 @@ NAND output is held high and the loop stops in a defined state, the same
 convention as the standard-cell rings. Two unstarved inverters buffer the
 last stage out to `clk_out`, so the tile's mux never loads the loop node.
 
-The netlist is written by the layout generator itself, one line per
-transistor finger as placed, and that netlist is what LVS compares the
-layout against and what ngspice simulates. There is no separate schematic
-to drift from the layout.
+![](../docs/sch_tt_analog_ring.png)
+![](../docs/sch_csro_stage.png)
+
+Two descriptions of the circuit exist and both are checked against the
+layout. The layout generator writes a netlist with one line per transistor
+finger as it places them; that is the LVS reference in `make macro` and the
+netlist ngspice simulates, and it cannot drift from the GDS. The xschem
+sheets are the human-readable drawing of the same circuit, and `make
+lvs-sch` proves they match the GDS too.
 
 ## Simulated behaviour
 
@@ -198,5 +211,8 @@ far more metal.
 - **Parasitic extraction.** The row is dense enough that wire capacitance
   will shift the frequency by some percent; kpex is in the container and
   the previous block's notes on `main` describe the shape of a `make pex`.
+- **The schematic is generated.** `xschem/make_sch.py` writes the sheets so
+  the ten stages and eight DAC legs land on grid; edit the .sch files
+  directly if you prefer, but then stop running `make sch`.
 - **Linearity.** See above. If the compression turns out to matter more than
   the simplicity, the fix is a cascode on the DAC's drain node.
