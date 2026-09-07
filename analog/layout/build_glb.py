@@ -1,6 +1,9 @@
 """Extrude the tile GDS into a 3D model (glTF binary).
 
-    ./run.sh python3 layout/build_glb.py        (or: make glb)
+    ./run.sh python3 layout/build_glb.py [gds] [top]        (or: make glb)
+
+Defaults to the analog macro's own GDS if no arguments are given; `make glb`
+passes GDS and CELL explicitly so it also works against the hardened tile.
 
 The other two 3D viewers -- GDS3D and KLayout's 2.5D view -- both need an X
 display. This one does not: it writes out/tile_3d.glb, which opens in any glTF
@@ -26,8 +29,8 @@ from shapely.geometry import Polygon
 HERE = os.path.dirname(os.path.realpath(__file__))
 ANALOG = os.path.dirname(HERE)
 
-TOP = "tt_um_mgpauly1458_inverter"
-GDS = f"{ANALOG}/../gds/{TOP}.gds"
+TOP = sys.argv[2] if len(sys.argv) > 2 else "tt_um_mgpauly1458_inverter"
+GDS = sys.argv[1] if len(sys.argv) > 1 else f"{ANALOG}/../gds/{TOP}.gds"
 PROCESS = f"{ANALOG}/tech/sg13g2_gds3d.txt"
 OUT = f"{ANALOG}/out/tile_3d.glb"
 

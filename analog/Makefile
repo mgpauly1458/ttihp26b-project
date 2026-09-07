@@ -256,7 +256,7 @@ GDS3D_TECH:= tech/sg13g2_gds3d.txt
 
 glb: $(GLB)
 $(GLB): $(GDS) layout/build_glb.py $(GDS3D_TECH) | out
-	$(RUN) python3 layout/build_glb.py
+	$(RUN) python3 layout/build_glb.py $(GDS) $(CELL)
 
 # The process file is a tool configuration rather than a build artefact, so it is
 # committed; regenerate it only if the PDK revises a layer height.
