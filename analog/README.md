@@ -1,43 +1,38 @@
-# Analog source, and the tile merge
+# The analog block
 
-The submitted artefacts — `gds/tt_um_mgpauly1458_inverter.gds` and the matching
-`lef/` file — are generated from this directory. It owns the analog inverter
-*and* the assembly of the whole tile; the digital half is built next door in
-`../digital` and arrives here as a macro GDS. Everything runs inside the
-`hpretl/iic-osic-tools` container via `./run.sh`, so Docker is the only host
-dependency.
+The hand-drawn CMOS inverter that the digital tile imports as a hard macro.
+This directory owns the block and nothing else: the tile is hardened by
+LibreLane from the repository root (`make -C .. harden`), and the only things
+it needs from here are three committed files.
+
+| committed | is | built by |
+|---|---|---|
+| `macro/tt_analog_inverter.gds` | the layout | `make gds` |
+| `macro/tt_analog_inverter.lef` | its abstract, for placement and routing | the same script, from the same constants |
+| `lib/tt_analog_inverter.lib` | its timing, for synthesis and STA | `make lib` |
+
+They are in git because CI has no KLayout, no PDK PCell library and no ngspice.
+Everything else here is scratch and lives in the gitignored `out/`.
+
+Everything runs inside the `hpretl/iic-osic-tools` container via `./run.sh`, so
+Docker is the only host dependency.
 
 ```bash
 cd analog
 make help       # every target, one line each
-make all        # both pipelines, end to end
+make macro      # gds + lib + drc + lvs: what the tile needs
+make design     # netlist + sim + gds + drc + lvs: is the block right?
 ```
-
-`make gds` depends on `../digital/out/ms_hello.gds` and builds it if it is
-missing, so the ordering between the two flows takes care of itself.
-
-Two pipelines, answering different questions:
-
-| target | what it answers | steps |
-|---|---|---|
-| `make design` | is the circuit right, and does the layout match it? | netlist → sim → gds → drc → lvs |
-| `make tt` | will Tiny Tapeout accept it? | drc → lvs → precheck |
-
-They overlap on DRC and LVS but are not the same check. This design was DRC and
-LVS clean long before precheck passed; everything that remained was about how
-the GDS is *written*, not about the circuit.
 
 | step | does |
 |---|---|
 | `make netlist` | xschem → SPICE, both the simulation and the LVS netlist |
 | `make sim` | ngspice DC sweep + transient |
 | `make plot` | waveform figure → `../docs/inverter_sim.png` |
-| `make macro` | build the digital half in `../digital` (LibreLane) |
-| `make gds` | analog + digital macro → `../gds/*.gds` and `../lef/*.lef` |
-| `make tile-netlist` | whole-tile LVS reference: analog + digital |
+| `make gds` | layout → `macro/*.gds` and `macro/*.lef` |
+| `make lib` | ngspice characterisation → `lib/*.lib` |
 | `make drc` | KLayout DRC, sg13g2 maximal rule set |
-| `make lvs` | KLayout LVS, whole tile vs the analog + digital netlist |
-| `make precheck` | local stand-in for TT's GDS prechecks |
+| `make lvs` | KLayout LVS, layout vs schematic |
 | `make png` | render the layout |
 | `make xschem` / `make klayout` / `make shell` | GUIs and a container prompt |
 | `make ci` | latest GitHub Actions results for this branch |
@@ -45,92 +40,71 @@ the GDS is *written*, not about the circuit.
 Both PDK runners exit non-zero on failure, so `make` genuinely stops rather than
 printing errors and continuing.
 
+Every target takes `CELL=<name>`, so the same commands work for the next block
+you add: `layout/build_<cell>.py` builds `out/<cell>.gds`, `xschem/<cell>.sch`
+is its schematic and `xschem/<cell>_tb.sch` its testbench.
+
 ## What is here
 
 ```
-xschem/inverter.sch                     the inverter cell
-xschem/inverter.sym                     its symbol
-xschem/inverter_tb.sch                  testbench: DC sweep and transient
-xschem/tt_um_..._inverter.sch           analog wrapper, renames the ports to
-                                        ua[0]/ua[1]/VDPWR/VGND for LVS
-layout/build_gds.py                     builds the core, merges the digital
-                                        macro, routes the tile, and emits the
-                                        LEF from the same constants
-layout/render.py                        the three figures in ../docs
-layout/build_gds3d_tech.py              GDS3D process file, from the PDK stack
-layout/build_glb.py                     3D model export, no display needed
-sim/plot.py                             waveform figure
-checks/build_tile_netlist.py            whole-tile LVS reference netlist
-checks/tt_precheck.py                   local stand-in for TT's GDS prechecks
-checks/tt_valid_layers.txt              allowlist vendored from tt-support-tools
-tech/tt_analog_1x2.def                  TT's tile template; pin names, layers
-                                        and positions are parsed from it
-tech/sg13g2_gds3d.txt                   generated GDS3D process file
+xschem/inverter.sch          the circuit: two transistors
+xschem/inverter_tb.sch       its testbench: DC sweep and transient
+xschem/tt_analog_inverter.sch  the macro wrapper - renames the pins to A, Y,
+                             VPWR, VGND, which is what the LEF and the tile use
+layout/build_tt_analog_inverter.py   the layout AND the LEF, from one set of
+                             constants, so the two cannot drift apart
+char/characterize.py         ngspice sweep -> Liberty NLDM tables
+sim/plot.py                  waveform figures
+layout/render.py             layout figures
+layout/build_glb.py          glTF export, for looking at it in 3D
+layout/build_gds3d_tech.py   generates GDS3D's process file from the PDK's own
+                             KLayout 2.5D stack
 ```
 
-## Tile construction
+## Shaped like a standard cell
 
-The tile is 202.08 × 313.74 µm, matching `tt_analog_1x2.def`. It holds two
-independent blocks that share only the supply and the substrate:
+The macro is 20.16 × 22.68 µm — 42 CoreSite widths by 6 rows — so it lands
+row-aligned in the tile's floorplan.
 
-- **`inverter_core`**, bottom right — the hand-drawn analog inverter.
-- **`ms_hello`**, upper left — the LibreLane macro, read in from
-  `../digital/out/ms_hello.gds`.
+**It has no Metal1 power rails.** The obvious idea, rails on every row boundary
+so the PDN's own rails abut them, does not survive contact with a block this
+size: a full-width rail crosses the core, and LVS extracts one merged `VPWR|Y`
+net. The supplies are instead two horizontal Metal4 bars spanning the full
+width, which `PDN_MACRO_CONNECTIONS` vias up to the tile's TopMetal1 grid.
+Horizontal, because a vertical strap only meets a vertical grid where the pitch
+happens to line up — and when it did not, IR analysis failed on VPWR while VGND
+was fine.
 
-Both are small, so most of the tile is empty and the work is in getting nets out
-to where Tiny Tapeout expects them.
+**It is shielded and boxed in.** A continuous p+ guard ring tied to VGND
+surrounds the core, and the LEF declares the whole footprint as an obstruction
+on Metal1 through Metal4, so no tile route crosses the block on any signal
+layer. Only the power grid passes over it, on TopMetal1.
 
-### The analog nets
+`A` and `Y` are Metal2 pins on the west and east edges, brought in from the
+core's Metal1 pads by a via stack.
 
-- **`ua[0]`, `ua[1]`** — TopMetal1 pads on the bottom edge at x = 191.04 µm and
-  166.56 µm, reached by `via_stack` PCells running Metal1 → TopMetal1 and then
-  TopMetal1 routing.
-- **`VDPWR`, `VGND`** — vertical Metal4 stripes 2 µm wide running the full
-  height of the tile, per the analog spec (at least 1.2 µm, starting within
-  10 µm of the bottom and reaching within 10 µm of the top).
+## Characterisation is measured, not asserted
 
-The input takes `ua[1]` and the output `ua[0]`, which looks backwards until you
-notice the geometry: the gate contact leaves the core on the left and the drain
-strap on the right, and `ua[1]` is the more leftward pad. Assigning them the
-other way round forces the two TopMetal1 routes to cross.
+`char/characterize.py` runs the real transistor-level netlist through ngspice on
+a 4 × 4 grid of input slew against output load, using the PDK's own axes and its
+own 50 % / 20-80 % thresholds, and writes the result as an NLDM table. It also
+measures input capacitance by integrating the current into the gate over a slow
+ramp.
 
-### The digital nets, and the one idea that makes them tractable
-
-The macro's pins are on its north edge; the tile's digital interface stubs are
-0.3 µm Metal4 tabs along the top edge of the die. Five signals have to get from
-one to the other, and eighteen unused outputs have to reach ground, across a
-region also crossed by two full-height TopMetal1 power stripes.
-
-Routed on a single layer this is a real puzzle: every horizontal run blocks
-every vertical run that has to cross it, and the ordering constraints do not
-always have a solution. Splitting the two directions across layers makes it
-disappear.
+Numbers at the typical corner, 1.2 V, 25 °C:
 
 | | |
 |---|---|
-| Metal4 | vertical, interface stub down to the bus |
-| Metal3 | horizontal, one bus per net, each at its own `y` |
-| Metal2 | vertical, bus down to the macro pin |
+| trip point | 618 mV against an ideal 600 mV |
+| peak gain | −17.2 |
+| input capacitance | 5.98 fF |
+| delay | 17 ps into a minimum load, 53 ps into 23 fF |
 
-Now a vertical run may cross any bus it likes. All that is left is bus-to-bus
-spacing — parallel, distinct `y` — and spur-to-spur — parallel, distinct `x` —
-and both fall out for free.
+Only `mos_tt` is characterised, so the same table is handed to every STA corner.
+A fuller job would emit slow and fast libraries from `cornerMOSlv.lib` and key
+`MACROS.lib` by corner instead of `"*"`.
 
-The supplies need the same trick for a different reason. The macro's straps
-interleave VPWR, VGND, VPWR, VGND, so a horizontal bar on one layer cannot reach
-both nets without crossing the other. The two feeds therefore leave the macro on
-different layers in the empty band below it — VGND on Metal4, VPWR on Metal3 —
-and VGND's bar passes *under* the VDPWR TopMetal1 stripe on the way across,
-which is only harmless because it is not on TopMetal1.
-
-### The unused outputs
-
-The analog spec is explicit: "Connect any unused `uo_out`, `uio_out` and
-`uio_oe` pins to GND." Eighteen stubs comb down onto one Metal3 bus that ends on
-the VGND stripe. Easy to miss on a design that uses no digital pins at all, and
-none of the prechecks test for it.
-
-## Looking at the tile in 3D
+## Looking at it in 3D
 
 Four, one of which you already have without doing anything. The three local ones
 all show the same stack, because they all read the same layer heights.
@@ -140,7 +114,7 @@ all show the same stack, because they all read the same layer heights.
 | Tiny Tapeout's viewer | no | already published by CI — see below |
 | `make d25` | yes | KLayout's 2.5D view, driven by the PDK's own BEOL stack |
 | `make view3d` | yes | GDS3D, a standalone 3D GDS viewer |
-| `make glb` | **no** | writes `out/tile_3d.glb` for any glTF viewer, browser or phone |
+| `make glb` | **no** | writes `out/*.glb` for any glTF viewer, browser or phone |
 
 **Start with Tiny Tapeout's.** The `viewer` job in `.github/workflows/gds.yaml`
 already runs on every push: it uploads the tile to `gds-viewer.tinytapeout.com`
@@ -153,8 +127,7 @@ sees. The local viewers are for iterating without a seven-minute round trip.
 its layer colours — that is what registers the 2.5D macro, and `-l <lyp>` alone
 does not. Once KLayout is up the entry is under
 **`sg13g2_menu > SG13G2 PDK > BEOL 2.5D Viewer`**. Select a region before opening
-it: the view renders the current selection, and the whole tile at once is mostly
-empty space.
+it: the view renders the current selection.
 
 GDS3D is installed in the container and the container even ships a wrapper for
 it, but the wrapper wants `$PDKPATH/libs.tech/gds3d/gds3d_tech.txt` and **no open
@@ -217,69 +190,57 @@ bulks on unnamed nets, which no hand-drawn schematic will match.
 **LVS net names must be on a `.text` purpose, one per metal layer.** The deck
 reads `metal1_text = labels(8, 25)`, `metal3_text = labels(30, 25)`,
 `metal4_text = labels(50, 25)` and so on. Labels anywhere else are silently
-ignored and the extracted netlist comes back with unnamed nets. The analog nets
-are named on Metal1, the digital ones on their Metal4 interface stubs.
-
-**Strip the macro's own labels when merging it.** LibreLane names the macro's
-nets, including `clk`, `rst_n` and its supplies, and the standard cells carry
-pin labels of their own. Those are the same physical nets the tile labels from
-outside, so leaving both in place puts two names on one net; LVS keeps whichever
-it likes, and the top level then looks as though it is missing a port.
-
-**Three netlists, three incompatible conventions.** The whole-tile LVS reference
-has to reconcile the PDK standard cells (transistor-level, but written as
-X-prefix subcircuit calls), the LibreLane macro netlist (right structure, but
-every standard cell is an empty black box) and the xschem inverter (already in
-the right form). `checks/build_tile_netlist.py` does the reconciling; the
-X-versus-M trap above is the same one, met a second time.
+ignored and the extracted netlist comes back with unnamed nets. The macro names
+`A` and `Y` on Metal2 and its supplies on Metal4, matching the layer each net
+actually sits on.
 
 **The PMOS and NMOS symbols have opposite D/S pin order** — the PMOS puts its
 source at the top, the sensible convention but the reverse of the NMOS. Placing
 both at the same rotation silently gives a PMOS with its source on the output
 node. Read the netlist, not the picture.
 
-## Getting through Tiny Tapeout's precheck
+## Getting a macro through the digital flow
 
-The design was DRC and LVS clean well before precheck passed. Every remaining
-failure was about how the GDS is *written*, not about the circuit. In order:
+These are the failures that came from the block being *imported* rather than
+being the top level. The tile's own traps are in `../CLAUDE.md`.
 
-**Every LEF port must also be a polygon on the matching `<layer>.pin`** (50/2
-for Metal4, 126/2 for TopMetal1) containing the LEF rectangle. `pin_check`
-verifies exactly that, so both come from one table in `build_gds.py`.
-
-**The LEF must declare all 51 interface pins**, not just the ones the design
-uses — `clk`, `ena`, `rst_n`, every `ui_in`/`uo_out`/`uio_*` and all eight
-`ua[]`. They are parsed straight out of `tech/tt_analog_1x2.def` so the names,
-layers and positions cannot disagree with the shuttle.
-
-**Power goes on TopMetal1 and must be at least 2.1 µm wide.** The published
-analog spec says Metal4 and 1.2 µm, but that is the sky130 guidance; precheck
-is the authority for IHP.
-
-**The boundary layer is `prBoundary.boundary` (189/4)**, not `.drawing`
-(189/0), which is not on the allowed layer list.
-
-**Strip `HeatTrans` (51/0).** The device PCells draw it and it is not on the
-allowed list. It plays no part in DRC or LVS.
+**Signoff DRC is stricter than this directory's.** `make drc` runs KLayout's
+sg13g2 deck; the tile's signoff runs Magic's, and Magic checks rules KLayout
+does not. The one that bit: the `ntap1` PCell draws a 1.26 µm `nBuLay` square —
+it is the PDK's well-tap *device*, with `R` and `Rspec` parameters, not a plain
+tie — and Magic measures it against the PMOS's own p+ diffusion 0.34 µm away.
+33 `NBL.f` violations, none of them fixable by moving anything. The layout
+generator strips `nBuLay`, the same way it strips `HeatTrans`.
 
 **Write the GDS with `write_context_info` disabled.** KLayout otherwise emits a
-hidden `$$$CONTEXT_INFO$$$` cell holding PCell parameters. `gdstk`, which
-precheck uses, counts it as a second top-level cell and fails the boundary
-check — and because `analog_pin_check` inspects `top_level()[0]`, it was
-examining that cell rather than the tile and wrongly reported `ua[0]` as
-unconnected. One flag fixes two confusing failures.
+hidden `$$$CONTEXT_INFO$$$` cell holding PCell parameters, which counts as a
+second top-level cell. LibreLane's render step fails with "the layout has
+multiple top cells", and Tiny Tapeout's precheck reads the wrong cell for its
+boundary and analog-pin checks.
 
-**An unused `ua[]` pin must have no metal within 0.5 µm of it.** The check
-builds a ring 0.1–0.5 µm outside each pad and treats any TopMetal1 there as a
-connection, cross-checked against `analog_pins` in `info.yaml`. Drawing the pad
-rectangle itself is fine; overhanging it by more than 0.1 µm counts as wired.
+**Strip `HeatTrans` (51/0).** The device PCells draw it, it is not on Tiny
+Tapeout's allowed layer list, and it plays no part in DRC or LVS.
 
-`make precheck` (`checks/tt_precheck.py`) reproduces the layer, boundary, pin
-and analog-pin checks locally, which is worth it — a CI round trip is about
-seven minutes. It is a convenience, not the authority: CI runs the real
-precheck, which also does DRC, zero-area, cell-name and Verilog-syntax checks.
+**Contacts must not meet at a right angle.** Two rows of guard-ring contacts
+meeting at a corner merge into an L, and every contact rule (`Cnt.b`, `CntB.a`,
+`CntB.a1`, `CntB.b2`, `M1.c1`) is written for a square. The vertical edges own
+the corners; the horizontal ones stop short.
+
+**An `Activ` with no `pSD` over it is n+.** A hand-drawn p+ guard ring needs the
+implant layer drawn explicitly, or it is the opposite of a substrate tie.
 
 **The PMOS and NWell-tap PCells each draw their own NWell**, and where the two
 meet the tie ends up only marginally enclosed, tripping `NW.d` (min NWell space
 to external N+ Activ, 0.31 µm). One generous well over the whole p-side fixes
 it.
+
+**Give the LEF pins antenna areas.** `ANTENNAGATEAREA` on `A`,
+`ANTENNADIFFAREA` on `Y`, measured off the devices. Without them OpenROAD warns
+that the pins "might not be connected to a gate" and skips antenna checking on
+every net that reaches them.
+
+**Do not give the Liberty an `operating_conditions` group.** OpenSTA derives its
+corner ("scene") names from the libraries it reads, and a macro library that
+declares its own conditions makes it look for a scene the PDK's corners do not
+define. Every STA corner then fails, before placement, with a message that names
+a hash rather than anything you wrote.

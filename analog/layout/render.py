@@ -2,26 +2,26 @@
 
     klayout -b -z -r analog/layout/render.py      (or: make png)
 
-Three views, because one is not enough any more. The tile is 202 x 314 um and
-the analog inverter is about 8 um across, so a whole-tile image that shows the
-routing renders the circuit itself as a smudge.
+Two views of the analog macro, because one is not enough: at the scale that
+shows the guard ring and the power straps, the transistors are a smudge.
 
-  docs/tile_layout.png       the whole tile: both blocks and all the routing
-  docs/inverter_layout.png   the analog core, close up
-  docs/digital_layout.png    the hardened macro
+  docs/macro_layout.png      the whole macro: guard ring, straps, pins
+  docs/inverter_layout.png   the inverter core, close up
+
+The hardened tile is rendered by the flow itself (`tt_tool.py --create-png`,
+which CI also runs), so it is not repeated here.
 """
 import os
 import pya
 
-GDS = "../gds/tt_um_mgpauly1458_inverter.gds"
+GDS = "macro/tt_analog_inverter.gds"
 LYP = "/foss/pdks/ihp-sg13g2/libs.tech/klayout/tech/sg13g2.lyp"
 
 # Cell name -> (output, width, height). The core and the macro are rendered by
 # looking up their bounding boxes in the layout, so they follow the build.
 VIEWS = [
-    (None,           "tile_layout.png",     620, 960),
+    (None,            "macro_layout.png",    760, 840),
     ("inverter_core", "inverter_layout.png", 640, 900),
-    ("ms_hello",     "digital_layout.png",  760, 760),
 ]
 
 os.makedirs("../docs", exist_ok=True)

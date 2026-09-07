@@ -27,10 +27,12 @@
 #
 # The two netlist formats are NOT interchangeable; see the netlist rules below.
 
-TT_TOP  := $(shell sed -n 's/^ *top_module: *"\(.*\)".*/\1/p' ../info.yaml)
-MACRO   ?= ms_hello
+# The analog macro the digital tile imports. It is the default CELL because it
+# is the only block this directory is responsible for now: the tile itself is
+# built by LibreLane from the repository root (see ../Makefile).
+MACRO   ?= tt_analog_inverter
 
-CELL    ?= $(TT_TOP)
+CELL    ?= $(MACRO)
 TB      ?= $(CELL)_tb
 PLOT    ?= sim/plot.py
 
@@ -40,27 +42,25 @@ PDKTECH := /foss/pdks/ihp-sg13g2/libs.tech/klayout/tech
 XSCHEM  := xschem -n -s -q --no_x --rcfile /work/analog/xschem/xschemrc
 
 # ------------------------------------------------------- per-cell file paths
-# The Tiny Tapeout top is the one cell that is special: its GDS and LEF are
-# committed at the repo root because that is what the shuttle consumes, its
-# builder is named build_gds.py rather than build_<cell>.py, and its LVS
-# reference is the merged analog+digital netlist rather than a plain xschem
-# netlist. Everything else follows the conventions above.
-ifeq ($(CELL),$(TT_TOP))
-  GDS      ?= ../gds/$(TT_TOP).gds
-  LEF      ?= ../lef/$(TT_TOP).lef
-  BUILD    ?= layout/build_gds.py
-  NETLIST  ?= out/$(TT_TOP)_tile.spice
+# The macro is the one cell that is special: its GDS and LEF are COMMITTED,
+# under macro/, because CI has neither KLayout nor the PDK's PCell library and
+# LibreLane has to find them in the repository. Everything else is scratch and
+# lives in out/.
+ifeq ($(CELL),$(MACRO))
+  GDS      ?= macro/$(MACRO).gds
+  LEF      ?= macro/$(MACRO).lef
+  LIB      ?= lib/$(MACRO).lib
 else
   GDS      ?= out/$(CELL).gds
-  BUILD    ?= layout/build_$(CELL).py
   NETLIST  ?= out/$(CELL).spice
 endif
+BUILD    ?= layout/build_$(CELL).py
+NETLIST  ?= out/$(CELL).spice
 
 SIM_NL   := out/$(TB).sim.spice
 CELLDIR  := out/$(CELL)
 DRC_OK   := $(CELLDIR)/.drc-passed
 LVS_OK   := $(CELLDIR)/.lvs-passed
-PRE_OK   := out/.precheck-passed
 
 # Schematics are cheap to re-netlist and hard to dependency-track properly
 # (xschem pulls in symbols transitively), so every .sch in the directory is a
@@ -69,8 +69,8 @@ PRE_OK   := out/.precheck-passed
 SCH_ALL  := $(wildcard xschem/*.sch) $(wildcard xschem/*.sym) xschem/xschemrc
 
 .DEFAULT_GOAL := help
-.PHONY: help list netlist netlist-lvs netlist-sim sim plot gds lef drc lvs \
-        precheck png tile-netlist design tt all xschem klayout shell ci \
+.PHONY: help list netlist netlist-lvs netlist-sim sim plot gds lef lib drc lvs \
+        png design macro all xschem klayout shell ci \
         glb gds3d-tech d25 view3d clean distclean
 
 # ======================================================================= help
@@ -78,7 +78,7 @@ help:
 	@echo 'Usage:  make <target> [CELL=<name>] [TB=<name>] [GDS=<path>] [NETLIST=<path>]'
 	@echo
 	@echo 'Variables'
-	@echo '  CELL     block to act on           (default: $(TT_TOP))'
+	@echo '  CELL     block to act on           (default: $(MACRO))'
 	@echo '  TB       testbench schematic       (default: <CELL>_tb)'
 	@echo '  GDS      layout to check           (default: $(GDS))'
 	@echo '  NETLIST  LVS reference netlist     (default: $(NETLIST))'
@@ -95,12 +95,14 @@ help:
 	@echo '  make png           render the layout'
 	@echo '  make drc           KLayout DRC on $(GDS)'
 	@echo '  make lvs           KLayout LVS, $(GDS) vs $(NETLIST)'
-	@echo '  make precheck      local stand-in for TT prechecks (top only)'
+	@echo '  make lib           ngspice characterisation -> $(LIB)'
 	@echo
 	@echo 'Pipelines'
 	@echo '  make design        netlist sim gds drc lvs   -- is the block right?'
-	@echo '  make tt            gds drc lvs precheck      -- will TT accept it?'
+	@echo '  make macro         gds lib drc lvs           -- ready for LibreLane?'
 	@echo '  make all           both'
+	@echo
+	@echo 'The tile itself is hardened from the repository root: make -C .. harden'
 	@echo
 	@echo '3D views of $(CELL)'
 	@echo '  make glb           out/tile_3d.glb, no display needed'
@@ -119,8 +121,8 @@ list:
 	@echo 'but not every script here is a cell builder; some are utilities.'
 	@ls layout/*.py 2>/dev/null | sed 's|layout/||; s|\.py$$||' | sed 's/^/    /' || true
 	@echo
-	@echo 'Tiny Tapeout top module (the default CELL, built by $(BUILD)):'
-	@echo '    $(TT_TOP)'
+	@echo 'The analog macro the tile imports (the default CELL, built by $(BUILD)):'
+	@echo '    $(MACRO)'
 
 out:
 	@mkdir -p out
@@ -161,14 +163,6 @@ netlist-lvs: $(NETLIST)
 netlist-sim: $(SIM_NL)
 netlist: netlist-lvs netlist-sim
 
-# The Tiny Tapeout top's LVS reference is not a plain xschem netlist: the tile
-# also contains the hardened digital macro, so the analog netlist and the
-# macro's netlist are merged. Hence the extra rule for it.
-out/$(TT_TOP)_tile.spice: out/$(TT_TOP).spice ../digital/out/$(MACRO).spice checks/build_tile_netlist.py | out
-	$(RUN) python3 checks/build_tile_netlist.py
-
-tile-netlist: out/$(TT_TOP)_tile.spice
-
 # ================================================================= simulation
 # The analysis lives in the testbench schematic's .control block -- edit it
 # there, not here.
@@ -195,13 +189,20 @@ out/%.gds:
 	@echo "layout that is built some other way."
 	@exit 1
 
-# The tile. Its builder also emits the LEF from the same constants, which is why
-# there is no separate `make lef` -- the two must not be able to drift.
-../gds/$(TT_TOP).gds: layout/build_gds.py tech/tt_analog_1x2.def | out
-	$(RUN) klayout -b -r layout/build_gds.py
+# The macro. Its builder also emits the LEF from the same constants, which is
+# why there is no separate `make lef` -- the two must not be able to drift.
+macro/$(MACRO).gds: layout/build_$(MACRO).py
+	$(RUN) klayout -b -r $<
 
-../lef/$(TT_TOP).lef: ../gds/$(TT_TOP).gds ;
+macro/$(MACRO).lef: macro/$(MACRO).gds ;
 lef: $(LEF)
+
+# ============================================================ characterisation
+# Liberty for the macro, measured in ngspice on the transistor-level netlist.
+# LibreLane cannot synthesise, place or sign off around the macro without it.
+lib: $(LIB)
+lib/$(MACRO).lib: char/characterize.py out/inverter.sim.spice
+	$(RUN) python3 char/characterize.py
 
 png: $(GDS) layout/render.py
 	$(RUN) klayout -b -z -r layout/render.py
@@ -225,13 +226,8 @@ $(LVS_OK): $(GDS) $(NETLIST) | $(CELLDIR)
 	    --run_dir=/work/analog/$(CELLDIR)/lvs --disable_tap_extraction'
 	@touch $@
 
-# Only meaningful for the submission tile: it reads ../info.yaml and checks the
-# committed gds/ and lef/.
-precheck: $(PRE_OK)
-$(PRE_OK): ../gds/$(TT_TOP).gds ../lef/$(TT_TOP).lef checks/tt_precheck.py \
-           checks/tt_valid_layers.txt ../info.yaml
-	$(RUN) python3 checks/tt_precheck.py
-	@touch $@
+# Tiny Tapeout's precheck runs on the hardened tile, not on this block, so it
+# lives in the top-level Makefile: `make -C .. precheck`.
 
 # ================================================================== pipelines
 # Block-level: needs a testbench, so run it as `make design CELL=<block>`.
@@ -239,10 +235,12 @@ $(PRE_OK): ../gds/$(TT_TOP).gds ../lef/$(TT_TOP).lef checks/tt_precheck.py \
 design: netlist sim gds drc lvs
 	@echo '=== $(CELL): simulated, DRC clean, LVS matching ==='
 
-tt: gds drc lvs precheck
-	@echo '=== TT pipeline clear locally -- push and let CI confirm ==='
+# What the tile needs from this directory: layout, timing, and the two checks
+# that say the layout is legal and matches the schematic.
+macro: gds lib drc lvs
+	@echo '=== $(MACRO): GDS, LEF and Liberty ready for LibreLane ==='
 
-all: design tt
+all: design macro
 
 # ============================================================== 3D viewing
 # Three views of the same stack. GDS3D and KLayout's 2.5D view both need an X

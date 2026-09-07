@@ -1,0 +1,65 @@
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+
+MACRO tt_analog_inverter
+  CLASS BLOCK ;
+  FOREIGN tt_analog_inverter 0 0 ;
+  ORIGIN 0 0 ;
+  SIZE 20.160 BY 22.680 ;
+  SYMMETRY X Y ;
+  SITE CoreSite ;
+  PIN A
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 0.39 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 0.000 11.000 0.800 12.200 ;
+    END
+  END A
+  PIN Y
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    ANTENNADIFFAREA 1.02 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 19.360 11.000 20.160 12.200 ;
+    END
+  END Y
+  PIN VPWR
+    DIRECTION INOUT ;
+    USE POWER ;
+    SHAPE ABUTMENT ;
+    PORT
+      LAYER Metal4 ;
+        RECT 0.000 13.245 20.160 15.645 ;
+    END
+  END VPWR
+  PIN VGND
+    DIRECTION INOUT ;
+    USE GROUND ;
+    SHAPE ABUTMENT ;
+    PORT
+      LAYER Metal4 ;
+        RECT 0.000 5.000 20.160 7.400 ;
+    END
+  END VGND
+  OBS
+    LAYER Metal1 ;
+        RECT 0.000 0.000 20.160 22.680 ;
+    LAYER Metal2 ;
+        RECT 0.000 0.000 20.160 10.800 ;
+        RECT 1.000 10.800 19.160 12.400 ;
+        RECT 0.000 12.400 20.160 22.680 ;
+    LAYER Metal3 ;
+        RECT 0.000 0.000 20.160 22.680 ;
+    LAYER Metal4 ;
+        RECT 0.000 0.000 20.160 4.800 ;
+        RECT 0.000 7.600 20.160 13.045 ;
+        RECT 0.000 15.845 20.160 22.680 ;
+  END
+END tt_analog_inverter
+
+END LIBRARY

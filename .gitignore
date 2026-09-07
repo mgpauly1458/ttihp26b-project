@@ -3,8 +3,6 @@
 *.vcd
 *.fst
 *.fst.hier
-runs
-tt_submission
 src/user_config.json
 src/config_merged.json
 test/sim_build
@@ -28,6 +26,15 @@ analog/out/
 # stray container cache (XDG_CACHE_HOME), should live under analog/out/
 /out/
 
-# LibreLane run directories; digital/out/ is the staged result and IS committed,
-# because analog/layout/build_gds.py reads the macro GDS from there.
-digital/runs/
+# LibreLane runs from the repository root, as CI does.
+runs/
+tt_submission/
+gds_render.png
+
+# analog/macro/ and analog/lib/ are NOT ignored: they hold the committed macro
+# GDS, LEF and Liberty, which CI cannot regenerate (no KLayout, no PCells, no
+# ngspice) and LibreLane has to find in the repository.
+
+# tt-support-tools, cloned by `make tools` exactly as CI does
+tt/
+gds_render_preview.svg

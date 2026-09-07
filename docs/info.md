@@ -5,68 +5,72 @@ docs workflow checks for them.
 
 ## How it works
 
-Two inverters that arrive at the same tile by completely different routes: one
-drawn by hand as a custom analog layout, one written in Verilog and hardened by
-LibreLane. They share the tile, the supply and the substrate, and nothing else —
-no signal crosses between them. That is deliberate. The point of the project is
-to prove out both flows and the merge between them, and the smallest honest
-mixed-signal design is the one where each half can still be verified on its own.
+A digital tile with a hand-drawn analog block inside it.
 
-### The analog half
+The Verilog top level is the whole tile. LibreLane hardens it, and while doing
+so it places a **hard macro** — a CMOS inverter laid out by hand in the
+`ihp-sg13g2` PDK — into the standard-cell array, routes to it, and runs its
+power grid over it. The design then does the one thing that makes such a pairing
+worth having: it computes the same inversion twice, once in silicon drawn by
+hand and once in synthesised logic, and brings both answers out to the pins
+along with a flag that goes high if they ever differ.
 
-A single CMOS inverter, laid out by hand in the `ihp-sg13g2` PDK.
+This is a digital submission. No `ua[]` analog pin is used; the analog content
+is entirely internal.
+
+### The analog block
+
+A single CMOS inverter — the smallest circuit that still exercises every step of
+an analog flow.
 
 - PMOS `sg13_lv_pmos`, W = 2 µm; NMOS `sg13_lv_nmos`, W = 1 µm; both L = 130 nm.
 - The 2:1 width ratio puts the switching threshold at 618 mV against an ideal
   600 mV on a 1.2 V supply, with a peak small-signal gain of −17.2.
-- Simulated delay into a 10 fF load is 38.5 ps falling and 36.9 ps rising.
+- Measured input capacitance 5.98 fF; 17 ps of delay into a minimum load,
+  53 ps into 23 fF.
 
-The devices come from the PDK's own PCells, so they are correct by
-construction; only the interconnect between them is drawn by hand.
+The devices come from the PDK's own PCells, so they are correct by construction;
+only the interconnect between them is drawn by hand. The block sits inside a
+continuous p+ guard ring tied to ground, and its LEF declares the whole
+footprint as a routing obstruction on Metal1 through Metal4, so no tile route
+crosses it — only the power grid, on TopMetal1 above.
 
-### The digital half
+It is 20.16 × 22.68 µm, which is a whole number of standard-cell sites by a
+whole number of rows, so it drops into the floorplan like an oversized cell.
 
-`ms_hello`, written in Verilog and taken through synthesis, placement, clock
-tree synthesis and routing by LibreLane into a 50 × 50 µm macro, which is then
-merged into the tile. Six logic cells survive — an inverter, a reset flip-flop
-and four buffers the tool inserted to drive the output pins — alongside the
-usual filler and decap:
+### The digital logic
 
-- `uo[0]` = `~ui[0]`, combinational.
-- `uo[1]` = `~ui[0]`, registered on `clk`, cleared by `rst_n`.
+`ui_in[0]` drives the inverter's gate. Its output comes back into the digital
+domain — a CMOS drain node is a full-swing signal, so it drives ordinary cell
+inputs directly — and appears three ways:
 
-The registered copy is there so the flow has to run clock tree synthesis and
-static timing analysis rather than collapsing the whole design to a single gate.
+| pin | meaning |
+|---|---|
+| `uo_out[0]` | the analog inverter's output, combinationally |
+| `uo_out[1]` | the same, registered on `clk` |
+| `uo_out[2]` | `~ui_in[0]` computed in standard cells |
+| `uo_out[3]` | high when the analog and logic answers disagree |
 
-### Verification
+`uo_out[3]` is the interesting pin on silicon: it is the built-in self-check.
 
-The merged tile is DRC clean against the sg13g2 maximal rule set, and LVS clean
-in strict port mode against a reference netlist that contains both halves — the
-analog inverter from its xschem schematic and the digital macro expanded to the
-PDK's transistor-level standard cells. That single LVS run is what actually
-checks the merge: that each digital net reaches the pin it is supposed to, that
-both blocks are on the right supply, and that the unused outputs really are tied
-to ground.
+The register is not decoration — it forces clock tree synthesis and static
+timing analysis to run rather than the design collapsing into a wire.
 
 ## How to test
 
-The two halves are tested independently.
+Drive `ui_in[0]` and watch `uo_out`.
 
-**Analog.** `ua[1]` is the input and drives both gates; `ua[0]` is the output,
-tied to both drains. Sweep `ua[1]` from 0 V to VDPWR and `ua[0]` should follow
-the inverting transfer curve, crossing mid-supply at roughly 0.62 V.
+1. Hold `rst_n` low, then release it. `uo_out[1]` clears to 0.
+2. With `ui_in[0]` low, `uo_out[0]` and `uo_out[2]` should both read 1;
+   with it high, both should read 0.
+3. `uo_out[3]` should stay low throughout. If it goes high, the hand-drawn
+   inverter and the synthesised one disagree — which is the measurement this
+   project exists to make.
+4. Clock `clk` (up to 50 MHz) and `uo_out[1]` follows `uo_out[0]` one edge late.
 
-There is no output buffer: `ua[0]` drives the analog pad directly through the
-pad's own series resistance, so the edges observed off-chip will be far slower
-than the simulated on-chip figures above. For a static sweep this does not
-matter.
-
-**Digital.** Drive `ui[0]` and read `uo[0]`, which should be its complement
-immediately. Clock `clk` and `uo[1]` should take the same value one cycle later.
-Hold `rst_n` low and `uo[1]` goes to 0 regardless of `ui[0]`. All other outputs
-are tied to ground on chip.
+No analog instrumentation is needed: everything is observable on the digital
+pins.
 
 ## External hardware
 
-None. A voltage source on `ua[1]` and a meter or scope on `ua[0]` covers the
-analog half; the digital half needs nothing beyond the usual pins.
+None.

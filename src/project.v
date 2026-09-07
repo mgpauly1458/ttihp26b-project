@@ -1,55 +1,59 @@
 /*
- * Copyright (c) 2026 Maxwell Pauly
- * SPDX-License-Identifier: Apache-2.0
+ * Tiny Tapeout top level: a digital tile with a hand-drawn analog block inside.
  *
- * Tile interface for a mixed-signal project. Nothing here is synthesised: the
- * tile's real content is the merged layout in
- * gds/tt_um_mgpauly1458_inverter.gds, which contains two independent blocks.
+ * The hierarchy is deliberately digital-on-top. LibreLane hardens this module
+ * into the whole 1x2 tile, places tt_analog_inverter as a hard macro, builds
+ * the PDN over both, and routes between them. The analog block is imported by
+ * the digital flow, not the other way round.
  *
- *   analog   a hand-drawn CMOS inverter. ua[1] drives the gates, ua[0] is the
- *            drain node. Built from PDK PCells in analog/layout/build_gds.py.
- *
- *   digital  ms_hello (src/ms_hello.v), hardened by LibreLane into a
- *            standard-cell macro and merged into the same tile. Its behaviour
- *            is mirrored below so this file describes what the tile actually
- *            does, but the instance in silicon is the hardened macro, not this
- *            RTL.
- *
- * The two halves share only the supply and the substrate; no signal crosses
- * between them.
+ * The submission is a DIGITAL one - analog_pins is 0 in info.yaml and no ua[]
+ * pin is touched. The analog content lives entirely inside the tile.
  */
 
 `default_nettype none
 
-module tt_um_mgpauly1458_inverter (
-    input  wire       VGND,
-    input  wire       VDPWR,    // 1.8v power supply
-    input  wire [7:0] ui_in,    // Dedicated inputs
-    output wire [7:0] uo_out,   // Dedicated outputs
-    input  wire [7:0] uio_in,   // IOs: Input path
-    output wire [7:0] uio_out,  // IOs: Output path
-    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
-    inout  wire [7:0] ua,       // Analog pins, only ua[5:0] can be used
-    input  wire       ena,      // always 1 when the design is powered
+module tt_um_mgpauly1458_ms_hello (
+    input  wire [7:0] ui_in,    // dedicated inputs
+    output wire [7:0] uo_out,   // dedicated outputs
+    input  wire [7:0] uio_in,   // IOs: input path
+    output wire [7:0] uio_out,  // IOs: output path
+    output wire [7:0] uio_oe,   // IOs: enable path (active high: 0=input, 1=output)
+    input  wire       ena,      // always 1 when the design is powered, so you can ignore it
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // The digital half: uo_out[0] is ui_in[0] inverted combinationally,
-  // uo_out[1] is the same inversion registered on clk.
-  reg q;
+  wire a = ui_in[0];
+  wire y_analog;
 
-  always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) q <= 1'b0;
-    else        q <= ~ui_in[0];
-  end
+  // The hand-drawn CMOS inverter. Hard macro; see src/tt_analog_inverter.v.
+  tt_analog_inverter u_inv (
+      .A(a),
+      .Y(y_analog)
+  );
 
-  // Unused outputs are tied to ground in the layout, as the analog spec
-  // requires, so they are driven low here too rather than left floating.
-  assign uo_out  = {6'b0, q, ~ui_in[0]};
+  wire y_comb, y_reg, y_ref, mismatch;
+
+  ms_hello u_dig (
+      .clk      (clk),
+      .rst_n    (rst_n),
+      .a        (a),
+      .y_analog (y_analog),
+      .y_comb   (y_comb),
+      .y_reg    (y_reg),
+      .y_ref    (y_ref),
+      .mismatch (mismatch)
+  );
+
+  assign uo_out = {4'b0000, mismatch, y_ref, y_reg, y_comb};
+
+  // Bidirectionals unused: drive them low and hold them as inputs.
   assign uio_out = 8'b0;
   assign uio_oe  = 8'b0;
 
-  wire _unused = &{ena, ui_in[7:1], uio_in, VGND, VDPWR, 1'b0};
+  // Silence the linter about the inputs this design does not use.
+  wire _unused = &{ena, ui_in[7:1], uio_in, 1'b0};
 
 endmodule
+
+`default_nettype wire

@@ -3,9 +3,9 @@ project:
   title:        "Mixed-signal hello world"      # Project title
   author:       "Maxwell Pauly"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "A hand-laid-out CMOS inverter and a LibreLane-hardened RTL inverter sharing one tile"      # One line description of what your project does
-  language:     "Mixed-signal (Verilog + Analog)" # other examples include Verilog, Amaranth, VHDL, etc
-  clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
+  description:  "A digital tile that imports a hand-laid-out CMOS inverter as a hard macro and compares it against the same inversion in logic"      # One line description of what your project does
+  language:     "Verilog" # other examples include Verilog, Amaranth, VHDL, etc
+  clock_hz:     50000000       # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? On ihp-sg13g2 a 1x1 tile is 202.08 x 154.98 uM.
   # 1x2 is the two-tile option: 202.08 x 313.74 uM (one wide, two tall).
@@ -13,10 +13,14 @@ project:
 
   # How many analog pins does your project use? Must be used sequentially
   # from ua[0]; only the pins declared here get connected to the pads.
-  analog_pins: 2
+  #
+  # Zero: this is a DIGITAL submission. The analog content is a hard macro
+  # inside the tile and nothing of it reaches a ua[] pad, so Tiny Tapeout
+  # hardens this project with its ordinary digital flow.
+  analog_pins: 0
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_mgpauly1458_inverter"
+  top_module:  "tt_um_mgpauly1458_ms_hello"
 
   # List your project's source files here.
   # Source files must be in ./src and you must list each source file separately, one per line.
@@ -24,12 +28,13 @@ project:
   source_files:
     - "project.v"
     - "ms_hello.v"
+    - "tt_analog_inverter.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: "Digital inverter input"
+  ui[0]: "Inverter input - drives the analog macro and the logic reference"
   ui[1]: ""
   ui[2]: ""
   ui[3]: ""
@@ -39,10 +44,10 @@ pinout:
   ui[7]: ""
 
   # Outputs
-  uo[0]: "~ui[0], combinational"
-  uo[1]: "~ui[0], registered on clk"
-  uo[2]: ""
-  uo[3]: ""
+  uo[0]: "Analog inverter output, combinational"
+  uo[1]: "Analog inverter output, registered on clk"
+  uo[2]: "~ui[0] computed in standard cells"
+  uo[3]: "High when the analog and logic answers disagree"
   uo[4]: ""
   uo[5]: ""
   uo[6]: ""
@@ -59,8 +64,8 @@ pinout:
   uio[7]: ""
 
   # Analog pins - make sure to also set "analog_pins" above, else the pins won't be connected
-  ua[0]: "Inverter output (drain node)"
-  ua[1]: "Inverter input (gate)"
+  ua[0]: ""
+  ua[1]: ""
   ua[2]: ""
   ua[3]: ""
   ua[4]: ""

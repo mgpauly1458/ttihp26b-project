@@ -70,5 +70,58 @@
   "MAGIC_DEF_LABELS": 0,
 
   "//": "Only export pin area in LEF (without any connected nets)",
-  "MAGIC_WRITE_LEF_PINONLY": 1
+  "MAGIC_WRITE_LEF_PINONLY": 1,
+
+  "//": "================================================================",
+  "//": "MIXED-SIGNAL: the hand-drawn analog inverter, imported as a hard macro.",
+  "//": "tt-support-tools generates src/user_config.json and merges it OVER this",
+  "//": "file, but only for the keys it owns (DESIGN_NAME, VERILOG_FILES, DIE_AREA,",
+  "//": "FP_DEF_TEMPLATE, VDD_PIN, GND_PIN, RT_MAX_LAYER). Everything below",
+  "//": "survives into the LibreLane run.",
+
+  "//": "Built by analog/layout/build_tt_analog_inverter.py; timing measured in",
+  "//": "ngspice by analog/char/characterize.py. Placed by hand rather than by",
+  "//": "the macro placer, and the numbers are not arbitrary: x sits on the site",
+  "//": "grid (2.88 + 0.48k) and y on the row grid (3.78k), so the macro lands",
+  "//": "flush in the rows, and x is chosen so that a whole VPWR/VGND strap pair",
+  "//": "of the tile PDN (13.6um offset, 38.87um pitch, 4um apart) falls inside",
+  "//": "the macro's 20.16um width, which is what gives both supplies a via.",
+  "//": "(A '//' key is only stripped at the top level - LibreLane rejects one",
+  "//": "inside the Macro object itself.)",
+  "MACROS": {
+    "tt_analog_inverter": {
+      "gds": ["dir::../analog/macro/tt_analog_inverter.gds"],
+      "lef": ["dir::../analog/macro/tt_analog_inverter.lef"],
+      "lib": { "*": ["dir::../analog/lib/tt_analog_inverter.lib"] },
+      "instances": {
+        "u_inv": { "location": [90.24, 151.2], "orientation": "N" }
+      }
+    }
+  },
+
+  "//": "Keep the placer, and every route, away from the analog block. The LEF",
+  "//": "already blocks Metal1..Metal4 over the macro; the halo keeps standard",
+  "//": "cells from crowding right up against the guard ring, and keeps the",
+  "//": "PDN's own straps off it except where they are hooked on purpose.",
+  "FP_MACRO_HORIZONTAL_HALO": 8,
+  "FP_MACRO_VERTICAL_HALO": 8,
+  "//": "The PDN halo stays at zero: a halo keeps the grid's straps away from",
+  "//": "the macro, and the macro's straps have to be reachable from it.",
+  "PDN_HORIZONTAL_HALO": 0,
+  "PDN_VERTICAL_HALO": 0,
+  "GRT_MACRO_EXTENSION": 2,
+
+  "//": "Hook the macro's supplies to the tile PDN.",
+  "//": "<instance_rx> <vdd_net> <gnd_net> <vdd_pin> <gnd_pin>",
+  "PDN_MACRO_CONNECTIONS": ["u_inv VPWR VGND VPWR VGND"],
+
+  "//": "The macro grid vias between PDN_VERTICAL_LAYER and PDN_HORIZONTAL_LAYER.",
+  "//": "The tile's grid is TopMetal1 (vertical) and, with FP_PDN_MULTILAYER off,",
+  "//": "PDN_HORIZONTAL_LAYER is used for NOTHING ELSE - see pdn_cfg.tcl, where",
+  "//": "the horizontal stripe and the core ring are both inside the multilayer",
+  "//": "branch. Naming Metal4 here is therefore how the macro's Metal4 power",
+  "//": "straps get vias up to the TopMetal1 grid, and it changes nothing else.",
+  "//": "Left at its TopMetal2 default the macro grid has no layer in common with",
+  "//": "the macro and PDN quits with PDN-0232 then PDN-0233.",
+  "PDN_HORIZONTAL_LAYER": "Metal4"
 }

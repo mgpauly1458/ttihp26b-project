@@ -1,8 +1,31 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# Tiny Tapeout Verilog Project Template
+# Mixed-signal hello world — TTIHP 26b
 
-- [Read the documentation for project](docs/info.md)
+A digital tile with a hand-drawn CMOS inverter inside it. The Verilog top level
+is the whole tile; LibreLane hardens it and places the analog block into it as a
+hard macro, then routes to it and runs the power grid over it. The design brings
+out the same inversion computed twice — once in silicon drawn by hand, once in
+synthesised logic — plus a pin that goes high if they ever disagree.
+
+- [Read the documentation for the project](docs/info.md)
+- [The analog block](analog/README.md) — schematic, layout, characterisation
+- [Working notes](CLAUDE.md) — how the flow fits together, and what it cost
+
+![the hardened tile](docs/tile_layout.png)
+
+## Building it
+
+```bash
+make macro      # the analog block: layout, timing, DRC, LVS   (Docker)
+make harden     # LibreLane the tile around it                 (Docker)
+make precheck   # Tiny Tapeout's own precheck on the result    (Docker)
+make test       # cocotb against the RTL
+```
+
+`make` on its own lists the targets.
+
+---
 
 ## What is Tiny Tapeout?
 

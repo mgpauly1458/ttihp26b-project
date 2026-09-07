@@ -1,17 +1,14 @@
 /*
- * Copyright (c) 2026 Maxwell Pauly
- * SPDX-License-Identifier: Apache-2.0
+ * The digital half of the mixed-signal hello world.
  *
- * The digital half of the mixed-signal tile: a "hello world" inverter in RTL,
- * hardened by LibreLane into a standard-cell macro that is then merged into the
- * hand-drawn analog tile (see analog/layout/build_gds.py).
+ * It drives the analog inverter's gate, samples the inverter's output back
+ * into the digital domain, and computes the same inversion in logic so the two
+ * can be compared on the pins. The flop is not decoration: it forces CTS and
+ * STA to run instead of the whole design collapsing into a wire.
  *
- * Deliberately small but not degenerate. A purely combinational inverter would
- * synthesise to one cell and exercise neither CTS nor timing analysis, so the
- * block also carries a registered copy of the same inversion.
- *
- *   y_comb = ~a                     combinational, straight through
- *   y_reg  = ~a registered on clk   resets low
+ * y_analog arrives from a CMOS drain node. That is a full-swing rail-to-rail
+ * signal driving standard-cell gate inputs, which is exactly what an ordinary
+ * cell output looks like - no level shifting or comparator is needed.
  */
 
 `default_nettype none
@@ -19,20 +16,25 @@
 module ms_hello (
     input  wire clk,
     input  wire rst_n,
-    input  wire a,
-    output wire y_comb,
-    output wire y_reg
+    input  wire a,          // stimulus, from ui_in[0]
+    input  wire y_analog,   // the hand-drawn inverter's output
+
+    output wire y_comb,     // y_analog, combinationally
+    output wire y_reg,      // y_analog, registered on clk
+    output wire y_ref,      // ~a computed in standard cells
+    output wire mismatch    // high when the analog and digital answers differ
 );
 
-  reg q;
+  assign y_comb   = y_analog;
+  assign y_ref    = ~a;
+  assign mismatch = y_analog ^ y_ref;
 
-  assign y_comb = ~a;
-  assign y_reg  = q;
-
+  reg y_reg_q;
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) q <= 1'b0;
-    else        q <= ~a;
+    if (!rst_n) y_reg_q <= 1'b0;
+    else        y_reg_q <= y_analog;
   end
+  assign y_reg = y_reg_q;
 
 endmodule
 
