@@ -13,9 +13,9 @@ ff -40 C 1.32 V).
 | clock | created on | period | what it clocks |
 |---|---|---|---|
 | `clk` | the tile's clock pin | 20 ns | `regfile`, `measure_core`'s FSM and counters, the reference-side synchronisers |
-| `ring0`..`ring6` | `u_rings.u_ringN.u_out/X`, each standard-cell ring's `(* keep *)` output buffer | 1.6 ns (0.9 ns for the 11-stage ring 5) | nothing directly: they only reach the mux |
-| `ring7` | `u_rings.u_ring7/clk_out`, the analog macro's output pin | 2.0 ns | likewise |
-| `ring_sel` | `u_mux.u_selout/X`, the named buffer on the selected ring | 0.9 ns | `u_div`'s first flop `q1`, the fastest flop in the design |
+| `ring0`..`ring6` | `u_rings.u_ringN.u_out/X`, each standard-cell ring's `(* keep *)` output buffer | 1.6 ns (0.8 ns for the 11-stage ring 5) | nothing directly: they only reach the mux |
+| `ring7` | `u_rings.u_ring7/clk_out`, the analog macro's output pin | 1.6 ns (544 MHz simulated at the fast corner, code 255) | likewise |
+| `ring_sel` | `u_mux.u_selout/X`, the named buffer on the selected ring | 0.8 ns | `u_div`'s first flop `q1`, the fastest flop in the design |
 | `div_ring` | `u_div.u_divout/X`, the named buffer on the divided ring | **4.0 ns** | `measure_core`'s window logic and its `arm` synchroniser |
 
 `set_clock_groups -asynchronous` puts `clk` and every one of these in its
@@ -47,14 +47,15 @@ is where the window logic's rate is set.
 
 **The divided ring must not exceed 250 MHz.** STA reports the window logic
 good to 3.0 ns at the slow corner (331 MHz), so 4.0 ns is the constraint
-with margin. A ring faster than 250 MHz must be measured through tap 1 or
-higher: the 11-stage ring (~700 MHz simulated) needs tap 2 or more, the
-21-stage rings and the analog ring at high codes need tap 1 or more. Tap 0
-(divide by 1) exists for slow rings, such as the analog ring at low codes
-(3.8 MHz at code 0). The testbenches use tap 3 and 4; the cocotb bench uses
-tap 3.
+with margin. A ring faster than 250 MHz must be measured through a higher
+tap: tap 3 (divide by 8) is safe for every ring at every corner (up to
+2 GHz), tap 2 for anything under 1 GHz, tap 1 under 500 MHz. The analog
+ring reaches 544 MHz at code 255 at the fast corner, the 11-stage ring
+about 1 GHz. Tap 0 (divide by 1) exists for slow rings, such as the analog
+ring at low codes (3.8 MHz at code 0). The testbenches use tap 3 and 4; the
+cocotb bench uses tap 3.
 
-The first divider flop `q1` is constrained at 0.9 ns (`ring_sel`) and
+The first divider flop `q1` is constrained at 0.8 ns (`ring_sel`) and
 passes with margin (period_min 0.54 ns at the slow corner): it is one flop
 with Q-bar back to D and nothing else, as `ring_divider.v` insists.
 

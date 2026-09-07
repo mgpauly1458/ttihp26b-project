@@ -55,8 +55,8 @@ Interface: `ui_in[2:0]` is a write address, `ui_in[3]` a write strobe,
 6. Repeat with `RING_SEL` 0..7 and `TRIM_CODE` (address 0) 0..255.
 
 Two rules of use. The divided ring (after `TAP_SEL`) must stay below
-250 MHz, which is what the window logic is timed for: use `TAP_SEL` >= 2
-for the 11-stage ring and >= 1 for the others at speed. And the analog
+250 MHz, which is what the window logic is timed for: `TAP_SEL` = 3 is
+safe for every ring at every corner; 2 is enough below 1 GHz. And the analog
 ring (slot 7) at low codes is slow: at code 0 it runs about 3.8 MHz, so
 200 periods through tap 3 take 420 us, longer than a 16000-cycle timeout
 at 50 MHz; use tap 0 or 1 for low codes, or raise `TIMEOUT` (up to 65535

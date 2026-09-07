@@ -25,19 +25,21 @@ source $::env(SCRIPTS_DIR)/base.sdc
 
 # ---------------------------------------------------------------- ring clocks
 # Period = fastest expected, with margin: simulated 350 MHz for the 21-stage
-# minimum-size rings (2.86 ns), ~700 MHz for the 11-stage ring, 332 MHz for
-# the analog macro at code 255 (3.0 ns). Fast corner, cold, could be ~1.5x
-# that, so 1.6 ns / 0.9 ns / 2.0 ns.
+# minimum-size rings (2.86 ns), ~700 MHz for the 11-stage ring; the analog
+# macro at code 255 is 332 MHz typical and 544 MHz at the fast corner, cold,
+# 1.32 V (analog/verify/ring.py). Fast-corner factor ~1.6 on the standard
+# cell rings too, so 1.6 ns / 0.8 ns / 1.6 ns, and the selected-ring clock
+# takes the fastest of them.
 set ring_clocks [list \
     ring0 1.6 [get_pins u_rings.u_ring0.u_out/X] \
     ring1 1.6 [get_pins u_rings.u_ring1.u_out/X] \
     ring2 1.6 [get_pins u_rings.u_ring2.u_out/X] \
     ring3 1.6 [get_pins u_rings.u_ring3.u_out/X] \
     ring4 1.6 [get_pins u_rings.u_ring4.u_out/X] \
-    ring5 0.9 [get_pins u_rings.u_ring5.u_out/X] \
+    ring5 0.8 [get_pins u_rings.u_ring5.u_out/X] \
     ring6 1.6 [get_pins u_rings.u_ring6.u_out/X] \
-    ring7 2.0 [get_pins u_rings.u_ring7/clk_out] \
-    ring_sel 0.9 [get_pins u_mux.u_selout/X] \
+    ring7 1.6 [get_pins u_rings.u_ring7/clk_out] \
+    ring_sel 0.8 [get_pins u_mux.u_selout/X] \
     div_ring 4.0 [get_pins u_div.u_divout/X] \
 ]
 
