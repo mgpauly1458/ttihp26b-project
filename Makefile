@@ -25,7 +25,7 @@ RTL := src/project.v \
        src/rings/ring_21_hd.v \
        src/rings/ring_11_min.v \
        src/rings/ring_tap.v \
-       src/rings/ring_analog_stub.v
+       src/rings/tt_analog_ring.v
 
 .DEFAULT_GOAL := help
 .PHONY: help test sweep plot clean \
@@ -65,7 +65,7 @@ test_ring_model: | build
 	@grep -q 'RESULT: PASS' build/tb_ring_model.log
 
 test_ring_divider: | build
-	$(IVERILOG) -o build/tb_ring_divider sim/tb_ring_divider.v src/ring_divider.v
+	$(IVERILOG) -o build/tb_ring_divider sim/tb_ring_divider.v src/ring_divider.v sim/sg13g2_cells_sim.v
 	$(VVP) build/tb_ring_divider | tee build/tb_ring_divider.log
 	@grep -q 'RESULT: PASS' build/tb_ring_divider.log
 
@@ -80,7 +80,7 @@ test_cdc_sync: | build
 	@grep -q 'RESULT: PASS' build/tb_cdc_sync.log
 
 test_ring_mux: | build
-	$(IVERILOG) -o build/tb_ring_mux sim/tb_ring_mux.v src/ring_mux.v
+	$(IVERILOG) -o build/tb_ring_mux sim/tb_ring_mux.v src/ring_mux.v sim/sg13g2_cells_sim.v
 	$(VVP) build/tb_ring_mux | tee build/tb_ring_mux.log
 	@grep -q 'RESULT: PASS' build/tb_ring_mux.log
 

@@ -47,7 +47,10 @@ module tb_ring_divider;
       expect = T_IN * (1 << tap);
       $display("tap %0d : period %9.3f ns  expected %9.3f ns  (divide by %0d)",
                tap, period, expect, 1 << tap);
-      if (period != expect) begin
+      // The output buffer's 80 ps delay stand-in shifts every edge by the same
+      // amount, so the period is unchanged; compare with a tolerance rather
+      // than exactly, since (t1 - t0) / 4 is a real.
+      if (period > expect + 0.001 || period < expect - 0.001) begin
         $display("  FAIL");
         errors = errors + 1;
       end

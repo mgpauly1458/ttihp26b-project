@@ -11,7 +11,15 @@ model, and checks the count the reciprocal formula predicts. It also checks
 that a dead code times out rather than hangs.
 
 The rings are sim/ring_model.v instances here (compiled in by -DSIM), so
-the "right answer" is known exactly: ring 7 at code 255 runs at 400 MHz.
+the "right answer" is known exactly: ring 7, the analog macro's behavioural
+model, runs at 332 MHz at code 255 and 3.8 MHz at code 0.
+
+Gate level (GATES=yes) runs the same tests on the hardened netlist. There
+the seven standard-cell rings are real cells with zero delay, and a
+zero-delay ring loop does not advance simulation time, so the bench keeps
+`ena` low (which gates every ring enable) until ring 7 is selected, and
+never selects another slot. Ring 7 is the hard macro, a blackbox with the
+behavioural model inside at both RTL and gate level.
 """
 
 import cocotb
@@ -25,6 +33,7 @@ ST_DONE, ST_BUSY, ST_TIMEOUT, ST_IGNORED = 1, 2, 4, 8
 
 T_REF_NS = 20          # 50 MHz, as declared in info.yaml
 F_REF = 1e9 / T_REF_NS
+F_RING7_MAX = 332e6    # src/rings/tt_analog_ring.v, F_MAX_HZ at code 255
 
 
 def ui(addr=0, we=0, rsel=0):
@@ -77,7 +86,9 @@ async def measure(dut, ring, code, tap, n, timeout):
 
 
 async def start(dut):
-    dut.ena.value = 1
+    # ena low through reset: with it low no ring is enabled, whatever the
+    # (reset, or before that X) ring select says. See the header.
+    dut.ena.value = 0
     dut.ui_in.value = 0
     dut.uio_in.value = 0
     dut.rst_n.value = 0
@@ -86,6 +97,10 @@ async def start(dut):
     await ClockCycles(dut.clk, 5)
     await Timer(5, units="ns")                    # release reset between edges
     dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 3)
+    await host_write(dut, A_RING_SEL, 7)          # the macro's slot, then
+    await Timer(1, units="ns")
+    dut.ena.value = 1                             # let the rings run
     await ClockCycles(dut.clk, 3)
 
 
@@ -98,18 +113,19 @@ async def test_id(dut):
 
 @cocotb.test()
 async def test_one_measurement(dut):
-    """Ring 7 at code 255 is 400 MHz in the model; tap 3, N=200 -> count 200 +/-1."""
+    """Ring 7 at code 255 is 332 MHz in the model; tap 3, N=200 -> count 241 +/-1."""
     await start(dut)
     status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
     assert not (status & ST_TIMEOUT), "unexpected timeout"
-    expected = 200 * 8 * F_REF / 400e6
+    expected = 200 * 8 * F_REF / F_RING7_MAX
     dut._log.info(f"count {count}, expected {expected:.1f}")
     assert abs(count - expected) <= 1
 
 
 @cocotb.test()
-async def test_dead_code_times_out(dut):
-    """Code 0 is in the model's dead zone: timeout_error, not a hang."""
+async def test_slow_code_times_out(dut):
+    """Code 0 runs at 3.8 MHz: 200 periods at tap 3 take 421 us, the timeout
+    is 40 us. timeout_error, not a hang, and the instrument recovers."""
     await start(dut)
     status, _ = await measure(dut, ring=7, code=0, tap=3, n=200, timeout=2000)
     assert status & ST_TIMEOUT
@@ -117,4 +133,4 @@ async def test_dead_code_times_out(dut):
     # And the instrument still works afterwards.
     status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
     assert not (status & ST_TIMEOUT)
-    assert abs(count - 200) <= 1
+    assert abs(count - 200 * 8 * F_REF / F_RING7_MAX) <= 1

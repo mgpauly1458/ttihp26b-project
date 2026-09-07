@@ -8,7 +8,7 @@ TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = project.v regfile.v measure_core.v cdc_sync.v ring_divider.v ring_mux.v \
                   rings/ring_bank.v rings/ring_21_min.v rings/ring_21_hd.v rings/ring_11_min.v \
-                  rings/ring_tap.v rings/ring_analog_stub.v
+                  rings/ring_tap.v rings/tt_analog_ring.v
 
 ifneq ($(GATES),yes)
 
@@ -32,6 +32,10 @@ COMPILE_ARGS    += -DSIM
 # See docs/design_notes.md, "Gate-level simulation".
 VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_io/verilog/sg13g2_io.v
 VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_stdcell/verilog/sg13g2_stdcell.v
+# The analog ring is a hard macro: a blackbox in the gate-level netlist too,
+# so its behavioural model (and the ring model it wraps) go in beside it.
+VERILOG_SOURCES += $(SRC_DIR)/rings/tt_analog_ring.v
+VERILOG_SOURCES += $(PWD)/../sim/ring_model.v
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
 endif

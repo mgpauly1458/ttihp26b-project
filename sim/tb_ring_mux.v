@@ -51,7 +51,9 @@ module tb_ring_mux;
       period = (t1 - t0) / 4;
       $display("sel %0d : period %5.2f ns (expected %5.2f)  ring_en = %b",
                k, period, 10.0 + k, ring_en);
-      if (period != 10.0 + k) begin
+      // Tolerance: the output buffer's 80 ps stand-in shifts every edge
+      // equally, and (t1 - t0) / 4 is a real.
+      if (period > 10.0 + k + 0.001 || period < 10.0 + k - 0.001) begin
         $display("  FAIL: wrong ring routed");
         errors = errors + 1;
       end

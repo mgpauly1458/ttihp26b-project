@@ -47,23 +47,36 @@ module ring_mux (
     input  wire [7:0] ring_in,
     input  wire [2:0] sel,
     input  wire       enable,
-    output reg        ring_out,
+    output wire       ring_out,
     output reg  [7:0] ring_en
 );
 
+  reg selected;
+
   always @(*) begin
     case (sel)
-      3'd0:    begin ring_out = ring_in[0]; ring_en = 8'b0000_0001; end
-      3'd1:    begin ring_out = ring_in[1]; ring_en = 8'b0000_0010; end
-      3'd2:    begin ring_out = ring_in[2]; ring_en = 8'b0000_0100; end
-      3'd3:    begin ring_out = ring_in[3]; ring_en = 8'b0000_1000; end
-      3'd4:    begin ring_out = ring_in[4]; ring_en = 8'b0001_0000; end
-      3'd5:    begin ring_out = ring_in[5]; ring_en = 8'b0010_0000; end
-      3'd6:    begin ring_out = ring_in[6]; ring_en = 8'b0100_0000; end
-      default: begin ring_out = ring_in[7]; ring_en = 8'b1000_0000; end
+      3'd0:    begin selected = ring_in[0]; ring_en = 8'b0000_0001; end
+      3'd1:    begin selected = ring_in[1]; ring_en = 8'b0000_0010; end
+      3'd2:    begin selected = ring_in[2]; ring_en = 8'b0000_0100; end
+      3'd3:    begin selected = ring_in[3]; ring_en = 8'b0000_1000; end
+      3'd4:    begin selected = ring_in[4]; ring_en = 8'b0001_0000; end
+      3'd5:    begin selected = ring_in[5]; ring_en = 8'b0010_0000; end
+      3'd6:    begin selected = ring_in[6]; ring_en = 8'b0100_0000; end
+      default: begin selected = ring_in[7]; ring_en = 8'b1000_0000; end
     endcase
     if (!enable) ring_en = 8'b0000_0000;
   end
+
+  // The selected ring leaves through a named buffer. Synthesis renames every
+  // net and gate it touches, but a `(* keep *)` cell instance survives with
+  // its name, so src/constraints.sdc can declare the selected ring a clock
+  // at u_mux.u_selout/X without knowing what the mux became. In simulation
+  // (-DSIM) it is a plain assign.
+`ifdef SIM
+  assign ring_out = selected;
+`else
+  (* keep *) sg13g2_buf_1 u_selout (.X(ring_out), .A(selected));
+`endif
 
 endmodule
 

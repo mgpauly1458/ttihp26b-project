@@ -50,8 +50,10 @@ module ring_divider (
     input  wire       ring_clk,
     input  wire       reset,
     input  wire [2:0] tap_sel,
-    output reg        divided_clk
+    output wire       divided_clk
 );
+
+  reg tap;   // the tap mux output, before the named buffer below
 
   reg q1, q2, q3, q4, q5, q6, q7;
 
@@ -80,16 +82,29 @@ module ring_divider (
   // Tap select. divide ratio = 2 ** tap_sel.
   always @(*) begin
     case (tap_sel)
-      3'd0:    divided_clk = ring_clk;   // /1
-      3'd1:    divided_clk = q1;         // /2
-      3'd2:    divided_clk = q2;         // /4
-      3'd3:    divided_clk = q3;         // /8
-      3'd4:    divided_clk = q4;         // /16
-      3'd5:    divided_clk = q5;         // /32
-      3'd6:    divided_clk = q6;         // /64
-      default: divided_clk = q7;         // /128
+      3'd0:    tap = ring_clk;   // /1
+      3'd1:    tap = q1;         // /2
+      3'd2:    tap = q2;         // /4
+      3'd3:    tap = q3;         // /8
+      3'd4:    tap = q4;         // /16
+      3'd5:    tap = q5;         // /32
+      3'd6:    tap = q6;         // /64
+      default: tap = q7;         // /128
     endcase
   end
+
+  // The divided clock leaves through a named buffer so that
+  // src/constraints.sdc can declare it a clock at u_div.u_divout/X. That
+  // declaration is where the instrument's one timing rule lives: the window
+  // logic in measure_core is timed for a divided ring of at most 250 MHz,
+  // so a ring faster than that must be measured through tap 1 or higher
+  // (the tap-0 path exists for slow rings, such as the analog ring at low
+  // codes). In simulation (-DSIM) the buffer is a plain assign.
+`ifdef SIM
+  assign divided_clk = tap;
+`else
+  (* keep *) sg13g2_buf_1 u_divout (.X(divided_clk), .A(tap));
+`endif
 
 endmodule
 

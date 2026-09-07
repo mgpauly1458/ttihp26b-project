@@ -48,7 +48,9 @@
 `default_nettype none
 
 module ring_21_min #(
+    /* verilator lint_off UNUSEDPARAM */
     parameter real SIM_F_HZ = 350.0e6   // simulation only, see header
+    /* verilator lint_on UNUSEDPARAM */
 ) (
     input  wire [7:0] code,
     input  wire       enable,

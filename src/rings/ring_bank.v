@@ -16,7 +16,7 @@
 //   4     ring_21_hd       same stage count, high-drive cells
 //   5     ring_11_min      half the stage count
 //   6     ring_tap         tap-select trim, code[2:0]
-//   7     ring_analog_stub the custom macro, all 8 code bits
+//   7     tt_analog_ring   the hand-drawn macro (analog/), all 8 code bits
 //
 // Simulation frequencies for slots 0-3 differ by a percent or two so the
 // sweep plot shows a population. They are simulation parameters only.
@@ -50,7 +50,7 @@ module ring_bank (
   ring_tap u_ring6 (
       .code(trim_code), .enable(ring_en[6]), .clk_out(ring_clk[6]));
 
-  ring_analog_stub u_ring7 (
+  tt_analog_ring u_ring7 (
       .code(trim_code), .enable(ring_en[7]), .clk_out(ring_clk[7]));
 
 endmodule

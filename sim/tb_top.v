@@ -17,7 +17,7 @@
 //      next accepted START.
 //   6. RESULT is a shadow: reading it during the next measurement returns
 //      the previous, complete result.
-//   7. A dead code times out cleanly through the pins.
+//   7. A code too slow for the timeout times out cleanly through the pins.
 // ============================================================================
 `timescale 1ns / 1ps
 
@@ -125,7 +125,9 @@ module tb_top;
     if (result !== first_result) begin $display("  FAIL: shadow changed"); errors = errors + 1; end
     wait_done;
 
-    $display("--- 7. Dead code times out through the pins");
+    // Ring 7 at code 0 is 3.8 MHz: 200 periods at tap 3 take 421 us, the
+    // timeout is 2000 reference cycles = 40 us. Must report, not hang.
+    $display("--- 7. Slow code times out through the pins");
     measure(3'd7, 8'd0, 3'd3, 16'd200, 16'd2000);
     $display("status %b after %0d polls", status, polls);
     if (!status[ST_TIMEOUT] || !status[ST_DONE]) begin $display("  FAIL"); errors = errors + 1; end

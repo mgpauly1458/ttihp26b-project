@@ -53,7 +53,11 @@ module tt_um_mgpauly1458_ringmeter (
     input  wire       rst_n     // reset_n - low to reset
 );
 
+  // Used synchronously by the reference domain and asynchronously by the
+  // divider, whose clock may not be running: intended, see the header.
+  /* verilator lint_off SYNCASYNCNET */
   wire reset = ~rst_n;
+  /* verilator lint_on SYNCASYNCNET */
 
   // ---- register file --------------------------------------------------------
   wire [7:0]  trim_code;

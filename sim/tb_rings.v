@@ -6,7 +6,7 @@
 // with the delay stand-ins from sim/sg13g2_cells_sim.v. What this proves is
 // that each netlist is wired into a loop with an odd number of inversions,
 // that the enable works, that the tap ring's eight codes give eight
-// distinct, monotonic, correctly ordered periods, and that the analog stub
+// distinct, monotonic, correctly ordered periods, and that the analog macro
 // is silent. The numbers are checked against the closed-form period from
 // the stand-in delays, to the picosecond, because that is what a wiring
 // error would break.
@@ -115,13 +115,15 @@ module tb_rings;
     end
     check_stopped(6);
 
-    $display("--- slot 7, analog stub: must be silent without SIM");
+    // Slot 7 is the hard macro: without SIM it is a blackbox with no body,
+    // so its output floats. What matters is that nothing here drives it.
+    $display("--- slot 7, analog macro: blackbox, must be silent without SIM");
     ring_en = 8'b1000_0000; code = 8'd255;
     #20;
-    if (ring_clk[7] !== 1'b0) begin
-      $display("  FAIL: stub output is %b, expected 0", ring_clk[7]);
+    if (ring_clk[7] !== 1'bz && ring_clk[7] !== 1'b0) begin
+      $display("  FAIL: macro output is %b, expected z (blackbox) or 0", ring_clk[7]);
       errors = errors + 1;
-    end else $display("slot 7 stub    : output 0, as expected");
+    end else $display("slot 7 macro   : output %b (blackbox), as expected", ring_clk[7]);
 
     if (errors == 0) $display("RESULT: PASS");
     else             $display("RESULT: FAIL (%0d errors)", errors);

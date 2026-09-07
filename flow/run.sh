@@ -9,6 +9,8 @@
 set -euo pipefail
 IMAGE=${IMAGE:-hpretl/iic-osic-tools:latest}
 ROOT=$(git rev-parse --show-toplevel)
+# The image's login shell sources $HOME/.bashrc; give it a HOME that exists.
+mkdir -p "$ROOT/analog/out/.home" "$ROOT/analog/out/.cache" && touch "$ROOT/analog/out/.home/.bashrc"
 exec docker run --rm \
     -v "$ROOT:/work" -w /work \
     --user "$(id -u):$(id -g)" \
