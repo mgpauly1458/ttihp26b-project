@@ -44,6 +44,9 @@ help:
 	@echo '  make test_top             8. whole tile through its pins'
 	@echo '  make sweep                8. 8 rings x 256 codes -> build/sweep.csv, docs/sweep*.png'
 	@echo
+	@echo 'The analog macro (analog/):'
+	@echo '  make macro                layout, Liberty, DRC, LVS of the ring oscillator block (Docker)'
+	@echo
 	@echo 'Tiny Tapeout flow:'
 	@echo '  make cocotb               the CI testbench (test/), RTL'
 	@echo '  make tools                clone tt-support-tools, set up venv'
@@ -125,7 +128,13 @@ TT_REPO  := https://github.com/TinyTapeout/tt-support-tools.git
 FINAL_GDS  := runs/wokwi/final/gds/$(TOP).gds
 SUBMISSION := tt_submission/$(TOP).gds
 
-.PHONY: cocotb tools harden precheck submission
+.PHONY: cocotb tools harden precheck submission macro
+
+# The analog block is built and checked in its own directory, in the
+# iic-osic-tools container. Its outputs (analog/macro/*.gds, *.lef and
+# analog/lib/*.lib) are committed because CI cannot regenerate them.
+macro:
+	$(MAKE) -C analog macro
 
 cocotb:
 	PATH="$(PWD)/$(VENV)/bin:$$PATH" $(MAKE) -C test clean

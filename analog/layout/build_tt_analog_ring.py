@@ -582,9 +582,10 @@ cont(macro, gx, ry(Y_IN) + 80)
 box(macro, METAL1, gx - 130, ry(Y_IN) - 70, gx + 130, ry(VPWR_RAIL[0]) + 10)
 row.x = don.right + 600
 
-# --- bias: Mp0 diode (24 fingers), Mn0 diode NMOS, Mp1 mirror ---------------
+# --- bias: MPD diode PMOS (24 fingers), MND diode NMOS, MPM mirror PMOS -------
+# (named so they cannot collide with the stages' MP<i>/MN<i>)
 mp0_cols = ["VPWR" if k % 2 == 0 else "vbp" for k in range(NG_MP0 + 1)]
-mp0 = Mos(macro, "MP0", "pmos", row.x, ry(YP), WPS, LPS, NG_MP0, mp0_cols, "vbp")
+mp0 = Mos(macro, "MPD", "pmos", row.x, ry(YP), WPS, LPS, NG_MP0, mp0_cols, "vbp")
 for k, net in enumerate(mp0_cols):
     if net == "VPWR":
         row.strap_up(mp0.pad(k))
@@ -609,14 +610,14 @@ box(macro, METAL1, g0[0] - 590, ry(p1), mp0.pad(1)[2], ry(p2))
 # under Mp0: Mn0 and Mp1 share the NMOS row space; Mp1 must sit where the
 # PMOS row is free, so it goes after Mp0.
 row.x = mp0.right + 600
-mn0 = Mos(macro, "MN0", "nmos", mp0.x + 1000, ry(0), WNS, LNS, 1, ["VGND", "vbn"], "vbn")
+mn0 = Mos(macro, "MND", "nmos", mp0.x + 1000, ry(0), WNS, LNS, 1, ["VGND", "vbn"], "vbn")
 row.strap_down(mn0.pad(0))
 row.strap_to(mn0.pad(1), Y_BN + 80)
 pad = row.bias_stub(mn0.gate_box(), "vbn", Y_BN, up=True)
 d1 = mn0.pad(1)
 box(macro, METAL1, pad[0], pad[1], d1[2] + 80, pad[3])
 
-mp1 = Mos(macro, "MP1", "pmos", row.x, ry(YP), WPS, LPS, 1, ["VPWR", "vbn"], "vbp")
+mp1 = Mos(macro, "MPM", "pmos", row.x, ry(YP), WPS, LPS, 1, ["VPWR", "vbn"], "vbp")
 row.strap_up(mp1.pad(0))
 row.strap_to(mp1.pad(1), Y_BN + 80)
 row.bias_stub(mp1.gate_box(), "vbp", Y_BP, up=False)
