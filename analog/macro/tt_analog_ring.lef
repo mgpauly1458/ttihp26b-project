@@ -1,0 +1,147 @@
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+
+MACRO tt_analog_ring
+  CLASS BLOCK ;
+  FOREIGN tt_analog_ring 0 0 ;
+  ORIGIN 0 0 ;
+  SIZE 86.400 BY 56.700 ;
+  SYMMETRY X Y ;
+  SITE CoreSite ;
+  PIN code[0]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 1.200 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 10.600 0.000 11.000 1.200 ;
+    END
+  END code[0]
+  PIN code[1]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 2.400 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 9.800 0.000 10.200 1.200 ;
+    END
+  END code[1]
+  PIN code[2]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 4.800 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 9.000 0.000 9.400 1.200 ;
+    END
+  END code[2]
+  PIN code[3]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 9.600 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 8.200 0.000 8.600 1.200 ;
+    END
+  END code[3]
+  PIN code[4]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 19.200 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 7.400 0.000 7.800 1.200 ;
+    END
+  END code[4]
+  PIN code[5]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 38.400 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 6.600 0.000 7.000 1.200 ;
+    END
+  END code[5]
+  PIN code[6]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 76.800 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 5.800 0.000 6.200 1.200 ;
+    END
+  END code[6]
+  PIN code[7]
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 153.600 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 5.000 0.000 5.400 1.200 ;
+    END
+  END code[7]
+  PIN enable
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    ANTENNAMODEL OXIDE1 ;
+      ANTENNAGATEAREA 0.143 LAYER Metal2 ;
+    PORT
+      LAYER Metal2 ;
+        RECT 4.200 0.000 4.600 1.200 ;
+    END
+  END enable
+  PIN clk_out
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    ANTENNADIFFAREA 1.020 LAYER Metal3 ;
+    PORT
+      LAYER Metal3 ;
+        RECT 85.200 45.300 86.400 45.700 ;
+    END
+  END clk_out
+  PIN VPWR
+    DIRECTION INOUT ;
+    USE POWER ;
+    SHAPE ABUTMENT ;
+    PORT
+      LAYER Metal4 ;
+        RECT 0.000 50.450 86.400 52.850 ;
+    END
+  END VPWR
+  PIN VGND
+    DIRECTION INOUT ;
+    USE GROUND ;
+    SHAPE ABUTMENT ;
+    PORT
+      LAYER Metal4 ;
+        RECT 0.000 42.150 86.400 44.550 ;
+    END
+  END VGND
+  OBS
+    LAYER Metal1 ;
+        RECT 0.000 0.000 86.400 56.700 ;
+    LAYER Metal2 ;
+        RECT 0.000 0.000 4.000 1.400 ;
+        RECT 11.200 0.000 86.400 1.400 ;
+        RECT 0.000 1.400 86.400 56.700 ;
+    LAYER Metal3 ;
+        RECT 0.000 0.000 86.400 45.100 ;
+        RECT 0.000 45.100 85.000 45.900 ;
+        RECT 0.000 45.900 86.400 56.700 ;
+    LAYER Metal4 ;
+        RECT 0.000 0.000 86.400 41.950 ;
+        RECT 0.000 44.750 86.400 50.250 ;
+        RECT 0.000 53.050 86.400 56.700 ;
+  END
+END tt_analog_ring
+
+END LIBRARY
