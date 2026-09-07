@@ -13,32 +13,13 @@ test/gate_level_netlist.v
 # Local Python environment for cocotb
 venv/
 
-# Vivado / Basys3 prototype outputs
-fpga/basys3/build/
-fpga/**/.Xil/
-vivado*.jou
-vivado*.log
-*.str
-
-# Analog flow scratch
-analog/out/
-analog/drc_run_*/
-analog/lvs_run_*/
-analog/macro/backups/
-analog/simulations/
-*_extracted.cir
-
-# stray container cache (XDG_CACHE_HOME), should live under analog/out/
-/out/
+# iverilog builds, logs, sweep CSV
+build/
 
 # LibreLane runs from the repository root, as CI does.
 runs/
 tt_submission/
 gds_render.png
-
-# analog/macro/ and analog/lib/ are NOT ignored: they hold the committed macro
-# GDS, LEF and Liberty, which CI cannot regenerate (no KLayout, no PCells, no
-# ngspice) and LibreLane has to find in the repository.
 
 # tt-support-tools, cloned by `make tools` exactly as CI does
 tt/

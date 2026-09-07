@@ -5,72 +5,55 @@ docs workflow checks for them.
 
 ## How it works
 
-A digital tile with a hand-drawn analog block inside it.
+An on-chip frequency meter. Eight ring oscillators sit on the tile; the
+instrument measures whichever one is selected and reports the result as a
+number over the pins, so characterising a trimmable oscillator across 256
+trim codes, several rings, four temperatures and thirty chips becomes an
+overnight script instead of a month with a bench counter.
 
-The Verilog top level is the whole tile. LibreLane hardens it, and while doing
-so it places a **hard macro** — a CMOS inverter laid out by hand in the
-`ihp-sg13g2` PDK — into the standard-cell array, routes to it, and runs its
-power grid over it. The design then does the one thing that makes such a pairing
-worth having: it computes the same inversion twice, once in silicon drawn by
-hand and once in synthesised logic, and brings both answers out to the pins
-along with a flag that goes high if they ever differ.
+It is a **reciprocal counter**: it counts how many cycles of the reference
+clock (`clk`, supplied from the bench) fit into exactly `TARGET_N` periods
+of the ring, after a programmable divide-by-1..128. Then
 
-This is a digital submission. No `ua[]` analog pin is used; the analog content
-is entirely internal.
+    f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT
 
-### The analog block
+The only thing that must be accurate is `f_ref`, and that is a clock on an
+ordinary digital input. No voltage reference, no bandgap, nothing analog in
+the measurement chain, which is why it fits on a digital tile.
 
-A single CMOS inverter — the smallest circuit that still exercises every step of
-an analog flow.
+Everything except the rings is shared: one divider, one counter, one
+window state machine, one register file. Because every ring is measured by
+the same instrument, a difference between two rings is a real difference.
 
-- PMOS `sg13_lv_pmos`, W = 2 µm; NMOS `sg13_lv_nmos`, W = 1 µm; both L = 130 nm.
-- The 2:1 width ratio puts the switching threshold at 618 mV against an ideal
-  600 mV on a 1.2 V supply, with a peak small-signal gain of −17.2.
-- Measured input capacitance 5.98 fF; 17 ps of delay into a minimum load,
-  53 ps into 23 fF.
-
-The devices come from the PDK's own PCells, so they are correct by construction;
-only the interconnect between them is drawn by hand. The block sits inside a
-continuous p+ guard ring tied to ground, and its LEF declares the whole
-footprint as a routing obstruction on Metal1 through Metal4, so no tile route
-crosses it — only the power grid, on TopMetal1 above.
-
-It is 20.16 × 22.68 µm, which is a whole number of standard-cell sites by a
-whole number of rows, so it drops into the floorplan like an oversized cell.
-
-### The digital logic
-
-`ui_in[0]` drives the inverter's gate. Its output comes back into the digital
-domain — a CMOS drain node is a full-swing signal, so it drives ordinary cell
-inputs directly — and appears three ways:
-
-| pin | meaning |
-|---|---|
-| `uo_out[0]` | the analog inverter's output, combinationally |
-| `uo_out[1]` | the same, registered on `clk` |
-| `uo_out[2]` | `~ui_in[0]` computed in standard cells |
-| `uo_out[3]` | high when the analog and logic answers disagree |
-
-`uo_out[3]` is the interesting pin on silicon: it is the built-in self-check.
-
-The register is not decoration — it forces clock tree synthesis and static
-timing analysis to run rather than the design collapsing into a wire.
+The ring population: four identical 21-stage minimum-drive rings placed at
+different corners (matching), a high-drive 21-stage ring, an 11-stage ring,
+a tap-select trimmed ring, and a slot for a custom current-starved
+binary-weighted analog ring designed as a separate macro. One 8-bit trim
+code is broadcast to all of them.
 
 ## How to test
 
-Drive `ui_in[0]` and watch `uo_out`.
+Interface: `ui_in[2:0]` is a write address, `ui_in[3]` a write strobe,
+`uio_in[7:0]` write data, `ui_in[6:4]` selects which byte appears on
+`uo_out`. Drive `clk` from an accurate source; 50 MHz is assumed below.
 
-1. Hold `rst_n` low, then release it. `uo_out[1]` clears to 0.
-2. With `ui_in[0]` low, `uo_out[0]` and `uo_out[2]` should both read 1;
-   with it high, both should read 0.
-3. `uo_out[3]` should stay low throughout. If it goes high, the hand-drawn
-   inverter and the synthesised one disagree — which is the measurement this
-   project exists to make.
-4. Clock `clk` (up to 50 MHz) and `uo_out[1]` follows `uo_out[0]` one edge late.
+1. Reset. Set `ui_in[6:4]` = 7 and read `uo_out`: it must be `0xA5`.
+2. Write registers (put address and data on the pins, pulse `ui_in[3]`
+   high for at least 4 clocks): address 1 `RING_SEL` = 0, address 2
+   `TAP_SEL` = 3, address 3/4 `TARGET_N` = 200 (low byte 200, high byte
+   0), address 5/6 `TIMEOUT` = 16000 (0x80, 0x3E).
+3. Write 1 to address 7 (`START`).
+4. Read `STATUS` (`ui_in[6:4]` = 0) until bit 0 (`done`) is set. Bit 2 is
+   `timeout_error`; if set, the ring did not run.
+5. Read `RESULT` bytes with `ui_in[6:4]` = 1..4. With a 350 MHz ring the
+   count is about 229; `f = 200 * 8 * 50 MHz / RESULT`.
+6. Repeat with `RING_SEL` 0..7 and `TRIM_CODE` (address 0) 0..255.
 
-No analog instrumentation is needed: everything is observable on the digital
-pins.
+Full register map, pin map and the sweep script are in the repository's
+`docs/` and `scripts/`.
 
 ## External hardware
 
-None.
+An accurate clock source for `clk` (the demo board's clock is fine for
+bring-up; a lab source for characterisation). A microcontroller or the
+demo board's RP2040 to run the sweep.

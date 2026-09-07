@@ -6,16 +6,19 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v ms_hello.v tt_analog_inverter.v
+PROJECT_SOURCES = project.v regfile.v measure_core.v cdc_sync.v ring_divider.v ring_mux.v \
+                  rings/ring_bank.v rings/ring_21_min.v rings/ring_21_hd.v rings/ring_11_min.v \
+                  rings/ring_tap.v rings/ring_analog_stub.v
 
 ifneq ($(GATES),yes)
 
 # RTL simulation:
 SIM_BUILD				= sim_build/rtl
-# -DSIM turns on the behavioural body inside the tt_analog_inverter blackbox.
-# Without it the macro is an empty module and Y floats.
+# -DSIM replaces every ring's structural netlist with the behavioural model
+# in sim/ring_model.v, whose frequencies are known exactly.
 COMPILE_ARGS    += -DSIM
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
+VERILOG_SOURCES += $(PWD)/../sim/ring_model.v
 
 else
 
@@ -24,19 +27,11 @@ SIM_BUILD				= sim_build/gl
 COMPILE_ARGS    += -DGL_TEST
 COMPILE_ARGS    += -DFUNCTIONAL
 COMPILE_ARGS    += -DSIM
-
-# NOTE: do not add -gno-specify here. The IHP cell models take their flop
-# inputs from the `delayed_*` signals that the specify block's $setuphold
-# produces, so dropping the specify blocks leaves those permanently x and every
-# flop output is x. The timing checks have to stay switched on.
+# NOTE: at gate level the rings are real cells with zero delay unless SDF is
+# annotated, and a zero-delay ring loop does not advance simulation time.
+# See docs/design_notes.md, "Gate-level simulation".
 VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_io/verilog/sg13g2_io.v
 VERILOG_SOURCES += $(PDK_ROOT)/ihp-sg13g2/libs.ref/sg13g2_stdcell/verilog/sg13g2_stdcell.v
-
-# The hard macro is a blackbox in the gate-level netlist too, so the netlist
-# still needs the behavioural model beside it (-DSIM is already set above).
-VERILOG_SOURCES += $(SRC_DIR)/tt_analog_inverter.v
-
-# this gets copied in by the GDS action workflow
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
 
 endif

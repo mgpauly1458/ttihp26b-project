@@ -1,150 +1,120 @@
 # SPDX-FileCopyrightText: © 2026 Maxwell Pauly
 # SPDX-License-Identifier: Apache-2.0
 
-"""Cocotb bench for the mixed-signal hello world.
+"""cocotb bench for the ring oscillator meter -- the CI smoke test.
 
-The analog inverter is a hard macro, so in simulation it is the behavioural
-model in src/tt_analog_inverter.v (compiled in by -DSIM) that responds. What
-these tests can therefore prove is that the tile is *wired* correctly - that
-ui_in[0] reaches the macro, that its output reaches the pins and the flop, and
-that the logic reference agrees with it. Whether the silicon inverter switches
-at the right threshold is a question for ngspice, and lives in analog/.
+The thorough verification is the iverilog testbenches in sim/ (`make test`)
+and the full sweep (`make sweep`). This file exists so Tiny Tapeout's test
+workflow has something honest to run: it drives the tile through its pins
+the way a host would, takes one measurement against the behavioural ring
+model, and checks the count the reciprocal formula predicts. It also checks
+that a dead code times out rather than hangs.
+
+The rings are sim/ring_model.v instances here (compiled in by -DSIM), so
+the "right answer" is known exactly: ring 7 at code 255 runs at 400 MHz.
 """
 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Timer
 
-# uo_out bit assignments, mirroring src/project.v and the pinout in info.yaml.
-Y_COMB, Y_REG, Y_REF, MISMATCH = 0, 1, 2, 3
+# Register map, mirroring src/regfile.v
+A_TRIM, A_RING_SEL, A_TAP_SEL, A_TARGET_L, A_TARGET_H, A_TIMEOUT_L, A_TIMEOUT_H, A_CONTROL = range(8)
+R_STATUS, R_RESULT0, R_RESULT1, R_RESULT2, R_RESULT3, R_TRIM, R_SEL, R_ID = range(8)
+ST_DONE, ST_BUSY, ST_TIMEOUT, ST_IGNORED = 1, 2, 4, 8
+
+T_REF_NS = 20          # 50 MHz, as declared in info.yaml
+F_REF = 1e9 / T_REF_NS
 
 
-async def drive(dut, a):
-    """Apply a new value to ui_in[0], between clock edges.
-
-    cocotb's ClockCycles returns on an edge, so assigning straight afterwards
-    puts the data change at the same instant as CLK. The gate-level flop's
-    $setuphold check fires, its notifier goes X, and uo_out[1] is X from then
-    on. Half a period away from the edge is the honest place to change an
-    input, and it is what real stimulus does.
-    """
-    await Timer(5, units="ns")
-    dut.ui_in.value = a
+def ui(addr=0, we=0, rsel=0):
+    return (rsel << 4) | (we << 3) | addr
 
 
-def SETTLE():
-    """Wait for combinational logic to settle.
+async def host_write(dut, addr, data):
+    """ADDR/WDATA, WE high for 4 clocks, WE low for 4 (see regfile.v)."""
+    await Timer(1, units="ns")                    # off the clock edge
+    dut.uio_in.value = data
+    dut.ui_in.value = ui(addr=addr, we=1)
+    await ClockCycles(dut.clk, 4)
+    await Timer(1, units="ns")
+    dut.ui_in.value = ui(addr=addr, we=0)
+    await ClockCycles(dut.clk, 4)
 
-    Long enough for the gate-level cells' path delays, which are real (the PDK
-    models carry specify blocks) and are what a 1ns wait was too short for -
-    the RTL run passed while the same test read a stale uo_out under GATES=yes.
-    Still far shorter than the 20ns clock, so no edge is crossed.
-    """
-    return Timer(5, units="ns")
+
+async def host_read(dut, rsel):
+    await Timer(1, units="ns")
+    dut.ui_in.value = ui(rsel=rsel)
+    await ClockCycles(dut.clk, 3)
+    await Timer(1, units="ns")
+    return int(dut.uo_out.value)
 
 
-def bit(dut, n):
-    """One bit of uo_out.
+async def wait_done(dut, max_polls=100000):
+    for _ in range(max_polls):
+        status = await host_read(dut, R_STATUS)
+        if status & ST_DONE:
+            return status
+    raise AssertionError("measurement never finished")
 
-    Read bit by bit rather than int(uo_out.value): in gate-level simulation a
-    single X anywhere in the byte makes the whole conversion raise, and a test
-    that only cares about bit 0 should not fail because of bit 1. uo_out is
-    declared [7:0], so the LogicArray indexes by bit number directly.
-    """
-    value = dut.uo_out.value[n]
-    assert value in ("0", "1"), f"uo_out[{n}] is '{value}', not a logic level"
-    return int(value)
+
+async def read_result(dut):
+    b = [await host_read(dut, r) for r in (R_RESULT0, R_RESULT1, R_RESULT2, R_RESULT3)]
+    return b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)
+
+
+async def measure(dut, ring, code, tap, n, timeout):
+    await host_write(dut, A_RING_SEL, ring)
+    await host_write(dut, A_TAP_SEL, tap)
+    await host_write(dut, A_TRIM, code)
+    await host_write(dut, A_TARGET_L, n & 0xFF)
+    await host_write(dut, A_TARGET_H, n >> 8)
+    await host_write(dut, A_TIMEOUT_L, timeout & 0xFF)
+    await host_write(dut, A_TIMEOUT_H, timeout >> 8)
+    await host_write(dut, A_CONTROL, 1)
+    status = await wait_done(dut)
+    return status, await read_result(dut)
 
 
 async def start(dut):
-    dut._log.info("start")
-
-    # Drive the inputs to known levels and let reset settle BEFORE the clock
-    # starts. Starting the clock in the same delta as the first assignment puts
-    # a CLK edge and the x->0 transition of RESET_B at the same instant, which
-    # trips the gate-level flop's $width/$recrem checks: its notifier goes X and
-    # Q never recovers, so uo_out[1] reads X for the whole run.
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
     dut.rst_n.value = 0
     await Timer(1, units="ns")
-
-    clock = Clock(dut.clk, 20, units="ns")   # 50 MHz, as declared in info.yaml
-    cocotb.start_soon(clock.start())
+    cocotb.start_soon(Clock(dut.clk, T_REF_NS, units="ns").start())
     await ClockCycles(dut.clk, 5)
-
-    # Release reset between edges, not on one. The PDK's gate-level flop model
-    # carries a $recrem check, and deasserting RESET_B at the same instant as a
-    # rising CLK trips it: the notifier goes X and Q stays X for the rest of the
-    # simulation. The RTL model does not care, so this only shows up under
-    # `make GATES=yes`.
-    await Timer(5, units="ns")
+    await Timer(5, units="ns")                    # release reset between edges
     dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 1)
+    await ClockCycles(dut.clk, 3)
 
 
 @cocotb.test()
-async def test_combinational_inversion(dut):
-    """The macro's output tracks ~ui_in[0] on uo_out[0]."""
+async def test_id(dut):
+    """The interface is alive: the ID byte reads back."""
     await start(dut)
-
-    for a in (0, 1, 0, 1):
-        await drive(dut, a)
-        await SETTLE()                       # settle, no clock edge involved
-        assert bit(dut, Y_COMB) == (not a), \
-            f"uo_out[0] should be {int(not a)} for ui_in[0]={a}"
+    assert await host_read(dut, R_ID) == 0xA5
 
 
 @cocotb.test()
-async def test_logic_reference_agrees(dut):
-    """The standard-cell reference and the macro never disagree.
-
-    uo_out[3] is the XOR of the two. On silicon it is the interesting pin: it
-    goes high if the hand-drawn inverter does not do what the logic says it
-    should.
-    """
+async def test_one_measurement(dut):
+    """Ring 7 at code 255 is 400 MHz in the model; tap 3, N=200 -> count 200 +/-1."""
     await start(dut)
-
-    for a in (0, 1):
-        await drive(dut, a)
-        await SETTLE()
-        assert bit(dut, Y_REF) == (not a)
-        assert bit(dut, MISMATCH) == 0, "analog and logic answers disagree"
+    status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
+    assert not (status & ST_TIMEOUT), "unexpected timeout"
+    expected = 200 * 8 * F_REF / 400e6
+    dut._log.info(f"count {count}, expected {expected:.1f}")
+    assert abs(count - expected) <= 1
 
 
 @cocotb.test()
-async def test_registered_output(dut):
-    """uo_out[1] is the macro's output one clock edge late."""
+async def test_dead_code_times_out(dut):
+    """Code 0 is in the model's dead zone: timeout_error, not a hang."""
     await start(dut)
-
-    await drive(dut, 1)
-    await ClockCycles(dut.clk, 2)
-    assert bit(dut, Y_REG) == 0, "1 in should register as 0 out"
-
-    await drive(dut, 0)
-    await ClockCycles(dut.clk, 2)
-    assert bit(dut, Y_REG) == 1, "0 in should register as 1 out"
-
-
-@cocotb.test()
-async def test_reset_clears_the_register(dut):
-    """rst_n low forces the registered output low, whatever the input is."""
-    await start(dut)
-
-    await drive(dut, 0)                       # would otherwise register a 1
-    await ClockCycles(dut.clk, 2)
-    assert bit(dut, Y_REG) == 1
-
-    await Timer(5, units="ns")                # off the edge, as above
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 2)
-    assert bit(dut, Y_REG) == 0, "reset should clear the register"
-
-
-@cocotb.test()
-async def test_bidirectionals_are_inputs(dut):
-    """Nothing drives the uio pins: oe is held low and the outputs at zero."""
-    await start(dut)
-    assert int(dut.uio_oe.value) == 0
-    assert int(dut.uio_out.value) == 0
+    status, _ = await measure(dut, ring=7, code=0, tap=3, n=200, timeout=2000)
+    assert status & ST_TIMEOUT
+    assert status & ST_DONE
+    # And the instrument still works afterwards.
+    status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
+    assert not (status & ST_TIMEOUT)
+    assert abs(count - 200) <= 1
