@@ -1,25 +1,9 @@
-// ============================================================================
-// tb_sweep.v -- the exit criterion: every code on every ring, through the pins
-// ----------------------------------------------------------------------------
-// For each of the 8 rings and each of the 256 trim codes: select the ring,
-// set the code, pick a tap, measure, recover the frequency, and compare it
-// with what the behavioural model behind that slot actually generates. Every
-// row goes to build/sweep.csv; scripts/plot_sweep.py draws it.
-//
-// Pass conditions (from the brief, section 7)
-//   * recovered frequency matches the model within the quantisation error
-//     over the whole live range, including the nonlinear region;
-//   * dead-zone codes return timeout_error, not a number, not a hang;
-//   * no dropped or duplicated counts: the count is within +/-1 of the exact
-//     ratio (plus the model's own 1 ps period rounding);
-//   * no cross-contamination: ring 3 after ring 5 reads the same as ring 3
-//     after ring 3.
-//
-// Tap policy
-//   One tap per ring, from the table below. The sweep script on silicon
-//   will do the same: it knows roughly how fast each ring is. tb_top
-//   separately proves that every tap recovers the same frequency.
-// ============================================================================
+// tb_sweep.v -- the exit criterion: 8 rings x 256 codes through the pins, one row each to build/sweep.csv
+// Per row: select ring, set code and tap, measure, recover f, compare with the model behind that slot.
+// scripts/plot_sweep.py draws the CSV.
+// Pass: live codes within +/-1 count (plus the model's 0.1 % period rounding) over the whole range;
+//   dead codes give timeout_error, not a number or a hang; ring 3 reads the same after ring 5 as after ring 3.
+// - One tap per ring (tap_for_ring), as the silicon sweep script will do; tb_top proves every tap agrees.
 `timescale 1ns / 1ps
 
 module tb_sweep;
@@ -45,10 +29,9 @@ module tb_sweep;
   integer errors = 0;
   `include "tb_pins.vh"
 
-  // Divider tap used for each ring. Rings 0-4 and 6 sit at or below
-  // ~450 MHz; ring 5 (11 stages) is the fast one. Ring 7, the analog macro,
-  // spans 2.0 MHz to 164 MHz (post-layout): tap 1 keeps code 0 inside the
-  // timeout (200 x 2 / 2.0 MHz = 200 us) and still gives 122 counts at 255.
+  // Tap per ring. Rings 0-4 and 6 are at or below ~450 MHz; ring 5 (11 stages) is the fast one. Ring 7
+  // spans 2.0 to 164 MHz: tap 1 keeps code 0 inside the timeout (200 x 2 / 2.0 MHz = 200 us) and
+  // still gives 122 counts at 255.
   function [2:0] tap_for_ring;
     input [2:0] ring;
     case (ring)
@@ -58,9 +41,7 @@ module tb_sweep;
     endcase
   endfunction
 
-  // What the model behind slot `ring` is generating right now. Reads the
-  // code the model actually sees (after the ring wrapper's interpretation),
-  // so the testbench does not have to know how each ring uses the code.
+  // What the model behind slot `ring` generates now, from the code the model actually sees.
   function real model_freq;
     input [2:0] ring;
     case (ring)
@@ -112,8 +93,7 @@ module tb_sweep;
             n_bad = n_bad + 1;
           end else begin
             c_expect = N_PERIODS * (1 << tap) * F_REF / f_model;
-            // +/-1 count quantisation, plus the model's 1 ps period rounding
-            // (well under 0.1 %).
+            // +/-1 count quantisation plus the model's 1 ps period rounding (well under 0.1 %)
             if (result > c_expect + 1.0 + 0.001 * c_expect ||
                 result < c_expect - 1.0 - 0.001 * c_expect) begin
               $display("FAIL ring %0d code %0d: count %0d, expected %0.2f", ring, code, result, c_expect);

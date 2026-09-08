@@ -1,26 +1,9 @@
-// ============================================================================
-// tb_cdc_sync.v -- a level crossing between awkwardly related clocks
-// ----------------------------------------------------------------------------
-// Source domain: 7.3 ns period. Destination: 20 ns. The ratio is deliberately
-// irrational-looking so the source edges walk through every phase of the
-// destination clock.
-//
-// Part 1: toggle a level in the source domain, holding each value for a
-//         random 3..6 source cycles (21.9 .. 43.8 ns, always more than one
-//         destination period). Every toggle must appear at the output exactly
-//         once and in order: nothing lost, nothing duplicated.
-//         (A first version held for as little as 2 cycles = 14.6 ns and lost
-//         64 of 500 toggles. That is the rule in numbers: a level must be
-//         held longer than one destination period, or it can be missed.)
-// Part 2: pulses 2 ns wide -- a tenth of the destination period. Report how
-//         many of 200 get through. This is the failure mode that matters, and
-//         it is why every crossing in the design is a held level.
-//
-// What RTL simulation cannot show: metastability itself. A simulator's flop
-// samples cleanly however close to the edge the input moves. What this bench
-// proves is the protocol -- that a held level always gets through and a short
-// pulse may not -- not the settling behaviour, which only the silicon shows.
-// ============================================================================
+// tb_cdc_sync.v -- a level crossing from a 7.3 ns source clock to a 20 ns destination (edges walk every phase)
+// Part 1: 500 level toggles, each held 3..6 source cycles (21.9..43.8 ns, always > one destination period).
+//         Every toggle must appear exactly once, in order. Held 2 cycles (14.6 ns) lost 64 of 500:
+//         a level must be held longer than one destination period.
+// Part 2: 200 pulses of 2 ns; reports how many get through. This is why every crossing in the design is a held level.
+// - RTL simulation cannot show metastability; this proves the protocol, not the settling.
 `timescale 1ns / 1ps
 
 module tb_cdc_sync;
@@ -44,14 +27,12 @@ module tb_cdc_sync;
   integer received = 0;   // toggles observed at q
   reg     q_prev;
 
-  // Count every change of q, in the destination domain.
+  // Count every change of q in the destination domain.
   always @(posedge dst_clk) begin
     if (!reset) begin
       if (q !== q_prev) begin
         received = received + 1;
-        // Order check: after each toggle, q must equal the value of d that
-        // was sent that many toggles ago. Since d only toggles, that value
-        // is simply (received & 1).
+        // d only toggles, so after toggle n q must equal n & 1.
         if (q !== received[0]) begin
           $display("FAIL: q=%b out of order at toggle %0d", q, received);
           errors = errors + 1;

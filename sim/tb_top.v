@@ -1,24 +1,10 @@
-// ============================================================================
-// tb_top.v -- the whole tile through its pins
-// ----------------------------------------------------------------------------
-// Drives tt_um_mgpauly1458_ringmeter exactly as a host microcontroller would:
-// write strobes on the dedicated inputs, data on the bidirectionals, bytes
-// read back on the dedicated outputs. Compiled with SIM, so the rings are
-// behavioural models with known frequencies.
-//
-//   1. ID byte reads back after reset (the interface is alive).
-//   2. Written registers read back.
-//   3. One measurement on the analog model at code 255 (400 MHz) gives the
-//      count the formula predicts, within +/-1.
-//   4. The same ring at one code, through all eight divider taps, recovers
-//      the same frequency each time: the divide ratio really is multiplied
-//      back out.
-//   5. Writes while busy are ignored and flagged; the flag clears on the
-//      next accepted START.
-//   6. RESULT is a shadow: reading it during the next measurement returns
-//      the previous, complete result.
-//   7. A code too slow for the timeout times out cleanly through the pins.
-// ============================================================================
+// tb_top.v -- the whole tile through its pins, driven as a host microcontroller would (SIM: rings are models)
+//   1 ID reads back after reset      2 written registers read back
+//   3 ring 7, code 255, tap 3, N 200: count within +/-1 of the formula
+//   4 ring 7, code 128 through all eight taps recovers the same frequency (the ratio is multiplied back out)
+//   5 writes while busy are ignored and flagged; the flag clears on the next accepted START
+//   6 RESULT is a shadow: reading it during the next measurement returns the previous complete result
+//   7 a code too slow for the timeout times out through the pins, and the instrument recovers
 `timescale 1ns / 1ps
 
 module tb_top;
@@ -84,14 +70,14 @@ module tb_top;
       f_meas = 200.0 * (1 << k) * F_REF / result;
       $display("tap %0d : count %6d  f_meas %8.3f MHz  (model %8.3f MHz)  err %+6.3f %%",
                k, result, f_meas / 1e6, f_model / 1e6, 100.0 * (f_meas - f_model) / f_model);
-      // +/-1 count on the count, so the frequency error bound is 1/count.
+      // +/-1 on the count, so the frequency error bound is 1/count
       if (status[ST_TIMEOUT] || (f_meas > f_model * (1.0 + 1.5 / result)) || (f_meas < f_model * (1.0 - 1.5 / result))) begin
         $display("  FAIL"); errors = errors + 1;
       end
     end
 
     $display("--- 5. Writes while busy are ignored and flagged");
-    // A long measurement: N = 60000 on ring 0 at tap 7 takes ages.
+    // A long measurement: ring 0 at tap 7, 1024 periods.
     host_write(A_RING_SEL, 8'd0);
     host_write(A_TAP_SEL, 8'd7);
     host_write(A_TARGET_L, 8'd0);  host_write(A_TARGET_H, 8'd4);     // 1024 periods of /128
@@ -116,7 +102,7 @@ module tb_top;
     if (!rdata[ST_IGNORED]) begin $display("  FAIL: flag should persist until next START"); errors = errors + 1; end
 
     $display("--- 6. RESULT shadow holds during the next measurement");
-    host_write(A_CONTROL, 8'h01);            // start another long one (ring 5, /128, 1024)
+    host_write(A_CONTROL, 8'h01);            // another long one (ring 5, /128, 1024)
     host_read(R_STATUS);
     if (rdata[ST_IGNORED]) begin $display("  FAIL: flag not cleared by accepted START"); errors = errors + 1; end
     if (!rdata[ST_BUSY])   begin $display("  FAIL: not busy"); errors = errors + 1; end
@@ -125,13 +111,12 @@ module tb_top;
     if (result !== first_result) begin $display("  FAIL: shadow changed"); errors = errors + 1; end
     wait_done;
 
-    // Ring 7 at code 0 is 2.0 MHz: 200 periods at tap 3 take 800 us, the
-    // timeout is 2000 reference cycles = 40 us. Must report, not hang.
+    // Ring 7 at code 0 is 2.0 MHz: 200 periods at tap 3 take 800 us; timeout 2000 cycles = 40 us.
     $display("--- 7. Slow code times out through the pins");
     measure(3'd7, 8'd0, 3'd3, 16'd200, 16'd2000);
     $display("status %b after %0d polls", status, polls);
     if (!status[ST_TIMEOUT] || !status[ST_DONE]) begin $display("  FAIL"); errors = errors + 1; end
-    // And the instrument is not stuck afterwards.
+    // and it is not stuck afterwards
     measure(3'd7, 8'd255, 3'd3, 16'd200, 16'd16000);
     if (status[ST_TIMEOUT]) begin $display("  FAIL: stuck after timeout"); errors = errors + 1; end
     else $display("recovered: result %0d", result);

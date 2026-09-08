@@ -1,26 +1,19 @@
 # SPDX-FileCopyrightText: © 2026 Maxwell Pauly
 # SPDX-License-Identifier: Apache-2.0
 
-"""cocotb bench for the ring oscillator meter -- the CI smoke test.
+"""cocotb bench for the ring oscillator meter: the CI smoke test.
 
-The thorough verification is the iverilog testbenches in sim/ (`make test`)
-and the full sweep (`make sweep`). This file exists so Tiny Tapeout's test
-workflow has something honest to run: it drives the tile through its pins
-the way a host would, takes one measurement against the behavioural ring
-model, and checks the count the reciprocal formula predicts. It also checks
-that a dead code times out rather than hangs.
+Thorough verification is sim/ (`make test`) and the sweep (`make sweep`). This drives the tile
+through its pins as a host would: ID readback, one measurement on ring 7 checked against the
+reciprocal formula, and a dead-slow code that must time out rather than hang.
 
-The rings are sim/ring_model.v instances here (compiled in by -DSIM), so
-the "right answer" is known exactly: ring 7, the analog macro's behavioural
-model, runs at 164 MHz at code 255 and 2.0 MHz at code 0 (its post-layout
-simulation).
+Rings are sim/ring_model.v instances (-DSIM), so the answer is exact: ring 7, the analog macro's
+model, runs at 164 MHz at code 255 and 2.0 MHz at code 0 (its post-layout simulation).
 
-Gate level (GATES=yes) runs the same tests on the hardened netlist. There
-the seven standard-cell rings are real cells with zero delay, and a
-zero-delay ring loop does not advance simulation time, so the bench keeps
-`ena` low (which gates every ring enable) until ring 7 is selected, and
-never selects another slot. Ring 7 is the hard macro, a blackbox with the
-behavioural model inside at both RTL and gate level.
+GATES=yes runs the same tests on the hardened netlist. There the seven standard-cell rings are
+zero-delay cells, and a zero-delay ring loop never advances simulation time (iverilog hangs), so
+`ena` (which gates every ring enable) stays low until ring 7 is selected and no other slot is
+ever selected. Ring 7 is the hard macro: a blackbox with the model inside at RTL and gate level.
 """
 
 import cocotb
@@ -42,7 +35,7 @@ def ui(addr=0, we=0, rsel=0):
 
 
 async def host_write(dut, addr, data):
-    """ADDR/WDATA, WE high for 4 clocks, WE low for 4 (see regfile.v)."""
+    """ADDR/WDATA, WE high 4 clocks, WE low 4 (regfile.v protocol)."""
     await Timer(1, units="ns")                    # off the clock edge
     dut.uio_in.value = data
     dut.ui_in.value = ui(addr=addr, we=1)
@@ -87,8 +80,7 @@ async def measure(dut, ring, code, tap, n, timeout):
 
 
 async def start(dut):
-    # ena low through reset: with it low no ring is enabled, whatever the
-    # (reset, or before that X) ring select says. See the header.
+    # ena low through reset: no ring is enabled whatever the (reset, or X) ring select says. See the header.
     dut.ena.value = 0
     dut.ui_in.value = 0
     dut.uio_in.value = 0
@@ -107,14 +99,14 @@ async def start(dut):
 
 @cocotb.test()
 async def test_id(dut):
-    """The interface is alive: the ID byte reads back."""
+    """The ID byte reads back."""
     await start(dut)
     assert await host_read(dut, R_ID) == 0xA5
 
 
 @cocotb.test()
 async def test_one_measurement(dut):
-    """Ring 7 at code 255 is 164 MHz in the model; tap 3, N=200 -> count 488 +/-1."""
+    """Ring 7 at code 255 (164 MHz), tap 3, N=200: count 488 +/-1."""
     await start(dut)
     status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
     assert not (status & ST_TIMEOUT), "unexpected timeout"
@@ -125,13 +117,12 @@ async def test_one_measurement(dut):
 
 @cocotb.test()
 async def test_slow_code_times_out(dut):
-    """Code 0 runs at 2.0 MHz: 200 periods at tap 3 take 800 us, the timeout
-    is 40 us. timeout_error, not a hang, and the instrument recovers."""
+    """Code 0 (2.0 MHz): 200 periods at tap 3 take 800 us, timeout is 40 us. timeout_error, then recovery."""
     await start(dut)
     status, _ = await measure(dut, ring=7, code=0, tap=3, n=200, timeout=2000)
     assert status & ST_TIMEOUT
     assert status & ST_DONE
-    # And the instrument still works afterwards.
+    # and the instrument still works afterwards
     status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
     assert not (status & ST_TIMEOUT)
     assert abs(count - 200 * 8 * F_REF / F_RING7_MAX) <= 1

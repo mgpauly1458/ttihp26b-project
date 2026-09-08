@@ -1,28 +1,17 @@
-"""Shared plumbing for the analog verification suite (analog/verify/*.py).
+"""Shared plumbing for analog/verify/*.py: deck pieces, parallel ngspice runner, log parsing, CSV and Markdown output.
 
-Every test script in this directory does the same four things: write a set
-of ngspice decks, run them in parallel inside the container, pull numbers
-out of the logs and data files, and write a CSV plus a Markdown table that
-docs/analog_verification.md picks up. This module holds the parts they
-share, so each test file is only the circuit and the measurements.
+    corner(c, temp)    .lib/.option lines for a process corner and temperature
+    mc(kind, seed)     the PDK's mos_tt_stat (global) or mos_tt_mismatch (per device) section plus a seed
+    blocks()           .include of out/blocks/blocks.spice (netlist_blocks.py): csro_dac, csro_stage, csro_nand, csro_inv
+    dut(mismatch)      .include of spice/tt_analog_ring.spice (the LVS reference); mismatch=True adds mm_ok=1 per finger
+    code_bits(vdd)     eight B-sources deriving code[k] from V(sw), so one `.dc Vsw 0 255 1` covers all 256 codes
+    run_decks(...)     parallel ngspice; VERIFY_REUSE=1 re-reads finished runs whose deck text is unchanged
+    meas(log, name)    `name = value` from a log; None if absent or failed
+    table(...)         Markdown table
 
-    corner(...)        the .lib/.option lines for a process corner, temperature
-                       and supply; the fifteen PVT points the tile is signed
-                       off at are in PVT
-    mc(...)            the same for a Monte Carlo sample: the PDK's
-                       statistical (process) or mismatch section plus a seed
-    blocks()           the block netlists (out/blocks/blocks.spice, made by
-                       netlist_blocks.py): csro_dac, csro_stage, csro_nand,
-                       csro_inv as .subckt, straight from the xschem sheets
-    dut()              the macro's own netlist (spice/tt_analog_ring.spice,
-                       the one LVS matched against the GDS), optionally with
-                       mm_ok=1 on every finger so mismatch applies to it
-    code_bits(...)     eight B-sources that turn one swept voltage into the
-                       binary code, so a single .dc runs all 256 codes
-    run_decks(...)     the parallel ngspice runner (VERIFY_REUSE=1 re-reads
-                       finished runs whose deck is unchanged, for re-analysis)
-    meas(...)          read `name = value` lines out of a log
-    table(...)         a Markdown table from rows
+PVT is the 5 corner x 3 temperature x 3 supply box; SIGNOFF the three LibreLane STA corners.
+Each run gets its own .spiceinit with num_threads=1 plus the PDK osdi lines: the container's
+spinit uses 8 threads per process, and a local .spiceinit replaces it entirely.
 """
 import csv
 import os
@@ -35,11 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "out", "verify")
 DOCS = os.path.join(os.path.dirname(ROOT), "docs")
-# One thread per ngspice process: the parallelism is across decks, and the
-# container's default of 8 threads each oversubscribes the machine eightfold.
-# A .spiceinit in the run directory replaces the container's, so it repeats
-# what that one does: the PDK's OSDI models and the HSPICE-compatibility
-# switch the PDK's netlists rely on.
+# per-run .spiceinit: one thread per deck (parallelism is across decks), plus the PDK lines the replaced spinit carried
 SPICEINIT = """set num_threads=1
 set ngbehavior=hsa
 set ng_nomodcheck
@@ -58,14 +43,11 @@ VDD_NOM = 1.2
 CORNERS = ["mos_tt", "mos_ss", "mos_ff", "mos_sf", "mos_fs"]
 TEMPS = [-40, 27, 125]
 VDDS = [1.08, 1.2, 1.32]
-# The three PVT points LibreLane signs the tile off at, first, then the rest
-# of the 5 x 3 x 3 box. Names are what the tables show.
+# PVT: the 5 x 3 x 3 box; SIGNOFF: the three LibreLane STA corners
 PVT = [(c, t, v) for c in CORNERS for t in TEMPS for v in VDDS]
 SIGNOFF = [("mos_tt", 27, 1.2), ("mos_ss", 125, 1.08), ("mos_ff", -40, 1.32)]
 
-# Nominal frequency of the macro against code (typical, 27 C, 1.2 V; from
-# make sim). Used only to size transient runs: how long to run and how fine
-# to step so every code gets the same number of periods and points.
+# f(code) at typical 27 C 1.2 V (make sim); sizes transients so every code gets equal periods and points per period
 F_NOM = {0: 3.8e6, 1: 5.8e6, 2: 7.8e6, 3: 9.8e6, 4: 11.9e6, 6: 15.9e6, 8: 20.2e6,
          12: 28.5e6, 16: 36.9e6, 24: 53.5e6, 32: 68.5e6, 48: 96.5e6, 63: 124e6,
          64: 126e6, 96: 172e6, 127: 215e6, 128: 216e6, 160: 253e6, 191: 288e6,
@@ -92,10 +74,7 @@ def corner(c="mos_tt", temp=27):
 
 
 def mc(kind, seed, temp=27):
-    """kind 'stat': the PDK's global process variation (every device moves
-    together); 'mismatch': local variation, independent per device (needs
-    mm_ok=1 on the instances, which the block netlists carry and dut()
-    adds). The seed makes the sample reproducible and distinct per run."""
+    """'stat': global process variation; 'mismatch': per-device variation (needs mm_ok=1 on the instances). seed makes the sample reproducible."""
     section = {"stat": "mos_tt_stat", "mismatch": "mos_tt_mismatch"}[kind]
     return f".lib {MODELS} {section}\n.option temp={temp}\n.option seed={seed}\n"
 
@@ -107,9 +86,7 @@ def blocks():
 
 
 def dut(mismatch=False):
-    """The macro's netlist. For a mismatch run every finger gets mm_ok=1 so
-    the PDK's per-device random offsets apply; a copy is written next to the
-    decks rather than editing the LVS reference."""
+    """.include of the macro's netlist; mismatch=True uses a copy next to the decks with mm_ok=1 on every finger (the LVS reference is not edited)."""
     if not mismatch:
         return f".include {DUT_NETLIST}\n"
     path = os.path.join(OUT, os.path.basename(DUT_NETLIST).replace(".spice", ".mm.spice"))
@@ -124,9 +101,7 @@ def dut(mismatch=False):
 
 
 def code_bits(vdd, node="sw"):
-    """Eight B-sources: code[k] = vdd * bit k of the integer V(sw). With
-    `.dc Vsw 0 255 1` this runs every code in one analysis. bit k of c is
-    floor(c / 2^k) - 2 floor(c / 2^(k+1))."""
+    """Eight B-sources: code[k] = vdd * bit k of V(sw), bit k = floor(c/2^k) - 2 floor(c/2^(k+1)); `.dc Vsw 0 255 1` then runs all 256 codes in one analysis."""
     lines = [f"Vsw {node} 0 dc 0"]
     for k in range(8):
         lines.append(f"Bc{k} code[{k}] 0 V = {vdd}*(floor(V({node})/{2**k}) - 2*floor(V({node})/{2**(k+1)}))")
@@ -143,9 +118,7 @@ CODE_PORTS = " ".join(f"code[{k}]" for k in range(8))
 
 # ------------------------------------------------------------------- running
 def run_decks(decks, jobs=None, tag=""):
-    """decks: {name: deck_text}. Runs each in its own directory under
-    out/verify/<tag>/<name>/ so data files never collide, and returns
-    {name: (log_text, rundir)}."""
+    """decks {name: text} -> {name: (log, rundir)}; each runs in its own out/verify/<tag>/<name>/."""
     jobs = jobs or max(1, (os.cpu_count() or 4) - 2)
     base = os.path.join(OUT, tag) if tag else OUT
     os.makedirs(base, exist_ok=True)
@@ -156,16 +129,14 @@ def run_decks(decks, jobs=None, tag=""):
         os.makedirs(d, exist_ok=True)
         path = os.path.join(d, "deck.spice")
         logpath = os.path.join(d, "ngspice.log")
-        # VERIFY_REUSE=1: re-analyse finished runs instead of simulating again
+        # VERIFY_REUSE=1: reuse a finished run whose deck text is byte-identical
         if os.environ.get("VERIFY_REUSE") and os.path.exists(logpath) and \
                 os.path.exists(path) and open(path).read() == text:
             return name, (open(logpath).read(), d)
         with open(path, "w") as fh:
             fh.write(text)
-        # the container's spinit sets num_threads=8; one thread per deck, the
-        # parallelism is across decks (a .spiceinit in the cwd overrides spinit)
+        # a .spiceinit in the cwd replaces the container's spinit (8 threads); see SPICEINIT
         with open(os.path.join(d, ".spiceinit"), "w") as fh:
-            # a local .spiceinit replaces $HOME/.spiceinit, so repeat the PDK settings it carries
             fh.write(SPICEINIT)
         p = subprocess.run(["ngspice", "-b", "deck.spice"], capture_output=True, text=True, cwd=d)
         log = p.stdout + p.stderr
@@ -178,8 +149,7 @@ def run_decks(decks, jobs=None, tag=""):
 
 
 def meas(log, name):
-    """value of a `meas` result or an `echo name=$&x` line; None if absent
-    or if ngspice printed it as failed"""
+    """value of a `meas` result or an `echo name=$&x` line; None if absent or failed"""
     r = re.search(rf"(?:^|\s){re.escape(name)}\s*=\s*([-+\d.eE]+)", log, re.M)
     if not r:
         return None
@@ -190,8 +160,7 @@ def meas(log, name):
 
 
 def read_wrdata(path):
-    """columns of an ngspice `wrdata` file: [[x, y1, x, y2, ...]] -> list of
-    rows of floats"""
+    """rows of floats from an ngspice `wrdata` file (x y1 x y2 ... per row)"""
     rows = []
     with open(path) as fh:
         for line in fh:

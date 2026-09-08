@@ -1,45 +1,12 @@
-// ============================================================================
-// ring_21_hd.v -- 21-stage high-drive ring (slot 4)
-// ----------------------------------------------------------------------------
-// What it does
-//   The same 21-stage topology as ring_21_min but built from the library's
-//   large cells: NAND2_2 for the enable stage and INV_8 for the other twenty.
-//   Same stage count, different device widths. Compared with slot 0 this
-//   separates drive strength from stage count in the frequency, tempco and
-//   supply-pushing results.
-//
-// Clock domain
-//   None: it IS a clock source. Free-running while enable is high.
-//
-// Interface (the same for every ring, including the analog macro)
-//   code    [7:0]  the broadcast trim code. Ignored by this ring.
-//   enable         1 = oscillate. 0 holds the NAND output high and the
-//                  ring stops in a defined state.
-//   clk_out        the ring, through a buffer so the mux never loads the
-//                  loop directly
-//
-// Structural, not synthesised
-//   Every cell is instantiated by name so synthesis cannot see a
-//   combinational loop -- it would either refuse or optimise the ring away.
-//   The (* keep *) attributes stop yosys removing or merging anything. At
-//   the physical stage this module needs: don't-touch on the instances, a
-//   set_disable_timing on one arc to break the timing loop, and a region
-//   constraint so the placer keeps the loop compact (docs/constraints.md).
-//
-// Simulation
-//   With SIM defined the loop is replaced by sim/ring_model.v with this
-//   ring's fixed frequency, so the instrument can be swept against a known
-//   answer. Without SIM the structural loop is simulated using the delay
-//   stand-ins in sim/sg13g2_cells_sim.v (tb_rings only).
-//
-// Expected frequency (typical corner, no wires)
-//   Each INV_8 drives the 22 fF input of the next, so per-stage delay is
-//   about the same as INV_1 driving INV_1: period ~ 2 * (60 + 20*60) ps =
-//   2.52 ns, roughly 400 MHz. The interesting difference is not the nominal
-//   frequency but how much less the wire load matters, and how the tempco
-//   differs, which only silicon will tell.
-//
-// ============================================================================
+// ring_21_hd.v -- 21-stage high-drive ring (slot 4): NAND2_2 enable + 20 INV_8, same topology as ring_21_min
+//   code    [7:0]  broadcast trim code, ignored here
+//   enable         1 = oscillate; 0 holds the NAND output high, the ring stops in a defined state
+//   clk_out        the ring through buffer u_out, so the mux never loads the loop
+// Free-running clock source, no clock domain. Same stage count as slot 0, wide devices: separates drive
+//   strength from stage count in the frequency, tempco and supply-pushing results.
+// Expected period (typical, no wires) = 2 * (60 + 20*60) ps = 2.52 ns, ~400 MHz (INV_8 into the next INV_8's
+//   22 fF is about INV_1 into INV_1). Of interest is how much less wire load matters, and the tempco.
+// - Structural, every cell named and (* keep *); -DSIM swaps in sim/ring_model.v: see ring_21_min.v.
 `default_nettype none
 
 module ring_21_hd (

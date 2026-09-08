@@ -1,23 +1,13 @@
 #!/usr/bin/env python3
-"""The output buffer: full swing and clean edges into the tile's load.
+"""Output buffer: swing, 20-80 % edges and delay into 15 fF and 108 fF at 332 MHz, every PVT point.
 
     ./run.sh python3 verify/buffer.py [--jobs N]
 
-What is tested
-  csro_inv (0.5 / 0.3 um) followed by the 2 / 1 um inverter, as the top
-  sheet has them after stage 10, driving clk_out into the two loads that
-  bracket what the tile presents: 15 fF (a short wire and one gate) and
-  108 fF (the Liberty's max_capacitance, what the flow is allowed to hang
-  on the pin). The input is a 332 MHz square wave with 100 ps edges - the
-  fastest code, the hardest case for the buffer.
+Writes out/verify/buffer.md and buffer_corners.csv.
 
-Questions
-  * Does the output reach both rails at the fastest code and heaviest
-    load, at every PVT point? A clock that does not swing fully would be
-    counted wrong by the divider's first flop.
-  * Rise and fall times (20-80 %) and delay against load: these are the
-    numbers the Liberty file carries at the typical corner; here they are
-    seen at every corner.
+DUT: csro_inv (0.5/0.3) + the 2/1 um inverter, as after stage 10. Loads: 15 fF (short wire + one gate),
+108 fF (the Liberty max_capacitance). Input: 332 MHz (the fastest code), 100 ps edges.
+- Must reach both rails at every PVT point, or the divider's first flop miscounts.
 """
 import argparse
 import os

@@ -1,35 +1,17 @@
 #!/usr/bin/env python3
-"""The bias chain: DAC into the diode, the mirror, and what each stage gets.
+"""Bias chain: vbp, vbn and per-stage starve currents against code over PVT; mismatch Monte Carlo; noise at the bias nodes.
 
     ./run.sh python3 verify/bias.py [--mc 200] [--jobs N]
 
-What is tested
-  csro_dac feeding the diode-connected PMOS MPD (24 x 2 um / 0.5 um), the
-  mirror MPM (1 um / 0.5 um) into the diode-connected NMOS MND (0.5 / 0.5),
-  exactly as the top sheet wires them, plus eleven copies of each stage's
-  starve device (PMOS on vbp, NMOS on vbn) with their drains held at
-  mid-rail. Those replicas draw the current a stage's starve device passes
-  when the stage is switching, which is what sets the ring's delay. One
-  .dc sweeps all 256 codes.
+Writes out/verify/bias.md, bias_corners.csv, bias_mm.csv, bias_noise.csv and docs/verify_bias.png.
 
-Three questions
-  1. Corners: vbp, vbn, the DAC current and the per-stage currents at every
-     PVT point. This is where the compression is visible (vbp falls as the
-     DAC pulls harder, and the triode units follow it), and it says how far
-     the bias points move over process, supply and temperature - the ring's
-     frequency spread comes from here and from the stage delay (stage.py).
-  2. Mismatch Monte Carlo: how unequal are the eleven stage currents when
-     every starve device carries its own random Vt? The stages are single
-     1 um and 0.5 um fingers of L = 0.5 um, small enough that this is the
-     dominant mismatch in the block. Unequal stage currents change the
-     duty cycle and, second-order, the frequency; they do not break
-     anything. Also the MPD/MPM mirror ratio.
-  3. Thermal (and flicker) noise: .noise at vbp and vbn with the code held,
-     integrated over 1 kHz - 1 GHz (jitter the counter sees inside a
-     measurement) and 1 Hz - 1 GHz (including the drift a slow measurement
-     averages over). Expressed as a fraction of one LSB step of the same
-     node, which is the number that says whether noise can blur the 8-bit
-     control.
+DUT: csro_dac into diode PMOS MPD (24 x 2/0.5), mirror MPM (1/0.5) into diode NMOS MND (0.5/0.5), as the top sheet,
+plus NSTAGE replicas of each stage's starve device with drains at VMID. One .dc covers all 256 codes.
+- Corners: compression (vbp falls, the triode units follow) and the PVT movement of the bias points.
+- Mismatch MC: spread of the eleven stage currents (single 1 um and 0.5 um fingers, the dominant mismatch);
+  changes duty cycle, second-order frequency. Also the MPD/MPM mirror ratio.
+- Noise: .noise at vbp and vbn over 1 kHz-1 GHz, 1 Hz-1 GHz and 1 kHz-1 MHz, as a fraction of one LSB step
+  of the node. ngspice needs `ac 1` on Vdd for .noise; onoise_total is V rms.
 """
 import argparse
 import os
@@ -43,8 +25,7 @@ CODES_NOISE = [1, 16, 128, 255]
 
 
 def bias_devices(mm=False):
-    """MPD, MPM, MND as the top sheet has them; 0 V sources in series to read
-    their currents."""
+    """MPD, MPM, MND as on the top sheet; 0 V sources in series read their currents."""
     mmk = " mm_ok=1" if mm else ""
     return f"""Vmpd VPWR vpd 0
 XMPD vbp vbp vpd VPWR sg13_lv_pmos w=48u l=0.5u ng=24{mmk}

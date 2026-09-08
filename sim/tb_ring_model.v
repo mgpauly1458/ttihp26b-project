@@ -1,14 +1,7 @@
-// ============================================================================
-// tb_ring_model.v -- checks that the ground truth is what we think it is
-// ----------------------------------------------------------------------------
-// For a handful of codes: enable the model, measure the period between rising
-// edges over several cycles, and compare against the curve the model claims
-// (read straight out of the model's own freq_of_code function). Also checks
-// the dead zone is silent and that enable=0 holds the output low.
-//
-// Allowed error: the model rounds each half-period to 1 ps, so the measured
-// period can differ from 1/f by up to 2 ps.
-// ============================================================================
+// tb_ring_model.v -- ring_model matches its own freq_of_code curve
+// Per code: period over 10 rising edges against 1/f from dut.freq_of_code, tolerance 2 ps (the model
+// rounds each half-period to 1 ps). Also: the dead zone is silent, enable = 0 holds the output low,
+// and a mid-run code change is honoured at the next edge.
 `timescale 1ns / 1ps
 
 module tb_ring_model;
@@ -23,7 +16,7 @@ module tb_ring_model;
   integer i;
   real    t_first, t_last, period_ns, expect_ns;
 
-  // Measure the average period over NCYC rising edges.
+  // Average period over NCYC rising edges.
   localparam NCYC = 10;
   task measure_period;       // result lands in period_ns
     begin
@@ -50,8 +43,7 @@ module tb_ring_model;
     end
   endtask
 
-  // Check that clk_out stays low for a while: sample it every nanosecond for
-  // 1 us (20 cycles even at F_MIN) and count rising transitions.
+  // clk_out must stay low: sample every 1 ns for 1 us (20 cycles even at F_MIN), count rising edges.
   task check_silent;
     input [7:0] c;
     integer edges, n;
@@ -79,26 +71,26 @@ module tb_ring_model;
     $dumpfile("build/tb_ring_model.vcd");
     $dumpvars(0, tb_ring_model);
 
-    // Enable low: nothing should happen even at a live code.
+    // enable low at a live code
     enable = 1'b0;
     check_silent(8'd200);
 
     enable = 1'b1;
-    // Dead zone, and the boundary of it.
+    // dead zone and its boundary
     check_silent(8'd0);
     check_silent(8'd19);
-    // First live code is F_MIN, not zero: the offset.
+    // first live code is F_MIN, not zero
     check_code(8'd20);
     check_code(8'd21);
-    // Middle of the curve.
+    // middle of the curve
     check_code(8'd64);
     check_code(8'd128);
     check_code(8'd200);
-    // Top: F_MAX.
+    // top: F_MAX
     check_code(8'd254);
     check_code(8'd255);
 
-    // A code change mid-run should be honoured at the next edge, not ignored.
+    // A code change mid-run must be honoured at the next edge.
     code = 8'd255; #100;
     code = 8'd20;  #50;
     measure_period;

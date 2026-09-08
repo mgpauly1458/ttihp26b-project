@@ -1,21 +1,14 @@
-# The analog block: a current-starved ring oscillator with an 8-bit current
-# DAC, built as a hard macro for the digital tile.
-#
-#   make macro      gds + lib + drc + lvs: everything the tile needs
-#   make sim        frequency vs. code sweep of the generated netlist
-#   make png        layout figures -> ../docs/
-#
-# Everything runs in the hpretl/iic-osic-tools container via ./run.sh, so
-# Docker is the only host dependency. `make help` lists the targets.
+# Analog block: current-starved ring oscillator + 8-bit current DAC as a hard macro (tt_analog_ring).
+#   make macro      gds + lib + drc + lvs, everything the tile needs
+#   make help       every target
+# Everything runs in the hpretl/iic-osic-tools container via ./run.sh; Docker is the only host dependency.
 
 MACRO   := tt_analog_ring
 RUN     := ./run.sh
 GUI     := ./gui.sh
 PDKTECH := /foss/pdks/ihp-sg13g2/libs.tech/klayout/tech
 
-# CELL/GDS let `make glb` (and the other 3D views) run against either this
-# macro's own GDS or, from the repo root's `make view`, the hardened tile's
-# final GDS -- see the 3D viewing section below.
+# CELL/GDS are overridden by the repo root's `make view` to show the hardened tile in 3D (see 3D viewing)
 CELL    ?= $(MACRO)
 BUILD   := layout/build_$(MACRO).py
 GDS     := macro/$(MACRO).gds
@@ -62,7 +55,7 @@ help:
 	@echo '  make sim-post     parasitics per block + pre/post-layout side by side -> ../docs/analog_ring_sim_post.png'
 	@echo '  make verify-ring-post  the whole-block verification on the extracted netlist'
 	@echo
-	@echo '  make macro        gds lib drc lvs      -- ready for LibreLane?'
+	@echo '  make macro        gds lib drc lvs      (everything LibreLane needs)'
 	@echo '  make all          macro sim plot png'
 	@echo
 	@echo '3D views of $(CELL) (repo root: make view, the hardened submission tile)'
@@ -79,8 +72,7 @@ help:
 	@echo 'Variables for make sim: CODES=0,1,2,... CORNER=mos_tt TEMP=27 VDD=1.2'
 
 # ------------------------------------------------------------------ layout
-# The generator writes the GDS, the LEF and both netlists in one go, so they
-# cannot drift apart.
+# one generator writes GDS, LEF and both netlists, so they cannot drift apart
 gds: $(GDS)
 $(GDS) $(LEF) $(SIM_NL) $(LVS_NL): $(BUILD)
 	$(RUN) klayout -b -r $(BUILD)
@@ -89,9 +81,7 @@ png: $(GDS) layout/render.py
 	$(RUN) klayout -b -z -r layout/render.py
 
 # --------------------------------------------------------------- schematic
-# The layout generator's netlist is the LVS reference (it cannot drift from
-# the GDS). The xschem sheets are the drawing of the same circuit; lvs-sch
-# proves the drawing matches the layout too.
+# the generator's netlist is the LVS reference; lvs-sch proves the xschem drawing matches the layout too
 SCH     := xschem/tt_analog_ring.sch
 SHEETS  := tt_analog_ring csro_stage csro_nand csro_dac csro_inv
 XSCHEM  := xschem --rcfile /work/analog/xschem/xschemrc
@@ -113,7 +103,7 @@ lvs-sch: $(GDS) $(SCH_NL)
 	    --netlist=/work/analog/$(SCH_NL) --topcell=$(MACRO) \
 	    --run_dir=/work/analog/out/lvs-sch --disable_tap_extraction'
 
-# xschem renders through a virtual X server; no display needed.
+# rendered through xvfb; no display needed
 sch-png: $(SCH)
 	$(RUN) bash -lc 'cd /work/analog/xschem && for f in $(SHEETS); do \
 	    xvfb-run -a $(XSCHEM) -q --command "xschem zoom_full; xschem print png /work/docs/sch_$$f.png" $$f.sch >/dev/null 2>&1; done'
@@ -135,9 +125,7 @@ drc-density: $(GDS)
 	$(RUN) bash -lc 'python3 $(PDKTECH)/drc/run_drc.py --path=/work/analog/$(GDS) \
 	    --topcell=$(MACRO) --run_dir=/work/analog/out/drc-density --density_only' || true
 
-# --disable_tap_extraction keeps the well and substrate ties out of the
-# device list; otherwise they extract as ntap1/ptap1 resistors that the
-# schematic does not have.
+# --disable_tap_extraction: the ties would otherwise extract as ntap1/ptap1 resistors the schematic lacks
 lvs: $(LVS_OK)
 $(LVS_OK): $(GDS) $(LVS_NL)
 	@rm -rf out/lvs && mkdir -p out/lvs
@@ -164,17 +152,13 @@ plot: $(SWEEP) char/plot_sweep.py
 	$(RUN) python3 char/plot_sweep.py $(SWEEP) ../docs/analog_ring_sweep.png
 
 # --------------------------------------------------------- characterisation
-# The shipped Liberty is characterised on the POST-LAYOUT netlist: the code
-# pins' capacitance includes their buses (16..90 % more than the gates alone)
-# and clk_out's edges include its wire. `make lib` therefore runs kpex first.
+# the shipped Liberty is from the POST-LAYOUT netlist (code buses add 16..90 % to the gate caps), so lib runs kpex first
 lib: $(LIB)
 $(LIB): $(PEX_SIM) char/characterize.py
 	$(RUN) python3 char/characterize.py --netlist $(PEX_SIM) --out out/char_post
 
 # ------------------------------------------------------------ verification
-# Corners, Monte Carlo and noise, block by block and then the whole macro.
-# docs/analog_verification.md is the strategy; `make verify` regenerates the
-# results appendix docs/analog_verification_results.md and docs/verify_*.png.
+# strategy: docs/analog_verification.md; verify regenerates docs/analog_verification_results.md and docs/verify_*.png
 VERIFY_JOBS ?= 14
 BLOCKS := out/blocks/blocks.spice
 
@@ -193,8 +177,7 @@ verify-report:
 
 verify: verify-dac verify-bias verify-stage verify-nand verify-buffer verify-ring verify-report
 
-# The tile around the macro, as sources: supply ripple, ground bounce,
-# crosstalk onto the code, enable and output lines (verify/environment.py).
+# the tile as sources around the macro: supply ripple, ground bounce, crosstalk (verify/environment.py)
 verify-env: $(SIM_NL)
 	$(RUN) python3 verify/environment.py --jobs $(VERIFY_JOBS)
 
@@ -202,9 +185,7 @@ verify-env-post: $(PEX_SIM)
 	$(RUN) python3 verify/environment.py --netlist $(PEX_SIM) --tag env_post --jobs $(VERIFY_JOBS)
 
 # ------------------------------------------------------------- post-layout
-# kpex (2.5D) extracts the parasitic capacitances of the flat macro against
-# the LVS netlist; build_sim_post.py rewrites its output so ngspice can run
-# it in the pre-layout netlist's place (same subckt name and ports).
+# kpex 2.5D capacitances of the flat macro; build_sim_post.py makes the output a drop-in for the pre-layout netlist
 pex: $(PEX_SIM)
 $(PEX_RAW): $(GDS) $(LVS_NL)
 	@rm -rf out/pex && mkdir -p out/pex
@@ -214,14 +195,11 @@ $(PEX_RAW): $(GDS) $(LVS_NL)
 $(PEX_SIM): $(PEX_RAW) layout/build_sim_post.py
 	python3 layout/build_sim_post.py --pex $(PEX_RAW) --out $@
 
-# Where the parasitics are, block by block, and the same circuit simulated
-# pre and post layout side by side -> ../docs/analog_ring_sim_post.png
+# parasitics per block, and pre vs post layout side by side (verify/pex.py)
 sim-post: $(PEX_SIM)
 	$(RUN) python3 verify/pex.py --pex $(PEX_SIM) --jobs $(VERIFY_JOBS)
 
-# The whole-block corner/Monte Carlo/noise run on the post-layout netlist
-# (~1.3 h). --fscale 0.5: the extracted ring is about half as fast, and the
-# transients are sized from the nominal frequency table.
+# ring.py on the extracted netlist (~1.3 h); --fscale 0.5 because the extracted ring is about half as fast
 verify-ring-post: $(PEX_SIM)
 	$(RUN) python3 verify/ring.py --netlist $(PEX_SIM) --tag ring_post --fscale 0.5 --jobs $(VERIFY_JOBS)
 
@@ -233,32 +211,21 @@ macro: gds lib drc lvs
 all: macro lvs-sch sim plot png sch-png
 
 # ============================================================== 3D viewing
-# Three views of the same stack. GDS3D and KLayout's 2.5D view both need an X
-# display; the glTF export does not, which is why it exists -- reach for it
-# over ssh or when the container cannot get to the display.
-#
-# All three read the same layer heights: KLayout's come from the PDK's
-# libs.tech/klayout/tech/d25/sg13g2_beol.lyd25, and GDS3D's process file is
-# generated from that same file by build_gds3d_tech.py, so the views agree by
-# construction.
+# glb needs no display (use it over ssh); d25 and view3d do. All three use the PDK's
+# sg13g2_beol.lyd25 heights: the GDS3D process file is generated from it (build_gds3d_tech.py).
 GLB       := out/tile_3d.glb
 GDS3D_TECH:= tech/sg13g2_gds3d.txt
 
-# Always rebuilt, never treated as up to date from mtimes: the output path is
-# the same regardless of which GDS/CELL made it, so a stale glb from a
-# different CELL (e.g. the macro alone vs. the hardened tile) would otherwise
-# look current and `make view` would silently hand back someone else's model.
+# always rebuilt: the output path does not depend on GDS/CELL, so a stale glb from another CELL would look current
 glb: $(GDS) layout/build_glb.py $(GDS3D_TECH) | out
 	$(RUN) python3 layout/build_glb.py $(GDS) $(CELL)
 
-# The process file is a tool configuration rather than a build artefact, so it
-# is committed; regenerate it only if the PDK revises a layer height.
+# committed tool configuration; regenerate only if the PDK revises a layer height
 gds3d-tech:
 	$(RUN) python3 layout/build_gds3d_tech.py
 
-# -n loads the PDK *technology*, which is what registers the 2.5D macro; -l
-# would only load the layer properties. The viewer then lives under
-# sg13g2_menu > SG13G2 PDK > BEOL 2.5D Viewer, and wants a selection first.
+# -n loads the PDK technology (registers the 2.5D macro; -l would not); viewer under
+# sg13g2_menu > SG13G2 PDK > BEOL 2.5D Viewer, select shapes first
 d25:
 	$(GUI) klayout -n sg13g2 /work/analog/$(GDS)
 

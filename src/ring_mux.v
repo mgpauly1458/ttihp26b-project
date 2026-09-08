@@ -1,46 +1,14 @@
-// ============================================================================
-// ring_mux.v -- selects one of eight rings, and enables only that one
-// ----------------------------------------------------------------------------
-// What it does
-//   Routes ring number `sel` to the divider, and drives the per-ring enable
-//   lines so that ONLY the selected ring runs. This is the component that
-//   makes the shared-instrument argument true: every ring is measured by the
-//   same divider, counter and FSM, so a difference between rings is a real
-//   difference.
-//
-// Clock domain
-//   None -- pure combinational logic on the ring clocks. It is in the ring
-//   domain in the sense that its output is a clock.
-//
-// Interface
+// ring_mux.v -- selects one of eight rings and enables only that one (combinational, on the ring clocks)
 //   ring_in [7:0]  the eight ring outputs
 //   sel     [2:0]  which one
 //   enable         master enable; 0 stops every ring
-//   ring_out       the selected ring
-//   ring_en [7:0]  one-hot enable back to the rings (all zero if !enable)
-//
-// Unselected rings are disabled -- the tradeoff
-//   On:   seven free-running rings at hundreds of MHz would burn power and
-//         inject supply and substrate noise into the one being measured,
-//         which is the opposite of what a characterisation instrument wants.
-//         Off, they cost nothing.
-//   Cost: a ring that was off needs time to start after enable. For a
-//         standard-cell ring that is a few gate delays; for the analog ring
-//         it is whatever its start-up transient is. The selected ring is
-//         enabled from the moment RING_SEL is written, not from START, so by
-//         the time the host has also written START (several clock periods
-//         later at the very least) the ring has been running for far longer
-//         than any plausible start-up. The FSM's ARM state additionally
-//         begins the window on a clean edge, never mid-period. If a ring
-//         turns out to need milliseconds, the host inserts a delay between
-//         writing RING_SEL and START; nothing in hardware has to change.
-//
-// Assumptions
-//   * sel changes only while idle. A combinational clock mux switching
-//     between two unrelated waveforms can produce a runt pulse, exactly as
-//     the divider's tap mux can. The register file refuses writes to
-//     RING_SEL while busy.
-// ============================================================================
+//   ring_out       the selected ring, through the (* keep *) buffer u_selout
+//   ring_en [7:0]  one-hot enable back to the rings; all zero if !enable
+// - Unselected rings are off: seven free-running rings would burn power and inject supply and substrate
+//   noise into the one being measured. The selected ring is enabled when RING_SEL is written, not at START,
+//   so it has run for many clk periods before a window opens; a ring needing longer gets a host-side delay.
+// - sel must change only while idle: a combinational clock mux switching between unrelated waveforms can
+//   make a runt pulse. regfile blocks RING_SEL writes while busy.
 `default_nettype none
 
 module ring_mux (
@@ -67,11 +35,8 @@ module ring_mux (
     if (!enable) ring_en = 8'b0000_0000;
   end
 
-  // The selected ring leaves through a named buffer. Synthesis renames every
-  // net and gate it touches, but a `(* keep *)` cell instance survives with
-  // its name, so src/constraints.sdc can declare the selected ring a clock
-  // at u_mux.u_selout/X without knowing what the mux became. In simulation
-  // (-DSIM) it is a plain assign.
+  // A (* keep *) cell instance keeps its name through synthesis, so src/constraints.sdc can declare
+  // the selected ring a clock at u_mux.u_selout/X. Plain assign in simulation (-DSIM).
 `ifdef SIM
   assign ring_out = selected;
 `else

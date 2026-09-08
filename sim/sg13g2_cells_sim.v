@@ -1,25 +1,10 @@
-// ============================================================================
-// sg13g2_cells_sim.v -- delay-annotated stand-ins for the cells the rings use
-// ----------------------------------------------------------------------------
-// The structural rings in src/rings/ instantiate SG13G2 standard cells by
-// name. To simulate them we need a model of each cell WITH a propagation
-// delay: a zero-delay inverter loop never advances simulation time and the
-// simulator hangs. The PDK's own Verilog models are zero-delay (their timing
-// comes from SDF back-annotation after layout), so this file provides the
-// handful of cells the rings use, each with one rough delay.
-//
-// The delays are typical-corner (1.2 V, 25 C) numbers read from
-// sg13g2_stdcell_typ_1p20V_25C.lib at roughly fanout-of-one loading. They
-// are here to sanity-check that each netlist is wired into a loop that
-// oscillates at about the frequency its stage count predicts. They are NOT
-// a prediction of silicon: wire load, the real corner and the layout will
-// all move them. Only tb_rings.v compiles this file. The instrument sweep
-// uses sim/ring_model.v instead, which is why the ring modules carry an
-// `ifdef SIM` branch.
-//
-// Pin names and functions match the Liberty file exactly, so the same ring
-// netlists go to synthesis untouched.
-// ============================================================================
+// sg13g2_cells_sim.v -- delay-annotated stand-ins for the cells the structural rings use (tb_rings only)
+// - The PDK's Verilog models are zero-delay (timing comes from SDF), and a zero-delay inverter loop
+//   never advances simulation time: the simulator hangs.
+// - Delays are typical corner (1.2 V, 25 C) from sg13g2_stdcell_typ_1p20V_25C.lib at about fanout-of-one.
+//   Enough to check each netlist is a loop at roughly its predicted frequency; not a silicon prediction.
+// - Pin names and functions match the Liberty file, so the same netlists go to synthesis untouched.
+// - The instrument sweep uses sim/ring_model.v instead: the rings' `ifdef SIM` branch.
 `timescale 1ns / 1ps
 
 module sg13g2_inv_1 (output Y, input A);

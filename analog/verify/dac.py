@@ -1,35 +1,17 @@
 #!/usr/bin/env python3
-"""The current DAC on its own: linearity over corners and under mismatch.
+"""DAC linearity: I(code) over the 45 PVT points, mismatch and process Monte Carlo.
 
     ./run.sh python3 verify/dac.py [--mc 200] [--stat 100] [--jobs N]
 
-What is tested
-  csro_dac (the 255 binary-weighted unit fingers plus the two always-on
-  ones), sinking from an ideal voltage held at the drain node. The drain is
-  held at 0.6 V, the middle of the range the real diode node spans, so this
-  measures the array itself: how well 2^k fingers deliver 2^k unit currents.
-  The compression that comes from the drain sagging is the bias block's
-  business (bias.py) and shows up here only as the two extra rows at 0.46
-  and 0.85 V.
+Writes out/verify/dac.md, dac_corners.csv, dac_mm.csv, dac_stat.csv and docs/verify_dac.png.
 
-  One .dc analysis sweeps all 256 codes: eight B-sources turn the swept
-  variable into the code bits (common.code_bits).
-
-Three questions, three runs
-  1. Corners: I(code) at all 45 PVT points (5 process corners x 3
-     temperatures x 3 supplies). Reports the unit current, the full-scale
-     current, the always-on current at code 0, and the endpoint-fit DNL and
-     INL in LSB. The instrument needs monotonic; INL is informational (the
-     tile measures frequency, not current, and the code-to-frequency map
-     is calibrated on the bench anyway).
-  2. Mismatch Monte Carlo: `mos_tt_mismatch`, N samples, each finger with
-     its own random Vt and mobility offset (the PDK's agauss on
-     delvto/factuo, scaled by 1/sqrt(WL)). The worst DNL in the run is the
-     number that says whether the binary weighting can ever produce a
-     non-monotonic step, and where (it is always at a major transition).
-  3. Process Monte Carlo: `mos_tt_stat`, every device moved together by the
-     PDK's global distributions. Reports the spread of the unit current,
-     which is the spread of the whole frequency scale from die to die.
+DUT: csro_dac (255 binary-weighted unit fingers + 2 always-on) sinking from a source held at VD = 0.6 V,
+mid-range of the real diode node; VD_EXTRA repeats typical at the node's code-255 and code-1 values.
+Drain sag is bias.py's business. One .dc covers all 256 codes (common.code_bits).
+- Metrics: unit, full-scale and code-0 current, endpoint-fit DNL/INL in LSB. Monotonic is the requirement;
+  INL is informational (the bench calibrates code to frequency).
+- Mismatch MC (mos_tt_mismatch, per-finger Vt/mobility offsets): worst DNL and its code, always a major carry.
+- Process MC (mos_tt_stat, all devices together): unit-current spread = frequency-scale spread die to die.
 """
 import argparse
 import os

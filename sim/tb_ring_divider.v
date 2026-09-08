@@ -1,13 +1,7 @@
-// ============================================================================
-// tb_ring_divider.v -- all eight taps, then the tap-change runt experiment
-// ----------------------------------------------------------------------------
-// Part 1: a clean 10 ns clock in, every tap out. The period at tap k must be
-//         exactly 10 ns * 2^k, measured over several cycles.
-// Part 2: switch tap_sel while running, at eight different phases of the
-//         input clock, and record the shortest high or low pulse that appears
-//         on divided_clk. Reported, not judged: the question was "does a
-//         runt appear", and the answer is printed.
-// ============================================================================
+// tb_ring_divider.v -- all eight taps, then the live tap-change runt experiment
+// Part 1: 10 ns in; the period at tap k must be 10 ns * 2^k, averaged over 4 cycles.
+// Part 2: switch tap_sel 0 -> 1 while running at eight phases of the input and record the shortest
+//         pulse on divided_clk. Reported, not judged.
 `timescale 1ns / 1ps
 
 module tb_ring_divider;
@@ -37,8 +31,7 @@ module tb_ring_divider;
     input [2:0] tap;
     begin
       tap_sel = tap;
-      // A tap change is glitchy by nature; wait for it to settle before
-      // measuring, and ignore whatever the first edge looks like.
+      // A tap change is glitchy; skip the first edge before measuring.
       @(posedge divided_clk);
       @(posedge divided_clk); t0 = $realtime;
       for (i = 0; i < 4; i = i + 1) @(posedge divided_clk);
@@ -47,9 +40,7 @@ module tb_ring_divider;
       expect = T_IN * (1 << tap);
       $display("tap %0d : period %9.3f ns  expected %9.3f ns  (divide by %0d)",
                tap, period, expect, 1 << tap);
-      // The output buffer's 80 ps delay stand-in shifts every edge by the same
-      // amount, so the period is unchanged; compare with a tolerance rather
-      // than exactly, since (t1 - t0) / 4 is a real.
+      // The 80 ps buffer stand-in shifts every edge equally; tolerance because (t1 - t0) / 4 is a real.
       if (period > expect + 0.001 || period < expect - 0.001) begin
         $display("  FAIL");
         errors = errors + 1;
@@ -58,8 +49,7 @@ module tb_ring_divider;
   endtask
 
   // ---- Part 2 -------------------------------------------------------------
-  // Watch divided_clk for a while and record the shortest pulse (high or low)
-  // seen. Polled at 10 ps, which is fine enough for a 10 ns input.
+  // Record the shortest pulse (high or low) on divided_clk, polled at 10 ps.
   real min_pulse, t_edge;
   reg  prev;
   task watch_min_pulse;
@@ -100,8 +90,7 @@ module tb_ring_divider;
       #(phase);
       tap_sel = 3'd1;
       watch_min_pulse(T_IN * 4);
-      // 0.01 ns means two transitions inside one 10 ps sample step: the mux
-      // output moved at the switch instant and again at the very next edge.
+      // 0.01 ns = two transitions inside one sample step: the mux moved at the switch and again at the next edge.
       $display("  switch at phase %5.2f ns : shortest pulse afterwards %6.2f ns", phase, min_pulse);
       if (min_pulse < worst_runt) worst_runt = min_pulse;
     end

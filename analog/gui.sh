@@ -5,23 +5,17 @@
 #   ./gui.sh klayout /work/gds/tt_um_mgpauly1458_inverter.gds
 #   ./gui.sh GDS3D -p tech/sg13g2_gds3d.txt -i /work/gds/...
 #
-# Everything the container needs to reach the display is passed in below. When
-# that does not work the failure is spectacularly unhelpful -- Qt aborts with
-# "could not load the Qt platform plugin xcb" and then segfaults -- so the
-# display is checked first and the likely cause reported. Set GUI_SKIP_CHECK=1
-# to bypass it.
+# preflight checks the display from inside a container first, because a failure otherwise is only
+# Qt's "could not load the Qt platform plugin xcb" and a segfault. GUI_SKIP_CHECK=1 bypasses it.
 set -euo pipefail
 IMAGE=${IMAGE:-hpretl/iic-osic-tools:latest}
 XSOCK=/tmp/.X11-unix
 
-# Hardware OpenGL if the render nodes are there. Without /dev/dri, Mesa cannot
-# load the platform driver and silently falls back to llvmpipe -- software
-# rendering, which still works but makes GDS3D and KLayout's 2.5D view crawl.
+# hardware OpenGL when /dev/dri exists; otherwise Mesa falls back to llvmpipe and the 3D views crawl
 GPU=()
 [ -d /dev/dri ] && GPU=(--device /dev/dri)
 
-# -t only when there is actually a terminal, so this stays usable from scripts
-# and from anything driving make non-interactively.
+# -t only with a real terminal, so non-interactive make still works
 TTYFLAG=()
 [ -t 0 ] && TTYFLAG=(-t)
 
@@ -31,8 +25,7 @@ preflight() {
         echo "  Headless? 'make glb' builds a 3D model that needs no display." >&2
         return 1
     }
-    # The real question is not whether the host can see the socket, but whether
-    # a container can. Ask one.
+    # what matters is whether a container can reach the display, so ask one
     if docker run --rm -v "$XSOCK:$XSOCK" \
             -v "${XAUTHORITY:-$HOME/.Xauthority}:/headless/.Xauthority:ro" \
             -e DISPLAY="$DISPLAY" -e XAUTHORITY=/headless/.Xauthority \
@@ -47,8 +40,7 @@ preflight() {
         echo "  The X socket $XSOCK/X${DISPLAY##*:} does not exist on this host." >&2
     elif docker run --rm -v "$XSOCK:/s" "$IMAGE" --skip \
             bash -lc '[ -z "$(ls -A /s)" ]' >/dev/null 2>&1; then
-        # The socket is there for us but the mount arrives empty, which means
-        # the daemon resolved a different /tmp than the shell did.
+        # the socket exists here but the mount arrives empty: the daemon resolves a different /tmp (snap confinement)
         echo "  $XSOCK exists here but arrives EMPTY inside the container, so" >&2
         echo "  the Docker daemon is resolving a different /tmp than this shell." >&2
         echo "  That is what snap-packaged Docker does: snap confinement hides" >&2

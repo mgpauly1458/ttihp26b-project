@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
-"""Netlist the four schematic sub-sheets as ngspice subcircuits.
+"""Netlist the four xschem sub-sheets as ngspice subcircuits for the block-level tests.
 
     ./run.sh python3 verify/netlist_blocks.py   ->  out/blocks/blocks.spice
 
-The block-level tests (dac.py, bias.py, stage.py, nand.py, buffer.py) work
-on the xschem sheets in xschem/: csro_dac, csro_stage, csro_nand, csro_inv.
-Those sheets are the drawing LVS proved equal to the layout (make lvs-sch),
-so a test on a sheet is a test on the block as it was laid out, and each
-block can be exercised on its own with ideal sources around it.
-
-xschem writes a sheet's devices as a flat list (its `top_subckt` flag only
-wraps the top sheet), so this script wraps each in `.subckt name <pins>`
-with the pin order below and concatenates them. The PDK symbols emit
-`mm_ok=1` on every device, which is what lets the `_mismatch` model
-sections apply their per-device random offsets in the Monte Carlo runs.
+Sheets: csro_dac, csro_stage, csro_nand, csro_inv from xschem/ (the drawing `make lvs-sch` proved equal to the layout).
+- xschem -n emits a sheet's devices flat (top_subckt wraps only the top sheet), so each is wrapped in `.subckt name <PINS>` here.
+- The PDK symbols emit mm_ok=1 on every device, which lets the _mismatch model sections apply per-device offsets.
 """
 import os
 import subprocess

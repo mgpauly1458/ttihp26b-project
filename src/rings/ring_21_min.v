@@ -1,50 +1,15 @@
-// ============================================================================
-// ring_21_min.v -- 21-stage minimum-drive ring (slots 0-3)
-// ----------------------------------------------------------------------------
-// What it does
-//   A 21-stage ring oscillator built from the smallest cells the library has:
-//   one NAND2 (which is also the enable) and twenty INV_1. Untrimmed: it is
-//   the baseline process monitor. Slots 0-3 are four instances of THIS
-//   module, placed at separate corners of the tile, so that their spread is
-//   a within-die matching measurement. Same netlist, different location --
-//   that is the whole experiment.
-//
-// Clock domain
-//   None: it IS a clock source. Free-running while enable is high.
-//
-// Interface (the same for every ring, including the analog macro)
-//   code    [7:0]  the broadcast trim code. Ignored by this ring.
-//   enable         1 = oscillate. 0 holds the NAND output high and the
-//                  ring stops in a defined state.
-//   clk_out        the ring, through a buffer so the mux never loads the
-//                  loop directly
-//
-// Structural, not synthesised
-//   Every cell is instantiated by name so synthesis cannot see a
-//   combinational loop -- it would either refuse or optimise the ring away.
-//   The (* keep *) attributes stop yosys removing or merging anything. At
-//   the physical stage this module needs: don't-touch on the instances, a
-//   set_disable_timing on one arc to break the timing loop, and a region
-//   constraint so the placer keeps the loop compact (docs/constraints.md).
-//
-// Simulation
-//   With SIM defined the loop is replaced by sim/ring_model.v with this
-//   ring's fixed frequency, so the instrument can be swept against a known
-//   answer. Without SIM the structural loop is simulated using the delay
-//   stand-ins in sim/sg13g2_cells_sim.v (tb_rings only).
-//
-// Parameter
-//   SIM_F_HZ affects ONLY the simulation model, so the four instances can
-//   have four slightly different frequencies and the sweep sees a
-//   population instead of four copies of one number. The structural
-//   netlist has no parameters.
-//
-// Expected frequency (typical corner, no wires, from the cell delays)
-//   period = 2 * (t_nand2_1 + 20 * t_inv_1) = 2 * (65 + 20*55) ps = 2.33 ns
-//   so roughly 430 MHz. Wire load will pull that down; 300-400 MHz is the
-//   working assumption until layout.
-//
-// ============================================================================
+// ring_21_min.v -- 21-stage minimum-drive ring (slots 0-3): NAND2_1 enable + 20 INV_1, the untrimmed baseline
+//   code    [7:0]  broadcast trim code, ignored here
+//   enable         1 = oscillate; 0 holds the NAND output high, the ring stops in a defined state
+//   clk_out        the ring through buffer u_out, so the mux never loads the loop
+//   SIM_F_HZ       simulation-only frequency, so slots 0-3 differ and the sweep sees a population
+// Free-running clock source, no clock domain. Slots 0-3 are four copies of this netlist placed at four
+//   corners of the tile: their spread is a within-die matching measurement.
+// Expected period (typical, no wires) = 2 * (65 + 20*55) ps = 2.33 ns, ~430 MHz; 300-400 MHz assumed after layout.
+// - Structural, every cell named and (* keep *): synthesis would refuse or remove a combinational loop.
+//   Physical needs: don't-touch, set_disable_timing on one loop arc, a region constraint (docs/constraints.md).
+// - -DSIM replaces the loop with sim/ring_model.v at a fixed frequency; without SIM the netlist simulates
+//   with the delay stand-ins in sim/sg13g2_cells_sim.v (tb_rings only).
 `default_nettype none
 
 module ring_21_min #(
@@ -58,8 +23,7 @@ module ring_21_min #(
 );
 
 `ifdef SIM
-  // Fixed frequency: F_MIN = F_MAX and the code is tied high, so the model's
-  // curve collapses to a single point. No dead zone.
+  // F_MIN = F_MAX and code tied high: the model's curve collapses to one point, no dead zone.
   ring_model #(
       .F_MIN_HZ  (SIM_F_HZ),
       .F_MAX_HZ  (SIM_F_HZ),
@@ -75,8 +39,7 @@ module ring_21_min #(
   (* keep *) wire s1, s2, s3, s4, s5, s6, s7, s8, s9, s10;
   (* keep *) wire s11, s12, s13, s14, s15, s16, s17, s18, s19, s20;
 
-  // Stage 1 is the enable gate: with enable low, n0 is stuck high and the
-  // loop cannot oscillate. With enable high it is just another inverter.
+  // Stage 1 is the enable gate: enable low sticks n0 high; enable high makes it an inverter.
   (* keep *) sg13g2_nand2_1 u_en (.Y(n0), .A(enable), .B(s20));
 
   (* keep *) sg13g2_inv_1    u_i1  (.Y(s1), .A(n0));

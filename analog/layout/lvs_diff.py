@@ -1,11 +1,6 @@
-"""Print what did not match in a KLayout LVS run.
+"""Print the nets, devices and pins that did not match in a KLayout LVS run, with layout-side locations.
 
-    klayout -b -r analog/layout/lvs_diff.py -rd db=out/lvs/<cell>.lvsdb
-
-Walks the cross-reference of the .lvsdb and lists every net and device that
-has no partner or only a partial match, with the layout-side location, so
-the mismatch can be found in the GDS instead of read out of a 300-device
-netlist by eye.
+    klayout -b -r analog/layout/lvs_diff.py -rd db=out/lvs/<cell>.lvsdb      (or: make lvs-diff)
 """
 import pya
 
@@ -24,8 +19,7 @@ status_name = {pya.NetlistCrossReference.Match: "match",
 
 
 def name_of(o):
-    """pya exposes some of these as properties and some as methods depending
-    on the build; take whichever answers."""
+    """name of a pya object, exposed as a property or a method depending on the build"""
     v = getattr(o, "name", None)
     if isinstance(v, str):
         return v

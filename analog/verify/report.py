@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Assemble the verification results into docs/analog_verification_results.md.
+"""Concatenate out/verify/<name>.md in ORDER into docs/analog_verification_results.md.
 
     python3 verify/report.py
 
-Each test script leaves its tables in out/verify/<name>.md; this concatenates
-them in reading order with a header saying what produced them. The strategy
-and the reading of the numbers are in docs/analog_verification.md, written by
-hand; this file is the generated appendix it refers to.
+Strategy and reading of the numbers: docs/analog_verification.md (hand written); this writes its generated appendix.
 """
 import datetime
 import os

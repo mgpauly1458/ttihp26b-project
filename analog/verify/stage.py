@@ -1,30 +1,17 @@
 #!/usr/bin/env python3
-"""One starved inverter stage: delay over corners, and its thermal noise.
+"""One starved inverter stage: delay and slew over the 45 PVT points at codes 0/16/128/255; thermal noise to timing jitter.
 
     ./run.sh python3 verify/stage.py [--jobs N]
 
-What is tested
-  csro_stage biased by the real bias chain (DAC + MPD + MPM + MND at a fixed
-  code), driven by an identical stage and loading an identical stage, so
-  the device under test sees the edge shape and the load it sees in the
-  ring. Eleven of these delays, two per period, are the ring's period.
+Writes out/verify/stage.md, stage_corners.csv, stage_noise.csv and docs/verify_stage.png.
 
-Two questions
-  1. Corners: propagation delay (high-to-low and low-to-high, at half rail)
-     and output slew of the stage at codes 0, 16, 128, 255, at all 45 PVT
-     points. Twice eleven times the delay is the period the whole-block
-     transient (ring.py) should find; the two are compared there. The
-     spread over PVT is the spread of the instrument's scale.
-  2. Noise: with the stage held at its trip point (input DC set so the
-     output is at half rail, found from a .dc sweep in the same run),
-     ngspice `.noise` gives the integrated output noise voltage. Divided by
-     the output slope at the crossing (from the transient) it is the timing
-     jitter of one transition, sigma_td = v_n,rms / (dV/dt). This is the
-     standard small-signal estimate of a ring stage's thermal jitter; it
-     is an estimate, not a transient-noise simulation (ngspice has no
-     device noise in transient), and it is reported as such. Per-period
-     jitter of the ring follows as sqrt(22) sigma_td (22 independent
-     transitions per period), and the counter averages N periods.
+DUT: csro_stage with the real bias chain at a fixed code, driven by and loading identical stages.
+11 x (tPLH + tPHL) is the ring period ring.py should find.
+- Noise: input DC at the trip point (from a .dc in the same run), .noise gives the output V rms;
+  sigma_td = v_n / (dV/dt at the crossing, from the transient). Small-signal estimate, not transient noise
+  (ngspice has none). Period jitter = sqrt(22) sigma_td; N periods average by sqrt(N).
+- Slopes are taken from the 40/60 % crossing times because ngspice `deriv` is unsupported here.
+- ngspice needs `ac 1` on the input source for .noise; onoise_total is V rms.
 """
 import argparse
 import os
@@ -43,7 +30,7 @@ XMND vbn vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
 
 
 def deck_tran(models, vdd, code):
-    T = 2.0 / C.f_nom(code)          # two nominal periods per pulse: plenty of settling
+    T = 2.0 / C.f_nom(code)          # two nominal periods per pulse
     return f"""* stage delay at code {code}
 {models}{C.blocks()}Vdd VPWR 0 {vdd}
 {bias(vdd, code)}Vin a 0 pulse(0 {vdd} {T/4:.4g} 50p 50p {T/2:.4g} {T:.4g})

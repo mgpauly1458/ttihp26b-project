@@ -1,31 +1,17 @@
 #!/usr/bin/env python3
-"""Post-layout: where the parasitics are, block by block, and what they do.
+"""Post-layout: attribute kpex's parasitic capacitance to blocks, and simulate the macro pre and post layout side by side.
 
     ./run.sh python3 verify/pex.py [--pex out/pex/tt_analog_ring.pex.spice] [--jobs N]
 
-Two halves.
+Writes out/verify/pex.md, pex_blocks.csv and docs/analog_ring_sim_post.png.
 
-  1. Attribution. kpex extracts the flat macro; this sorts its capacitors by
-     the net they hang on and the block that net belongs to (DAC and code
-     buses, bias nodes, ring stages, output buffer), so each block's wiring
-     load is a number next to the device capacitance it adds to. This is
-     the "per-block extraction" a flat layout allows: the nets are labelled,
-     the blocks are groups of nets.
-
-  2. The same circuit twice. The whole macro is simulated pre-layout
-     (spice/tt_analog_ring.spice) and post-layout (the kpex netlist) at the
-     typical corner, codes 0, 16, 128, 255, and the block-level quantities
-     are read off the internal nodes of the running ring: each stage's
-     delay (s_k to s_k+1), the NAND's (s10 to s0), the buffer's (s10 to
-     clk_out) and clk_out's edge times, the ripple the ring induces on vbp
-     and vbn, and the RC settling of a code bus driven through 500 ohm. The
-     ring frequency itself comes from ring.py's runs (pre: ring_corners.csv,
-     post: ring_post_corners.csv) when they exist. docs/analog_ring_sim_post.png
-     puts pre and post side by side.
-
-kpex 2.5D extracts capacitance only; the metal resistances (the DAC's
-0.3 um Metal1 bars carry tens of uA, sub-millivolt drops) are not in the
-post-layout netlist and are argued, not simulated, in analog_layout_notes.md.
+- Attribution: kpex's capacitors sorted by net and by block (GROUPS), next to each net's device capacitance
+  (GATE_CAP_FF, from the pre-layout Liberty). The nets are labelled, so a flat layout still gives per-block numbers.
+- In situ, typical corner, codes 0/16/128/255, pre (spice/tt_analog_ring.spice) and post (the kpex netlist):
+  stage, NAND and buffer delays read off the running ring's internal nodes over its last three periods,
+  vbp/vbn ripple, and code-bus 10-90 % settling through 500 ohm. Post-layout transients are sized at half F_NOM.
+- f(code) pre vs post at the signoff corners comes from ring_corners.csv and ring_post_corners.csv when both exist.
+- kpex 2.5D extracts capacitance only; metal resistance (the DAC's Metal1 bars, sub-mV drops) is argued in docs/analog_layout_notes.md.
 """
 import argparse
 import csv

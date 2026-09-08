@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
-"""The starved NAND that closes the loop: does `enable` really stop the ring?
+"""The starved NAND: enable=0 must hold the ring; with enable=1 it is the eleventh inverter.
 
     ./run.sh python3 verify/nand.py [--jobs N]
 
-What is tested
-  csro_nand with the real bias chain, at every PVT point.
-  1. Hold: with `a` (enable) low, the output must stay high whatever `b`
-     (the feedback) does. A .dc sweep of `b` over the full rail with the
-     stage's own load; the minimum output voltage is the number. If it ever
-     dipped below the next stage's trip point the "stopped" ring would
-     twitch. Also the supply current in that state: what the block draws
-     when disabled, beyond the DAC.
-  2. Gate: with `a` high the NAND is the eleventh inverter of the ring. Its
-     delay is compared with a plain stage's (stage.py) at the same code -
-     a much slower NAND would make one of the eleven stages odd and the
-     output duty cycle lopsided.
+Writes out/verify/nand.md, nand_hold.csv and nand_gate.csv.
+
+DUT: csro_nand with the real bias chain, every PVT point, codes 0/16/255.
+- Hold: a=0, .dc of b over the rail with a stage load; min V(out) must stay above the next stage's trip point.
+  Also the disabled supply current.
+- Gate: a=1, delay against stage.py's at the same code (stage_corners.csv, if present); a slow NAND lopsides the duty cycle.
 """
 import argparse
 import os

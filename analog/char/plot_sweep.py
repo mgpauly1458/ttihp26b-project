@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-"""Plot the simulated frequency-vs-code sweep.
+"""Plot the sweep CSV: f(code) with the line through the origin and the code-8 point (compression visible), and supply current.
 
     ./run.sh python3 char/plot_sweep.py out/sweep.csv ../docs/analog_ring_sweep.png
-
-Left: frequency against code with the straight line through the origin and
-the code-8 point, so the compression at high codes is visible. Right: the
-supply current, which is essentially the DAC current, on the same axis.
 """
 import csv
 import sys

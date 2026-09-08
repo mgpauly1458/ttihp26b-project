@@ -1,59 +1,21 @@
-"""Build the current-starved ring oscillator with its 8-bit current DAC as a
-placeable hard macro.
+"""Layout generator for the tt_analog_ring hard macro: current-starved ring oscillator + 8-bit current DAC (IHP SG13G2).
 
-    klayout -b -r analog/layout/build_tt_analog_ring.py
+    klayout -b -r analog/layout/build_tt_analog_ring.py      (or: make gds)
 
-Writes, from one set of constants and one connectivity description:
+Writes macro/tt_analog_ring.gds, macro/tt_analog_ring.lef, spice/tt_analog_ring.spice (X calls, one per finger,
+for ngspice) and spice/tt_analog_ring.lvs.spice (M lines, for KLayout LVS). Ports: code[7:0] enable clk_out VPWR VGND.
 
-    macro/tt_analog_ring.gds      the layout
-    macro/tt_analog_ring.lef      its abstract for LibreLane
-    spice/tt_analog_ring.spice    the transistor-level netlist, one line per
-                                  finger, as ngspice subcircuit calls
-    spice/tt_analog_ring.lvs.spice  the same netlist as SPICE device lines,
-                                  which is what KLayout LVS reads
-
-Every device is placed through a `Mos` object that records what each of its
-source/drain columns and its gate are connected to. The netlists are written
-from those records, so the schematic LVS compares against is by construction
-the circuit this script *meant* to draw; LVS then checks that the metal and
-poly drawn here actually implement it.
-
-The circuit
------------
-    DAC       255 unit NMOS fingers (W=0.15 L=8um), gate driven straight by a
-              code bit, binary weighted 1..128, all drains on node vbp. Plus
-              two always-on units (gate on VPWR) so code 0 still oscillates.
-    bias      vbp is the diode-connected wide PMOS MPD (24 x 2um/0.5um), so
-              I_dac sets the PMOS starve voltage; each stage's 1um starve
-              PMOS gets I_dac/48. MPM (1um/0.5um, gate vbp) mirrors the same
-              current into the diode NMOS MND, giving vbn.
-    ring      NAND (enable, feedback) + 10 inverters, each stage starved top
-              and bottom by a 1um/0.5um PMOS on vbp and a 0.5um/0.5um NMOS on
-              vbn. 11 inverting stages.
-    buffer    two unstarved inverters from the last stage to clk_out.
-
-Layout
-------
-    Bottom: the DAC, 34 rows of unit fingers (16 rows of 8 for bit 7, 8 for
-    bit 6, 4 for bit 5, 2 for bit 4, then one row each of 8, 4, 2, 1 fingers
-    for bits 3..0). Rows come in mirrored pairs sharing a Metal1 vbp bar
-    between them and a Metal1 VGND bar outside. Each row's gates are joined
-    by a poly bar contacted at the row's left end and jogged in Metal1 to a
-    vertical Metal2 code bus. Code bits enter as Metal2 pins on the south
-    edge; the bus runs straight up from them.
-
-    Top: one standard-cell-like row - NMOS below, PMOS above, VGND rail
-    under, VPWR rail over - holding the always-on unit, Mp0, Mn0, Mp1, the
-    NAND, the ten stages and the buffer. Bias, feedback and enable run
-    horizontally on Metal2 in the gap between the two device rows; the
-    stage-to-stage connections are Metal1 jogs in that same gap.
-
-    The supplies are two horizontal Metal4 bars spanning the full width, for
-    the tile's PDN to via down to, exactly as the earlier inverter macro did.
-    A grounded p+ guard ring surrounds everything and the LEF blocks
-    Metal1..Metal4 over the whole footprint except the pins.
-
-Coordinates are nm throughout (layout dbu = 1nm).
+Circuit: DAC = 255 unit NMOS fingers (0.15/8 um) binary weighted, gates on the code bits, drains on vbp, + NG_ON
+always-on units so code 0 oscillates; vbp = diode PMOS MPD (24 x 2/0.5), so a stage's 1 um starve PMOS gets I_dac/48;
+MPM mirrors into diode NMOS MND for vbn; ring = starved NAND(enable, feedback) + 10 starved inverters (starve devices
+1/0.5 PMOS on vbp, 0.5/0.5 NMOS on vbn); buffer = two plain inverters to clk_out.
+Layout: DAC rows at the bottom (34 rows in mirrored pairs sharing a Metal1 vbp bar, VGND bars outside, one poly gate
+bar per row jogged in Metal1 to a vertical Metal2 code bus from the south-edge pins); one standard-cell-like row on top
+(NMOS below, PMOS above, rails outside) with bias, feedback and enable on Metal2 in the gap and stage-to-stage Metal1
+jogs there; VPWR/VGND as full-width Metal4 bars for the tile's PDN; grounded p+ guard ring; LEF OBS on Metal1..4 except pins.
+- Every finger is placed through Mos, which records its nets; both netlists come from those records, so LVS checks
+  the drawn metal and poly against the circuit this script meant.
+- Coordinates in nm (dbu = 1 nm). Design-rule numbers from sg13g2_tech_default.json.
 """
 
 import os
@@ -172,13 +134,12 @@ DEVICES = []   # (name, kind, wf_um, l_um, drain, gate, source, bulk)
 
 
 class Mos:
-    """A PCell transistor placed at (x, y), with its geometry read back off
-    the PCell so nothing about contact or gate positions is hard-coded.
+    """A PCell transistor at (x, y); pad and gate boxes are read back off the PCell, and every finger is recorded in DEVICES.
 
     kind    'nmos' | 'pmos'
     w, l    per-finger width and length in um
     ng      number of fingers
-    cols    list of ng+1 net names, one per source/drain column, left->right
+    cols    ng+1 net names, one per source/drain column, left to right
     gate    net name of the gate (all fingers share it)
     """
 
@@ -239,12 +200,9 @@ def write_netlists():
 
 
 # ===================================================================== DAC
-# Row geometry. A unit finger is nmos w=0.15 l=8: the PCell puts the source/
-# drain pads (Metal1 160 wide) on y 20..280, the channel Activ on y 75..225
-# and the gate poly on y -105..405. Rows are paired: the lower row of a pair
-# carries its poly bar above the fingers, the upper row carries it below, and
-# the Metal1 vbp bar shared by the pair runs between the two poly bars. The
-# VGND bar shared with the neighbouring pair runs outside.
+# Unit finger nmos 0.15/8: PCell pads (Metal1, 160 wide) on y 20..280, channel Activ 75..225, gate poly -105..405.
+# Rows are paired: lower row's poly bar above its fingers, upper row's below, the shared Metal1 vbp bar between
+# the two poly bars, the VGND bar shared with the neighbouring pair outside.
 DAC_UNITS = [(7, 8)] * 16 + [(6, 8)] * 8 + [(5, 8)] * 4 + [(4, 8)] * 2 + [(3, 8), (2, 4), (1, 2), (0, 1)]
 NROWS = len(DAC_UNITS)                  # 34
 for _b in range(8):
@@ -272,10 +230,7 @@ def bus_x(k):
 
 
 def build_dac(cell, ox, oy):
-    """The DAC at (ox, oy) = bottom-left of the first row's Activ.
-
-    Returns (x_right_of_rows, y_top) and the x of the trunks.
-    """
+    """The DAC rows at (ox, oy) = bottom-left of the first row's Activ; returns (x right of the rows, y top)."""
     row_end = None
     yfirst = oy
     for r, (bit, ng) in enumerate(DAC_UNITS):
@@ -349,10 +304,8 @@ box(macro, METAL1, DAC_X + 70, y0, X_RIGHT, y0 + 300)
 DAC_VGND_BOT = y0
 DAC_VGND_TOP = DAC_Y + (NPAIRS - 1) * PAIR_PITCH + VGND_BAR[0]
 
-# substrate tie islands under every VGND bar: one in the middle column and
-# one at each end of the row, so no finger is more than LU.b (20um) from a tie.
-# The bars are extended left over the second island; the poly-bar jogs sit
-# in other y slots so nothing collides.
+# substrate tie islands under every VGND bar (middle column and both row ends): no finger further than LU.b (20 um)
+# from a tie. The bars extend left over the second island; the poly-bar jogs use other y slots.
 TIE_X = DAC_X + 300 + NG_SPLIT * 8440 + (TIE_GAP - TIE_W) // 2
 TIE_XL = DAC_X - 1000 - TIE_W
 TIE_XR = DAC_X + ROW_W + 400
@@ -369,8 +322,7 @@ for pair in range(NPAIRS + 1):
 box(macro, METAL2, TRUNK_VBP_X, DAC_Y + VBP_BAR[0], TRUNK_VBP_X + 400, DAC_VGND_TOP + 300)
 box(macro, METAL1, TRUNK_VGND_X, DAC_VGND_BOT, TRUNK_VGND_X + 800, DAC_VGND_TOP + 300)
 
-# the Metal2 code / enable bus, from the south edge pins up to the last row
-# that uses each line (enable goes on up to the ring row)
+# Metal2 code bus from the south-edge pins up to the last row using each bit (enable continues to the ring row)
 PIN_H = 1200
 row_top_of_bit = {}
 for r, (bit, ng) in enumerate(DAC_UNITS):
@@ -454,10 +406,8 @@ class Row:
         return pad
 
     def in_bridge(self, ng, pg, slot_y=Y_IN, pad_left=True, net_line=None):
-        """Poly bridge joining an NMOS gate and the PMOS gate above it, with a
-        contact + Metal1 pad in the given slot. The poly pad is widened to the
-        LEFT of the bridge so the Metal1 pad clears the output strap on the
-        right. Returns the Metal1 pad box."""
+        """Poly bridge joining an NMOS gate and the PMOS gate above it, contact + Metal1 pad in the slot (widened to the
+        left so the pad clears the output strap on the right); via to Metal2 if net_line. Returns the Metal1 pad box."""
         nx1, ny1, nx2, ny2 = ng
         px1, py1, px2, py2 = pg
         assert nx1 == px1, "gates must align"
@@ -484,8 +434,7 @@ class Row:
 
     # -- cells ------------------------------------------------------------
     def stage(self, i, net_in, net_out):
-        """Starved inverter: [Mns|Mn] below, [Mps|Mp] above. Output strap on
-        the right; returns (x of the output strap's centre, next x)."""
+        """Starved inverter: [Mns|Mn] below, [Mps|Mp] above. Returns (input pad box, (output strap centre x, x1, x2))."""
         x = self.x
         mns = Mos(self.cell, f"MNS{i}", "nmos", x, ry(0), WNS, LNS, 1, ["VGND", f"n{i}"], "vbn")
         mps = Mos(self.cell, f"MPS{i}", "pmos", x, ry(YP), WPS, LPS, 1, ["VPWR", f"p{i}"], "vbp")
@@ -515,8 +464,7 @@ class Row:
         mps = Mos(self.cell, "MPS0", "pmos", x, ry(YP), WPS, LPS, 1, ["VPWR", "p0"], "vbp")
         xi = mns.right + ACT_SP
         mn = Mos(self.cell, "MNA0", "nmos", xi, ry(0), WNAND, LI, 2, ["n0", "na0", net_out], "enable")
-        # two fingers, two different gates: the PCell gives the fingers separate
-        # poly, so the second gate is re-labelled below by hand
+        # two fingers with different gates: the PCell gives separate poly, finger 1 is relabelled to net_fb below
         mp = Mos(self.cell, "MPA0", "pmos", xi, ry(YP), WPI, LI, 2, ["p0", net_out, "p0"], "enable")
         # fix the netlist records for finger 1 (gate = feedback)
         for idx, d in enumerate(DEVICES):
@@ -580,9 +528,7 @@ for k, net in enumerate(don_cols):
         box(macro, METAL1, d1[0] - 80, ry(p1), d1[2] + 80, ry(p2))
         via12(macro, (d1[0] + d1[2]) // 2, ry(Y_BP) + 80)
         row.vbp_x.append((d1[0] + d1[2]) // 2)
-# gate: a poly bar over the fingers' top ends joins them; a stub rises from it
-# to a contact in slot A, and Metal1 goes straight up through the (empty)
-# PMOS row to the VPWR rail
+# gate: poly bar over the fingers' top ends, stub to a contact in slot A, Metal1 straight up through the empty PMOS row to VPWR
 g0, gl = don.gate_box(0), don.gate_box(NG_ON - 1)
 box(macro, GATPOLY, g0[0], g0[3] - 10, gl[2], g0[3] + 300)
 gx = g0[0] + 150
@@ -591,8 +537,7 @@ cont(macro, gx, ry(Y_IN) + 80)
 box(macro, METAL1, gx - 130, ry(Y_IN) - 70, gx + 130, ry(VPWR_RAIL[0]) + 10)
 row.x = don.right + 600
 
-# --- bias: MPD diode PMOS (24 fingers), MND diode NMOS, MPM mirror PMOS -------
-# (named so they cannot collide with the stages' MP<i>/MN<i>)
+# --- bias: MPD diode PMOS (24 fingers), MND diode NMOS, MPM mirror PMOS (names distinct from the stages' MP<i>/MN<i>)
 mp0_cols = ["VPWR" if k % 2 == 0 else "vbp" for k in range(NG_MP0 + 1)]
 mp0 = Mos(macro, "MPD", "pmos", row.x, ry(YP), WP0F, LPS, NG_MP0, mp0_cols, "vbp")
 for k, net in enumerate(mp0_cols):
@@ -616,8 +561,7 @@ cont(macro, g0[0] - 460, cy)
 box(macro, METAL1, g0[0] - 590, ry(Y_BP) - 70, g0[0] - 330, cy + 150)
 box(macro, METAL1, g0[0] - 590, ry(p1), mp0.pad(1)[2], ry(p2))
 
-# under Mp0: Mn0 and Mp1 share the NMOS row space; Mp1 must sit where the
-# PMOS row is free, so it goes after Mp0.
+# MND sits under MPD in the free NMOS row; MPM needs free PMOS row, so it goes after MPD
 row.x = mp0.right + 600
 mn0 = Mos(macro, "MND", "nmos", mp0.x + 1000, ry(0), WNS, LNS, 1, ["VGND", "vbn"], "vbn")
 row.strap_down(mn0.pad(0))
@@ -832,8 +776,7 @@ obs = {
     "Metal4": subtract_windows(FOOT, [grow(r, GUARD) for r in tm_straps.values()]),
 }
 
-# gate area seen by each input: code[k] drives 2^k unit fingers, enable the
-# two NAND gates; clk_out sees the output inverter's two drains.
+# antenna: code[k] drives 2^k unit gates, enable the two NAND gates; clk_out sees the output inverter's two drains
 unit_gate = WU * LU
 lines = [
     "VERSION 5.8 ;",

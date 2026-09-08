@@ -1,16 +1,8 @@
-// ============================================================================
-// tb_measure_core.v -- the counter against a clean clock of known frequency
-// ----------------------------------------------------------------------------
-// No rings, no divider, no CDC awkwardness beyond what the core itself has:
-// a generated clock of exactly known period stands in for the divided ring.
-// The expected count is target_n * T_ring / T_ref, and the measured count
-// must be within +/-1 of it (the quantisation described in the core's
-// header). Several target_n values, several ring periods, including ones
-// that are not a nice multiple of the reference.
-//
-// Then the failure path: no ring clock at all must produce timeout_error,
-// not a hang, and a measurement afterwards must still work.
-// ============================================================================
+// tb_measure_core.v -- measure_core against a generated clock of known period (no rings, no divider)
+// Expected count = target_n * T_ring / T_ref, pass if within +/-1 (the core's quantisation). Several
+// target_n and ring periods, including awkward ratios and back-to-back runs. Then: no ring must give
+// timeout_error not a hang; a too-slow ring times out; a normal measurement works afterwards; timeout = 0
+// errors immediately.
 `timescale 1ns / 1ps
 
 module tb_measure_core;
@@ -29,7 +21,7 @@ module tb_measure_core;
 
   always #(T_REF / 2) ref_clk = ~ref_clk;
 
-  // The stand-in ring: a clock whose period we set.
+  // Stand-in ring: a clock of settable period.
   real t_ring = 10.0;
   always begin
     if (ring_on) #(t_ring / 2) ring = ~ring;
@@ -108,19 +100,18 @@ module tb_measure_core;
     repeat (5) @(posedge ref_clk);
 
     $display("--- Clean clocks, several target_n and ring periods");
-    // Ring slower than the reference: many counts per period.
+    // ring slower than the reference
     measure(100.0, 16'd1);
     measure(100.0, 16'd10);
     measure(100.0, 16'd100);
-    // Ring faster than the reference: fractional counts per period, where
-    // the quantisation does its worst.
+    // ring faster than the reference: fractional counts per period, worst case for the quantisation
     measure(7.3,   16'd100);
     measure(7.3,   16'd1000);
     measure(2.5,   16'd4000);      // 400 MHz ring, undivided
-    // Awkward ratio very close to an integer, both sides of it.
+    // ratio just either side of an integer
     measure(19.99, 16'd200);
     measure(20.01, 16'd200);
-    // Back to back with no idle time between: SETTLE handshake must cope.
+    // back to back with no idle time: the SETTLE handshake must cope
     measure(50.0,  16'd50);
     measure(50.0,  16'd50);
 

@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# Run a command inside the IIC-OSIC-TOOLS container with this directory mounted
-# at /work. The container already defaults to PDK=ihp-sg13g2.
+# Run a command in the IIC-OSIC-TOOLS container, repo mounted at /work, cwd /work/analog, PDK=ihp-sg13g2.
 #
 #   ./run.sh klayout -v
 #   ./run.sh bash -lc 'ngspice -b sim/tb.spice'
 #
-# ngspice is single-threaded by default (OMP_NUM_THREADS=1): these decks are
-# small, and a parallel sweep of them would otherwise oversubscribe the machine
-# eightfold. Override with OMP_NUM_THREADS=n in the environment.
-# --skip must be the first argument to the image's entrypoint or it starts a UI.
+# OMP_NUM_THREADS=1 (override in the environment): the decks are small and parallel sweeps would oversubscribe.
+# VERIFY_REUSE is passed through: VERIFY_REUSE=1 make verify re-analyses the stored runs in out/verify.
+# --skip must be the entrypoint's first argument or the image starts a UI.
 set -euo pipefail
 IMAGE=${IMAGE:-hpretl/iic-osic-tools:latest}
 exec docker run --rm \
@@ -17,4 +15,5 @@ exec docker run --rm \
     -e PDK=ihp-sg13g2 \
     -e XDG_CACHE_HOME=/work/analog/out/.cache \
     -e OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}" \
+    -e VERIFY_REUSE="${VERIFY_REUSE:-}" \
     "$IMAGE" --skip "$@"

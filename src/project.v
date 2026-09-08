@@ -1,45 +1,12 @@
-// ============================================================================
-// project.v -- Tiny Tapeout top level: on-chip ring oscillator frequency meter
-// ----------------------------------------------------------------------------
-// What it is
-//   A small all-digital instrument that measures how fast a ring oscillator
-//   runs and reports the result as a number over a handful of pins. Eight
-//   ring slots share one measurement chain, so any difference between two
-//   rings is a real difference and not an instrument difference.
-//
-//        ring_bank (8 rings) --> ring_mux --> ring_divider --> measure_core
-//             ^ TRIM_CODE broadcast        (/1../128)      (reciprocal counter)
-//                                                                 |
-//        pins <------------------------ regfile <-----------------+
-//
-//   Reciprocal method: count reference-clock cycles over exactly TARGET_N
-//   periods of the divided ring. Then
-//
-//       f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT
-//
-//   f_ref is the clk pin -- the only thing that has to be accurate, and it
-//   comes from the bench. No voltage reference or analog rail anywhere.
-//
-// Clock domains
-//   Reference (clk): regfile, measure_core's FSM and counters.
-//   Ring (whichever ring is selected, and the divider taps): ring_divider
-//   and the window logic in measure_core. Crossings are single bits through
-//   cdc_sync. See docs/constraints.md for what STA will need to be told.
-//
-// Reset
-//   rst_n is the tile's reset. Reference-domain logic uses it synchronously
-//   (as active-high `reset`); the divider uses it asynchronously because
-//   its clock may not be running. Both are explained in their files.
-//
-// ena
-//   Used as the master ring enable. It is 1 whenever this design is the one
-//   selected on the shuttle, so the rings are off while some other project
-//   is running -- which is what a neighbour would want from us.
-//
-// Pin summary (docs/pinmap.md has the full story)
-//   ui_in  = {spare, RSEL[2:0], WE, ADDR[2:0]}    uo_out = read data
-//   uio_in = write data (all inputs)              uio_out/uio_oe = 0
-// ============================================================================
+// project.v -- Tiny Tapeout top: on-chip ring oscillator frequency meter
+//   ring_bank (8 rings) -> ring_mux -> ring_divider (/1../128) -> measure_core -> regfile -> pins
+//   f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT    f_ref = the clk pin, the only thing that must be accurate
+// Pins  ui_in  = {spare, RSEL[2:0], WE, ADDR[2:0]}   uo_out = read byte      (docs/pinmap.md)
+//       uio_in = write data                          uio_out = uio_oe = 0
+// Clock domains: clk (regfile, measure_core FSM and counters); the selected ring and the divider taps
+//   (ring_divider, measure_core window logic). Crossings are single bits through cdc_sync (docs/constraints.md).
+// - rst_n is used synchronously by the clk domain and asynchronously by the divider, whose clock may be stopped.
+// - ena is the master ring enable: 1 only while this design is selected, so the rings are off for neighbours.
 `default_nettype none
 
 module tt_um_mgpauly1458_ringmeter (
@@ -48,13 +15,12 @@ module tt_um_mgpauly1458_ringmeter (
     input  wire [7:0] uio_in,   // IOs: input path
     output wire [7:0] uio_out,  // IOs: output path
     output wire [7:0] uio_oe,   // IOs: enable path (active high: 0=input, 1=output)
-    input  wire       ena,      // always 1 when the design is powered, so you can ignore it
+    input  wire       ena,      // 1 while this design is selected; master ring enable here
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // Used synchronously by the reference domain and asynchronously by the
-  // divider, whose clock may not be running: intended, see the header.
+  // Synchronous in the clk domain, asynchronous in the divider (its clock may be stopped): intended.
   /* verilator lint_off SYNCASYNCNET */
   wire reset = ~rst_n;
   /* verilator lint_on SYNCASYNCNET */

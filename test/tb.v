@@ -1,8 +1,7 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-/* cocotb wrapper: instantiates the tile and exposes its pins. The tests
-   themselves are in test.py. */
+/* cocotb wrapper: instantiates the tile and exposes its pins. Tests are in test.py. */
 module tb ();
 
   initial begin

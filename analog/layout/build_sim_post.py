@@ -1,27 +1,12 @@
 #!/usr/bin/env python3
-"""Turn kpex's extracted netlist into one ngspice can simulate in the macro's place.
+"""Rewrite kpex's extracted netlist so ngspice can run it in the pre-layout netlist's place.
 
-    python3 layout/build_sim_post.py [--pex out/pex/tt_analog_ring_pex.spice]
-                                     [--out out/pex/tt_analog_ring.pex.spice]
+    python3 layout/build_sim_post.py [--pex out/pex/tt_analog_ring_pex.spice] [--out out/pex/tt_analog_ring.pex.spice]
 
-kpex (2.5D) writes a `.SUBCKT tt_analog_ring` whose ports are every labelled
-net (the pins plus vbp, vbn, b1, s0..s10), whose transistors are SPICE `M`
-device lines naming `sg13_lv_nmos`/`sg13_lv_pmos` (which in this PDK's
-ngspice library are *subcircuits*, so an `M` line will not run), whose
-unlabelled nets are called `$122`, and which has a `VSUBS` substrate node.
-This rewrites it so that:
-
-  * the subcircuit has the macro's real ports, in the pre-layout order
-    (code[7:0] enable clk_out VPWR VGND), so any deck that includes
-    spice/tt_analog_ring.spice can include this file instead;
-  * every `M` becomes an `X` call with w/l/ng, like the pre-layout netlist;
-  * `$`-names become `n_...` (a `$` starts a comment in ngspice);
-  * VSUBS is VGND (the substrate is tied to ground through the guard ring
-    and the tie columns; the caps to it are caps to ground);
-  * the labelled internal nets keep their names, so vbp, vbn, s0..s10, b1
-    stay probeable as xdut.<name>.
-
-The parasitic capacitors are kept as written (kpex's values, in aF/fF).
+Writes a `.subckt tt_analog_ring` with the pre-layout ports (code[7:0] enable clk_out VPWR VGND); kpex's capacitors are kept as written.
+- kpex's `M` lines become `X` calls with w/l/ng: the PDK's sg13_lv_nmos/pmos ngspice models are subcircuits, so an `M` line will not run.
+- `$name` nets become `n_name` (`$` starts a comment in ngspice); VSUBS becomes VGND (substrate tied to ground through guard ring and ties).
+- Labelled internal nets (vbp, vbn, s0..s10, b1) keep their names and stay probeable as xdut.<name>.
 """
 import argparse
 import os

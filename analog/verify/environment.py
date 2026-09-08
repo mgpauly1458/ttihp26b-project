@@ -1,51 +1,23 @@
 #!/usr/bin/env python3
-"""The macro in a hostile tile: supply noise, ground bounce, crosstalk.
+"""The macro in the tile: supply ripple, noise and step, ground bounce and crosstalk as sources around the whole macro.
 
     ./run.sh python3 verify/environment.py [--netlist FILE] [--tag env] [--jobs N]
 
-The block shares one supply and one substrate with ~4500 standard cells, a
-50 MHz reference clock, seven other ring oscillators and Tiny Tapeout's
-project multiplexer, and its inputs arrive over the tile's own routing next
-to all of that. None of it is in the PDK models, so this test builds it as
-sources around the whole macro and measures what it does to the frequency
-the counter would read. Worst-case by intent: the amplitudes are at or
-beyond what a 1.2 V digital tile plausibly produces, so the answers are
-bounds. Every run is 300 periods at typical process, 27 C, 1.2 V; the
-`quiet` run of each code is the reference.
+Writes out/verify/<tag>.md, <tag>.csv and docs/verify_<tag>.png.
 
-Cases
-  supply ripple   VPWR with a 50 MHz square ripple (1 ns edges) of 10, 30
-                  and 100 mV peak-to-peak: the reference clock's own
-                  switching current through the PDN's impedance.
-  supply noise    VPWR with 10 mV rms broadband random noise (trnoise,
-                  100 ps): the digital logic's aggregate activity.
-  supply step     VPWR drops 50 mV at mid-run and stays: another block
-                  turning on. Frequency before and after, and how fast the
-                  ring follows (it has no loop filter; it follows at once).
-  ground bounce   VGND with a 30 mV peak-to-peak 50 MHz square: return
-                  current of the neighbours through the shared substrate
-                  and ground rails.
-  code crosstalk  a 50 MHz full-swing aggressor coupled through 20 fF onto
-                  code[0] (the lightest input, 9.6 fF of gate) and code[7]
-                  (1.3 pF), the code line driven through 500 ohm as the
-                  tile's buffer would. How far the gate moves and what the
-                  frequency does.
-  enable          the same aggressor onto `enable`: with the ring stopped
-                  (does it stay stopped? clk_out level) and running (period
-                  disturbance). Also a slow 5 ns enable edge: clean start?
-  output          the aggressor coupled through 5, 10, 20 and 30 fF onto
-                  clk_out with its 15 fF load: extra edges at the divider's
-                  threshold would be counted as ring cycles. 30 fF is an
-                  aggressor running beside clk_out at minimum spacing for
-                  hundreds of microns; the real route is tens.
-
-What the tile's multiplexer cannot do
-  Tiny Tapeout's mux passes the pins; the design's register file latches a
-  code only on a 4-clock write strobe and refuses writes while a measurement
-  is running, so a glitch on the pins cannot change the code mid-measurement
-  (that is the digital design's job and its testbenches). What reaches the
-  macro is the register's output through the tile's buffers, which is what
-  the crosstalk cases model.
+Typical, 27 C, 1.2 V, codes 16 and 255, N_RUN periods; the `quiet` run of each code is the reference.
+Amplitudes are at or beyond what a 1.2 V digital tile produces, so the results are bounds.
+  ripple        VPWR + 50 MHz square, 1 ns edges, 10/30/100 mV pp (the reference clock through the PDN)
+  noise         VPWR + 10 mV rms trnoise, 100 ps (aggregate logic activity)
+  step          VPWR drops 50 mV at mid-run: f before/after and settling (no loop filter, follows at once)
+  bounce        VGND + 30 mV pp 50 MHz square (neighbours' return current)
+  xcode         50 MHz full-swing aggressor through 20 fF onto code[0] (9.6 fF gate) and code[7] (1.3 pF), line driven through 500 ohm
+  xenable       the same onto enable, ring stopped (stays stopped?) and running; slow_enable: 5 ns enable edge, clean start?
+  xout          aggressor through 5/10/20/30 fF onto clk_out (15 fF load): an extra edge at 0.6 V would count as a cycle
+- Code and enable sources are referenced to VPWR/VGND, not ideal levels: the tile drives them from the rails the macro sees.
+- Every case of a code uses the same max time step: trnoise forces 100 ps steps, and a differently stepped reference differs ~0.1 % from numerics alone.
+- The design's register file latches the code on a write strobe and refuses writes during a measurement, so a pin glitch
+  cannot change the code mid-measurement; the crosstalk cases model the register output through the tile's buffers.
 """
 import argparse
 import os
@@ -61,9 +33,7 @@ CLOAD = "15f"
 
 def deck(netlist, code, case, params, n_run=N_RUN):
     T = 1 / C.f_nom(code)
-    # the same maximum step for every case of a code: the trnoise source forces
-    # 100 ps steps, and a reference run stepped differently would differ by
-    # ~0.1 % from numerics alone
+    # same max step for every case of a code (see header)
     tstop, step = n_run * T, min(T / 150, 50e-12)
     t_settle = 20 * T
     vpwr, vgnd = "VPWR", "0"
@@ -82,9 +52,7 @@ def deck(netlist, code, case, params, n_run=N_RUN):
         a = params["mvpp"] * 1e-3
         vgnd = "gb"
         extra.append(f"Vgb gb 0 pulse({-a/2:.4g} {a/2:.4g} 0 1n 1n 9n 20n)")
-    # The tile drives the code and enable from the same VPWR/VGND the macro
-    # sees, so a high bit is tied to the (rippling, stepping) VPWR node and a
-    # low bit to the (bouncing) ground node, not to ideal levels.
+    # high bits on the (rippling, stepping) VPWR node, low bits on the (bouncing) ground node
     hi, lo = "VPWR", vgnd
     codes = []
     for k in range(8):

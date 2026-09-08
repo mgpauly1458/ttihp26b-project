@@ -1,23 +1,16 @@
 #!/usr/bin/env python3
-"""Write the xschem schematics of the ring oscillator macro.
+"""Write the xschem sheets (and a symbol for each instantiated one) of the ring oscillator macro.
 
-    python3 xschem/make_sch.py          (or: make sch)
+    python3 xschem/make_sch.py          (or: make sch)   ->  xschem/*.sch, *.sym
 
-Five sheets, one symbol each for the four that are instantiated:
+    csro_stage      starved inverter, 4 transistors
+    csro_nand       starved NAND closing the loop, 6 transistors
+    csro_dac        8-bit binary array + always-on units
+    csro_inv        plain inverter (the buffer uses two)
+    tt_analog_ring  top: DAC, bias mirror, NAND, ten stages, buffer
 
-    csro_stage      one current-starved inverter: 4 transistors
-    csro_nand       the starved NAND that closes the loop: 6 transistors
-    csro_dac        the 8-bit binary array + the always-on units
-    csro_inv        a plain inverter (the output buffer uses two)
-    tt_analog_ring  the top: DAC, bias mirror, NAND, ten stages, buffer
-
-The sheets are written by a script only so that the ten stages and eight
-DAC legs land on the grid without hand arithmetic; the .sch/.sym files are
-ordinary xschem files, open and edit them like any other (`make xschem`).
-
-Device sizes are the same constants the layout generator uses. `make lvs-sch`
-netlists this hierarchy flat and runs LVS against the layout, which is what
-makes the drawing trustworthy.
+- Scripted so the ten stages and eight DAC legs land on the grid; the outputs are ordinary xschem files (`make xschem`).
+- Device sizes are the constants of layout/build_tt_analog_ring.py; `make lvs-sch` proves the drawing matches the layout.
 """
 import os
 import sys
@@ -62,10 +55,8 @@ class Sheet:
         self.lines.append(f"C {{devices/{kind}.sym}} {x} {y} 0 0 {{name=p{self.n} lab={name}}}\n")
 
     def mos(self, kind, name, x, y, w, l, ng=1, flip=0):
-        """Transistor with gate at (x-20,y) and channel pins at (x+20,y-30),
-        (x+20,y+30): drain on top for the NMOS, source on top for the PMOS.
-        w is the TOTAL width (the PDK convention: ng fingers of w/ng each).
-        flip=1 mirrors it so the gate is on the right."""
+        """Transistor: gate at (x-20, y), channel pins at (x+20, y-30) and (x+20, y+30) (NMOS drain on top, PMOS source on top).
+        w is the TOTAL width (PDK convention, ng fingers of w/ng). flip=1 puts the gate on the right. Returns (gate, top, bottom)."""
         self.lines.append(
             f"C {{{DEV.format(kind=kind)}}} {x} {y} 0 {flip} {{name={name}\nl={l:g}u\nw={w:g}u\nng={ng}\nm=1\n"
             f"model=sg13_lv_{kind}\nspiceprefix=X\n}}\n")
@@ -89,10 +80,8 @@ class Sheet:
 
 
 def symbol(name, pins, w=120, h=None, title=None):
-    """A box symbol. pins: list of (name, dir, side, offset) with side in
-    l r t b; offset along the side in grid units from the centre. Pin order
-    here is the subckt pin order, so the sheet must place its ipin/opin
-    symbols in the same order."""
+    """Box symbol. pins: (name, dir, side l|r|t|b, offset in grid units from the centre); their order is the subckt pin order,
+    so the sheet must place its ipin/opin symbols in the same order. Returns ({pin: (side, offset)}, half width, half height)."""
     h = h or 20 * (max(sum(1 for p in pins if p[2] == s) for s in "lr") + 1)
     hw, hh = w // 2, h // 2
     out = ["v {xschem version=3.4.8RC file_version=1.3}\n",

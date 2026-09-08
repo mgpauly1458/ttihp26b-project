@@ -1,26 +1,10 @@
-// ============================================================================
-// ring_bank.v -- the eight ring slots, and nothing else
-// ----------------------------------------------------------------------------
-// What it does
-//   Instantiates the ring population and broadcasts the trim code to all of
-//   them. Each ring gets its own enable from the mux and returns its own
-//   clock. There is no logic here; this file exists so the slot table in
-//   docs/rings.md has exactly one place in the RTL that it describes.
-//
-// Clock domain
-//   None. Eight clock sources.
-//
-// Slots
-//   0..3  ring_21_min      four copies of one netlist, to be placed at four
-//                          corners of the tile (region constraints, later)
-//   4     ring_21_hd       same stage count, high-drive cells
-//   5     ring_11_min      half the stage count
-//   6     ring_tap         tap-select trim, code[2:0]
-//   7     tt_analog_ring   the hand-drawn macro (analog/), all 8 code bits
-//
-// Simulation frequencies for slots 0-3 differ by a percent or two so the
-// sweep plot shows a population. They are simulation parameters only.
-// ============================================================================
+// ring_bank.v -- the eight ring slots: trim code broadcast, per-slot enable in, one clock out. No logic.
+//   trim_code [7:0]  broadcast to every ring
+//   ring_en   [7:0]  one-hot from ring_mux
+//   ring_clk  [7:0]  one clock source per slot
+// Slot  0-3 ring_21_min (four copies, four corners of the tile)   4 ring_21_hd   5 ring_11_min
+//       6 ring_tap (code[2:0])   7 tt_analog_ring (analog/, all 8 code bits)          docs/rings.md
+// - SIM_F_HZ for slots 0-3 differs by a percent or two so the sweep plot shows a population; simulation only.
 `default_nettype none
 
 module ring_bank (

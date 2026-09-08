@@ -1,16 +1,7 @@
-// ============================================================================
-// tb_rings.v -- every STRUCTURAL ring oscillates at the frequency its
-//               netlist predicts, and stops when told to
-// ----------------------------------------------------------------------------
-// Compiled WITHOUT SIM, so the ring modules use their cell-level netlists,
-// with the delay stand-ins from sim/sg13g2_cells_sim.v. What this proves is
-// that each netlist is wired into a loop with an odd number of inversions,
-// that the enable works, that the tap ring's eight codes give eight
-// distinct, monotonic, correctly ordered periods, and that the analog macro
-// is silent. The numbers are checked against the closed-form period from
-// the stand-in delays, to the picosecond, because that is what a wiring
-// error would break.
-// ============================================================================
+// tb_rings.v -- every structural ring oscillates at the period its netlist predicts, and stops on enable = 0
+// Compiled WITHOUT SIM: cell-level netlists with the delays in sim/sg13g2_cells_sim.v. Checks to 1 ps
+// against the closed-form period from the stand-in delays (what a wiring error breaks), that the tap
+// ring's eight codes give distinct, monotonic periods, and that slot 7 (a blackbox here) stays silent.
 `timescale 1ns / 1ps
 
 module tb_rings;
@@ -90,9 +81,7 @@ module tb_rings;
     $dumpfile("build/tb_rings.vcd");
     $dumpvars(0, tb_rings);
 
-    // Let every chain flush its power-up X with enable low before anything
-    // is enabled. Enabling at time zero lets an X pulse into the loop, and
-    // a circulating X never dies in simulation. Silicon has no X.
+    // Flush power-up X with enable low first: an X let into a loop circulates forever in simulation.
     #10;
 
     check_ring(0, 2 * (T_NAND1 + 20 * T_INV1), "21_min  "); check_stopped(0);
@@ -115,8 +104,7 @@ module tb_rings;
     end
     check_stopped(6);
 
-    // Slot 7 is the hard macro: without SIM it is a blackbox with no body,
-    // so its output floats. What matters is that nothing here drives it.
+    // Slot 7 without SIM is a bodiless blackbox, so its output floats; nothing here may drive it.
     $display("--- slot 7, analog macro: blackbox, must be silent without SIM");
     ring_en = 8'b1000_0000; code = 8'd255;
     #20;

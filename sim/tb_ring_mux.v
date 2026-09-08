@@ -1,11 +1,6 @@
-// ============================================================================
-// tb_ring_mux.v -- every select routes the right ring and enables only it
-// ----------------------------------------------------------------------------
-// Eight ring inputs are driven by eight distinguishable clocks (period
-// 10 + sel ns). For each sel: the output period must match that ring's, and
-// ring_en must be one-hot at that position. Then enable=0 must clear ring_en
-// entirely.
-// ============================================================================
+// tb_ring_mux.v -- every sel routes the right ring and enables only it
+// Ring k is a clock of period 10 + k ns. Per sel: the output period must match and ring_en must be
+// one-hot at k. enable = 0 must clear ring_en.
 `timescale 1ns / 1ps
 
 module tb_ring_mux;
@@ -24,7 +19,7 @@ module tb_ring_mux;
       .ring_en  (ring_en)
   );
 
-  // Eight clocks with distinct periods: 10, 11, ... 17 ns.
+  // Eight clocks with periods 10, 11, ... 17 ns.
   always #5.0 ring_in[0] = ~ring_in[0];
   always #5.5 ring_in[1] = ~ring_in[1];
   always #6.0 ring_in[2] = ~ring_in[2];
@@ -51,8 +46,7 @@ module tb_ring_mux;
       period = (t1 - t0) / 4;
       $display("sel %0d : period %5.2f ns (expected %5.2f)  ring_en = %b",
                k, period, 10.0 + k, ring_en);
-      // Tolerance: the output buffer's 80 ps stand-in shifts every edge
-      // equally, and (t1 - t0) / 4 is a real.
+      // The 80 ps buffer stand-in shifts every edge equally; tolerance because (t1 - t0) / 4 is a real.
       if (period > 10.0 + k + 0.001 || period < 10.0 + k - 0.001) begin
         $display("  FAIL: wrong ring routed");
         errors = errors + 1;

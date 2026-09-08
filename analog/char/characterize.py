@@ -1,25 +1,14 @@
 #!/usr/bin/env python3
-"""Characterise the ring oscillator macro and emit its Liberty model.
+"""Measure the macro's pin capacitances and output edges in ngspice and write its Liberty model.
 
-    ./run.sh python3 char/characterize.py
+    ./run.sh python3 char/characterize.py [--netlist FILE] [--lib FILE] [--out DIR]
 
-LibreLane needs a Liberty description of the macro to synthesise, place and
-sign off around it: pin directions, the capacitance every input presents to
-the cell that drives it, and what the output can drive. Rather than assert
-those numbers, this measures them in ngspice on spice/tt_analog_ring.spice,
-the same finger-by-finger netlist LVS checks the layout against.
+Writes lib/tt_analog_ring.lib (make lib passes the kpex post-layout netlist) and decks/logs in out/char.
 
-  * Input capacitance of each code bit and of enable: charge delivered over
-    a slow full-swing ramp, Q/V. The code bits are the gates of 2^k long
-    DAC fingers, so code[7] is over a picofarad - the driver on the tile
-    side has to be sized for it, and this is where the tool learns that.
-  * Output: clk_out's rise/fall transition against load, measured on the
-    running oscillator. There is no timing arc: the output is a free-running
-    clock, and the tile must declare it as one (create_clock on the macro
-    pin) rather than time a path through the macro.
-
-Units and thresholds follow the PDK's own standard-cell library so the
-numbers compose: 1 pF, 1 ns, 50 % delay, 20-80 % transition.
+- Input capacitance of each code bit and enable: Q/V over a slow full-swing ramp. code[7] (2^7 long fingers) is over a picofarad.
+- Output: clk_out 20-80 % transitions against LOADS on the running ring at code 128. No timing arc: the tile must create_clock on the pin.
+- Units and thresholds follow the PDK standard-cell library: 1 pF, 1 ns, 50 % delay, 20-80 % transition.
+- One .spiceinit in the work directory with num_threads=1 plus the PDK osdi lines: the container's spinit uses 8 threads and a local .spiceinit replaces it.
 """
 
 import os
@@ -32,11 +21,7 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "out", "char")
 NETLIST = os.path.join(ROOT, "spice", "tt_analog_ring.spice")
 LIB = os.path.join(ROOT, "lib", "tt_analog_ring.lib")
-# One thread per ngspice process: the parallelism is across decks, and the
-# container's default of 8 threads each oversubscribes the machine eightfold.
-# A .spiceinit in the run directory replaces the container's, so it repeats
-# what that one does: the PDK's OSDI models and the HSPICE-compatibility
-# switch the PDK's netlists rely on.
+# one thread per deck (parallelism is across decks), plus the PDK lines the replaced spinit carried
 SPICEINIT = """set num_threads=1
 set ngbehavior=hsa
 set ng_nomodcheck
@@ -68,9 +53,7 @@ Xdut {ports} enable clk_out VPWR 0 {CELL}
 
 
 def cap_deck(pin):
-    """Charge into `pin` over a slow ramp; every other input held at its
-    resting level (code bits low, enable high). Slow enough that the gate is
-    quasi-static: Q/V is then the small-signal input capacitance."""
+    """Charge into `pin` over a slow (quasi-static) ramp, other inputs at rest (code low, enable high); Q/V is the input capacitance."""
     srcs = []
     for p in INPUTS:
         if p == pin:
@@ -88,8 +71,7 @@ meas tran qtot find q at=201n
 
 
 def out_deck(load):
-    """The oscillator running at mid code into `load`; transition times of
-    clk_out from the 20-80 % crossings of one edge each way."""
+    """Ring running at code 128 into `load` pF; 20-80 % transitions of one edge each way."""
     srcs = [f"V{p.replace('[', '').replace(']', '')} {p} 0 {VDD if p in ('enable', 'code[7]') else 0}"
             for p in INPUTS]
     return header("\n".join(srcs)) + f"""Cl clk_out 0 {load}p

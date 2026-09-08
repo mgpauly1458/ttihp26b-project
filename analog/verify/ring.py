@@ -1,38 +1,23 @@
 #!/usr/bin/env python3
-"""The whole macro: frequency against code over corners, Monte Carlo, noise.
+"""Whole macro: f(code) and current over PVT, Monte Carlo, bias-node noise to jitter.
 
     ./run.sh python3 verify/ring.py [--mc 64] [--stat 32] [--codes ...] [--jobs N]
                                     [--skip-corners] [--skip-mc] [--skip-noise]
+                                    [--netlist FILE] [--tag ring] [--pvt all|signoff] [--fscale 1.0]
 
-What is tested
-  spice/tt_analog_ring.spice, the finger-by-finger netlist the layout
-  generator wrote and LVS matched against the GDS: the DAC, the bias chain,
-  the NAND, the ten stages and the output buffer, driving 15 fF. Every run
-  starts with `enable` low (ring held, clk_out high), releases it after two
-  nominal periods, and measures over the last 16 of 40 nominal periods, so
-  every code is simulated for the same number of cycles at the same points
-  per cycle. Start-up time (release to first edge) comes for free.
+Writes out/verify/<tag>.md, <tag>_corners.csv, <tag>_mm.csv, <tag>_stat.csv, <tag>_jitter.csv,
+docs/verify_<tag>_corners.png and docs/verify_<tag>_mc.png.
 
-Four questions
-  1. Corners: f(code) and supply current at all 45 PVT points, the ring
-     stopped with enable=0 (clk_out level and current), start-up time, and
-     supply pushing (df/dVDD). The fast/slow ratio over PVT is the range the
-     bench will see; monotonicity in code must hold at every point.
-  2. Mismatch Monte Carlo (mos_tt_mismatch, every finger its own offset):
-     f at codes 0, 15, 16, 127, 128, 255 per sample. The two major-carry
-     steps are where a binary DAC can go non-monotonic; the test counts
-     samples where f(16) <= f(15) or f(128) <= f(127), and reports the
-     spread of the end points.
-  3. Process Monte Carlo (mos_tt_stat, all devices together): spread of
-     f(0), f(16), f(255) from die to die.
-  4. Noise, transient: ngspice has no device noise in transient, so the
-     bias node's own current noise is measured by `.noise` (with the node
-     impedance from an `ac` at the same operating point) and injected back
-     as a `trnoise` current source of that density while the ring runs for
-     600 periods. Period jitter and the jitter of 50-period means are read
-     off the edge times. A run without the source gives the simulator's
-     numerical floor, which is reported beside it. The stage's own thermal
-     jitter is estimated separately in stage.py.
+DUT: spice/tt_analog_ring.spice (the LVS reference) or --netlist (the kpex post-layout one), clk_out into 15 fF.
+Each run holds enable low for N_HOLD nominal periods and measures the last N_MEAS of N_RUN, so every code gets
+the same cycles and points per cycle; start-up (release to first edge) comes free. --fscale scales F_NOM for
+the transient sizing (post-layout is about half as fast).
+- Corners: f, Idd, stopped level and current, start-up, supply pushing, temperature coefficient; f(code) must be monotonic at every point.
+- Mismatch MC at codes 0/15/16/127/128/255 counts samples with f(16) <= f(15) or f(128) <= f(127); process MC gives the die-to-die spread of f(0), f(16), f(255).
+- Noise: ngspice has no device noise in transient, so vbp's current noise (.noise divided by |Z| from an ac at the same
+  operating point) is injected back as a trnoise source for 600 periods; the same run without it is the numerical floor.
+  Stage thermal jitter is estimated in stage.py.
+- Frequency is 1 / median edge interval: `rise=N from=` occasionally returns one bogus crossing.
 """
 import argparse
 import csv
@@ -51,8 +36,7 @@ KMAX = 12                               # rising edges looked for in the window
 
 
 def dut_exposed(mismatch=False):
-    """The macro's netlist with vbp and vbn added to the port list, so a
-    top-level source can touch the bias node (for the noise injection)."""
+    """.include of a copy of the macro's netlist with vbp and vbn added to the ports, so a top-level source can reach the bias node."""
     src = C.dut(mismatch).split()[1]
     dst = os.path.join(C.OUT, os.path.basename(src).replace(".spice", ".exposed.spice"))
     if os.path.exists(dst) and os.path.getmtime(dst) < os.path.getmtime(src):
@@ -98,10 +82,7 @@ meas tran vmin min v(clk_out) from=$&tm
 
 
 def frequency(log):
-    """1 / median edge-to-edge interval. ngspice's `rise=N from=` occasionally
-    returns one bogus crossing time (seen: t1 later than t2 at one PVT
-    point); the median of the intervals ignores a single wrong edge where
-    (last - first) / (n - 1) would not."""
+    """(1 / median edge-to-edge interval, edges found); the median ignores the single bogus crossing `rise=N from=` sometimes returns (seen: t1 > t2 at one PVT point)."""
     ts = sorted(t for t in (C.meas(log, f"t{k}") for k in range(1, KMAX + 1)) if t is not None)
     if len(ts) < 2:
         return None, len(ts)

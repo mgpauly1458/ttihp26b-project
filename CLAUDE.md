@@ -1,44 +1,31 @@
-# Ring oscillator meter — working notes
+# Ring oscillator meter: working notes
 
-Branch `ring-osc-meter` of the TTIHP 26b submission repo (IHP SG13G2
-130 nm, `ihp-sg13g2` PDK). **Shuttle closes 2026-09-21.** Allocation is
-2 tiles (`1x2`).
+Branch `ring-osc-meter` of the TTIHP 26b repo (IHP SG13G2, `ihp-sg13g2`
+PDK). Shuttle closes 2026-09-21. Allocation `1x2`.
 
 ## How to work on this
 
-The owner reads every line and wants to be able to explain all of it.
+The owner reads every line and must be able to explain all of it.
 
-- Build one module at a time: write it, write its testbench, run it, show
-  the result, stop. Do not run ahead.
-- Explain before writing: what it does, what its ports mean, how it works.
-  If the explanation is hard, the design is too complicated.
-- Boring beats clever. No generate loops where straight instantiation
-  works, no parameters that were not asked for, no abstraction "for later".
-- Comment the why, not the what. Every file has a header: what it does,
-  which clock domain, what it assumes of its inputs.
+- One module at a time: write it, test it, show the result, stop.
+- Explain before writing. If the explanation is hard, the design is too complicated.
+- Boring beats clever: no generate loops, no unasked-for parameters, no abstraction for later.
+- Comment the why. Every file header: what, clock domain, input assumptions.
 - Stop and ask when a decision would change the design.
-- Verilog-2001, synthesisable, `always @(posedge clk)` with non-blocking
-  for sequential, `always @(*)` with blocking for combinational.
-  Synchronous active-high reset unless there is a stated reason
-  (`ring_divider.v` has one). iverilog `-g2005`; no SystemVerilog.
+- Verilog-2001, iverilog `-g2005`, no SystemVerilog. Synchronous active-high reset unless stated (`ring_divider.v`).
 
-The full brief is the project's specification; `docs/design_notes.md`
-records every decision taken against it and which ones still need the
-owner's call.
+`docs/design_notes.md` records every decision against the brief and which still need the owner's call.
 
 ## What it is
 
-Reciprocal frequency counter + eight ring oscillator slots + register file
-on the Tiny Tapeout pins. `src/project.v`'s header has the block diagram.
-`f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT`.
+Reciprocal frequency counter + eight ring slots + register file on the Tiny Tapeout pins. Block diagram in `src/project.v`'s header. `f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT`.
 
 ## Layout
 
 ```
-analog/         the ring oscillator macro: generator, netlists, GDS/LEF/lib
-src/            RTL (Tiny Tapeout needs src/; the brief's rtl/ is this)
-src/rings/      structural ring netlists (cells by name) + the analog
-                macro's blackbox (tt_analog_ring.v)
+analog/         ring oscillator macro: generator, netlists, GDS/LEF/lib
+src/            RTL (Tiny Tapeout needs src/; the brief's rtl/)
+src/rings/      ring netlists + analog blackbox tt_analog_ring.v
 sim/            ring_model.v (ground truth), sg13g2_cells_sim.v (delay
                 stand-ins), tb_*.v, tb_pins.vh (host protocol helpers)
 scripts/        plot_sweep.py
@@ -47,171 +34,74 @@ test/           cocotb smoke test for TT's CI
 build/          iverilog output, logs, sweep.csv (ignored)
 ```
 
-`make test` runs every testbench; `make sweep` is the exit criterion.
-Each testbench prints `RESULT: PASS`/`FAIL` and the Makefile greps it.
+`make test` runs every testbench (each prints `RESULT: PASS`/`FAIL`); `make sweep` is the exit criterion.
 
-## Two simulation modes
+| mode | rings | used by |
+|---|---|---|
+| `-DSIM` | `sim/ring_model.v`, known frequencies | `test_top`, `sweep`, `test/` |
+| no `-DSIM` | structural netlists with `sim/sg13g2_cells_sim.v` delays | `test_rings` |
 
-- `-DSIM`: every ring is a `sim/ring_model.v` instance with a known
-  frequency. Used by `test_top`, `sweep` and `test/`. The instrument is
-  checked against a known answer.
-- no `-DSIM`: the rings are their structural netlists, simulated with the
-  delay stand-ins in `sim/sg13g2_cells_sim.v` (the PDK's own models are
-  zero-delay and a zero-delay ring loop hangs the simulator). Used only by
-  `test_rings`. Checks each netlist is a real ring.
+- PDK cell models are zero-delay and a zero-delay ring loop hangs the simulator; hence the stand-ins.
+- Enable a structural ring only after its chain has flushed power-up X (a few ns); an X in the loop circulates forever.
 
-Enable a structural ring only after its chain has flushed its power-up X
-(a few ns); an X pulse let into the loop circulates forever in simulation.
+## Lessons: instrument
 
-## Things learned building it
-
-- **After a timeout, the ring domain can be left mid-window.** A restart
-  before a slow ring had produced 2-3 edges would carry on from stale
-  state and never close. Hence the FSM's CLEAR state (`measure_core.v`).
-- **A level crossing domains must be held longer than one destination
-  period.** The CDC testbench held some for 14.6 ns against a 20 ns clock
-  and lost 64 of 500. The testbench was wrong, not the synchroniser, and
-  it is now the comment that explains the rule.
-- **Changing a clock-mux select while running makes runts.** Measured in
-  `tb_ring_divider`: pulses down to 2.5 ns on a 10 ns clock. Every mux
-  select is blocked while busy.
-- **iverilog 12 and `-g2005`**: no `join_any`, no `output real` on tasks.
-  A task-local `integer` reused by a caller's loop variable silently
-  breaks the caller's loop (`tb_rings` tap loop ran once).
-- Tiny Tapeout's tooling accepts `source_files` in subdirectories of
-  `src/` (`os.path.join(src_dir, filename)`).
+- After a timeout the ring domain can be left mid-window and a restart never closes; hence the FSM CLEAR state (`measure_core.v`).
+- A level crossing domains must be held longer than one destination period: 14.6 ns against 20 ns lost 64 of 500 (testbench bug, now the rule's comment).
+- Changing a clock-mux select while running makes runts (2.5 ns on a 10 ns clock); every mux select is blocked while busy.
+- iverilog 12 `-g2005`: no `join_any`, no `output real` on tasks; a task-local `integer` shared with a caller's loop variable silently breaks the caller's loop.
+- Tiny Tapeout accepts `source_files` in subdirectories of `src/`.
 
 ## Hardened
 
-`make harden` (LibreLane 3.0.5 in the venv, PDK at `~/pdk`, as CI) is clean:
-0 setup/hold violations at all three corners, Magic DRC 0, LVS clean,
-antenna clean, lint clean; `make precheck` passes. `src/constraints.sdc`
-carries the ring clocks (see `docs/constraints.md`); `src/config.json`
-places and powers the analog macro. Slot 7 is `src/rings/tt_analog_ring.v`,
-the blackbox of the macro in `analog/`.
+`make harden` (LibreLane 3.0.5 in the venv, PDK at `~/pdk`, as CI): 0 setup/hold violations at all three corners, DRC 0, LVS clean, antenna clean, lint clean; `make precheck` passes. `src/constraints.sdc` carries the ring clocks ([docs/constraints.md](docs/constraints.md)); `src/config.json` places and powers the macro; slot 7 is `src/rings/tt_analog_ring.v`, the blackbox of `analog/`.
 
-The gate-level CI job runs the same cocotb bench on the netlist. It passes
-because the bench keeps `ena` low until ring 7 (the macro, whose model is
-compiled in beside the netlist) is selected: a zero-delay standard-cell
-ring loop would otherwise hang iverilog. Never select slots 0..6 in that
-bench.
+Gate-level CI passes only because the cocotb bench keeps `ena` low until ring 7 (model compiled in beside the netlist) is selected. Never select slots 0..6 there: a zero-delay cell ring hangs iverilog.
 
 ## Not done yet
 
-- Region constraints for the rings, especially slots 1..3 at corners. The
-  placer put them where density suited it.
-- Parasitic extraction of the analog block (`analog/README.md`).
-- Decision: a ninth, tri-state-inverter ring (`sg13g2_einvn_*` exists).
+- Region constraints for the rings, especially slots 1..3 at corners.
+- Decision: a ninth, tri-state-inverter ring (`sg13g2_einvn_*`).
 - Decision: approve or change the pin map (`docs/pinmap.md`).
 
-## The analog block (`analog/`)
+## Analog block (`analog/`)
 
-The hand-generated macro for ring slot 7: a current-starved ring oscillator
-whose current comes from an 8-bit binary array of long NMOS fingers
-switched straight by the code bits. `analog/README.md` is the full story;
-the short version:
+Current-starved ring for slot 7, current from an 8-bit binary array of long NMOS fingers switched by the code bits. Full story: `analog/README.md`; layout `docs/analog_layout_notes.md`; verification `docs/analog_verification.md` and generated `docs/analog_verification_results.md`.
 
-- `make -C analog macro` builds `analog/macro/*.gds` + `.lef` and
-  `analog/lib/*.lib` and runs the PDK's KLayout DRC and LVS. All three
-  artefacts are committed (CI cannot regenerate them). DRC is clean at the
-  maximal rule set without density; LVS matches.
-- One generator (`analog/layout/build_tt_analog_ring.py`) writes the GDS,
-  the LEF and the SPICE netlist from a single connectivity description, so
-  LVS checks the drawn metal against what the script meant, and ngspice
-  simulates the same netlist.
-- Interface `code[7:0]`, `enable`, `clk_out`, `VPWR`, `VGND`; blackbox in
-  `src/rings/tt_analog_ring.v`. Simulated post-layout 2.0 MHz (code 0)
-  to 164 MHz (code 255), twice that pre-layout; monotonic, linear at the
-  bottom and compressing to 63 % of that line at the top, for reasons the
-  README explains. `code[7]` presents 1.3 pF; the Liberty says so.
+- `make -C analog macro`: GDS, LEF, Liberty, KLayout DRC (maximal rules, no density) and LVS. All three artefacts are committed; CI cannot regenerate them.
+- One generator (`analog/layout/build_tt_analog_ring.py`) writes GDS, LEF and SPICE from one connectivity description; the xschem schematic (`make_sch.py`) is LVS-checked against the GDS by `make -C analog lvs-sch`.
+- Interface `code[7:0]`, `enable`, `clk_out`, `VPWR`, `VGND`. Post-layout 2.0 MHz (code 0) to 164 MHz (code 255), monotonic. `code[7]` presents 1.3 pF.
 - `clk_out` has no timing arc: it is a clock source, `create_clock` it.
-- The schematic is xschem (`analog/xschem/`, `make -C analog xschem`),
-  generated by `make_sch.py` from the same constants as the layout and
-  LVS-checked against the GDS by `make -C analog lvs-sch`. Renders in
-  `docs/sch_*.png`.
-- Density is not checked at block level; the tile's signoff does that.
-- `make -C analog verify` runs the verification suite (`analog/verify/`):
-  every block on its xschem sheet and then the whole netlist, over the 45
-  PVT points, mismatch and process Monte Carlo, and `.noise`. Strategy in
-  `docs/analog_verification.md`, generated results in
-  `docs/analog_verification_results.md`. Layout strategy and concerns in
-  `docs/analog_layout_notes.md`.
+- `make -C analog verify` (`analog/verify/`): each block, then the whole netlist, over 45 PVT points, Monte Carlo and `.noise`.
 
-Things learned building it:
+## Lessons: analog
 
-- **The other agent's `git clean`/checkout wiped untracked work.** Commit
-  early when two agents share a working tree.
-- **Long-L fingers are what make a rail-to-rail-gated DAC affordable.** A
-  minimum-length unit sinks 100 µA; at L = 8 µm it is 2 µA. Power and area
-  trade one for one at fixed gate drive - the only other knob is a lower
-  gate bias, and that costs matching.
-- **KLayout's DRC reports a via stack's lone Metal2 landing pad as a
-  min-area violation** located at the PCell's own origin (-0.145,-0.1). Pad
-  it out where a via stack passes through a layer nothing else uses.
-- **LU.b (tie within 20 µm of every n+ finger) needs ties inside a 69 µm
-  row**, not just a guard ring around it.
-- **In the PDK's xschem symbols `w` is the total width, `ng` the finger
-  count** (same as the PCells). Writing the per-finger width made the
-  24-finger diode 2 µm instead of 48 µm and LVS caught it.
-- **Wires that end on a pin box connect.** A bulk-tie wire run to the next
-  transistor's gate position shorted gate to rail in two sheets; LVS
-  caught that too. Keep device pitch larger than any stub you draw.
-- **Device names in the generated netlist must be unique**: ngspice bails
-  on duplicates with "device already exists"; KLayout LVS silently does not
-  care.
-- **ngspice `.noise` needs `ac 1` on its input source** or it aborts with
-  "no AC value"; its `onoise_total` is the rms voltage (V), not V^2; and
-  `meas ... deriv` is "currently not supported": take a slope from two
-  threshold crossings instead.
-- **One `.dc` can sweep all 256 codes**: eight B-sources turn the swept
-  voltage into the code bits with `floor()` (`verify/common.py`).
-- **The container's ngspice runs 8 threads per process** (its spinit), so
-  a 14-wide sweep of small decks is 112 threads and the machine thrashes
-  (load 177 on 20 cores). A `.spiceinit` in the run directory with
-  `set num_threads=1` fixes it, but it *replaces* the container's, so it
-  must also carry `set ngbehavior=hsa` and the PDK's `osdi` lines or the
-  PSP model is "unknown model type psp103va" (`common.SPICEINIT`).
-- **kpex 2.5D writes `M` device lines naming the PDK's subcircuits**, an
-  unwrapped `.SUBCKT` with every labelled net as a port, `$`-named nets
-  and a VSUBS node. `layout/build_sim_post.py` rewrites all of that.
-- **Post-layout, the ring is half as fast.** The stage outputs carry
-  ~1.7 fF of wiring against ~1 fF of minimum-size devices: 164 MHz instead
-  of 332 MHz at code 255. Nothing functional depends on the scale, but
-  every pre-layout frequency in the older notes is 2x optimistic; the
-  Liberty is characterised on the extracted netlist.
+- Commit early when two agents share a working tree; a `git clean`/checkout wiped untracked work.
+- Long-L fingers make a rail-to-rail-gated DAC affordable: a minimum-L unit sinks 100 uA, at L = 8 um 2 uA.
+- KLayout DRC reports a via stack's lone Metal2 landing pad as min-area at the PCell origin (-0.145,-0.1); pad it out where a stack passes through an otherwise unused layer.
+- LU.b (tie within 20 um of every n+ finger) needs ties inside a 69 um row, not only a guard ring.
+- PDK xschem symbols: `w` is total width, `ng` the finger count (as the PCells).
+- Wires ending on a pin box connect; keep device pitch larger than any stub.
+- Device names in the generated netlist must be unique: ngspice bails on duplicates, KLayout LVS silently does not.
+- ngspice `.noise` needs `ac 1` on its input source; `onoise_total` is rms V, not V^2; `meas ... deriv` is unsupported, take a slope from two threshold crossings.
+- One `.dc` sweeps all 256 codes: eight B-sources make the code bits with `floor()` (`verify/common.py`).
+- The container's ngspice runs 8 threads per process and a 14-wide sweep thrashes; a run-dir `.spiceinit` with `set num_threads=1` replaces the container's, so it must also carry `set ngbehavior=hsa` and the PDK `osdi` lines (`common.SPICEINIT`).
+- kpex 2.5D writes `M` lines naming PDK subcircuits, an unwrapped `.SUBCKT`, `$`-named nets and a VSUBS node; `layout/build_sim_post.py` rewrites them.
+- Post-layout the ring is half as fast (~1.7 fF wiring vs ~1 fF devices per stage): 164 MHz not 332 MHz at code 255. Pre-layout numbers in older notes are 2x optimistic; the Liberty is from the extracted netlist.
 
-Things learned integrating it:
+## Lessons: integration
 
-- **Git LFS breaks the shuttle build.** Tiny Tapeout's action checks out
-  without LFS; the macro GDS arrived as a pointer file and Magic failed
-  with "Error while reading cell (UNNAMED)". Binaries are plain blobs now.
-- **The ring clocks reach the 16-bit window counter through tap 0.** With
-  clocks only at the ring sources, STA timed measure_core at the raw
-  11-stage ring rate and failed by 1.5 ns. Named `(* keep *)` buffers in
-  ring_mux and ring_divider give the SDC pins to put the selected and the
-  divided clock on; the divided one is constrained to 250 MHz, which is
-  the instrument's usage rule (fast rings through tap >= 1).
-- **A PDN strap clipped by the macro edge gets no via** (PDN-0110). Place
-  the macro so its edges clear the TopMetal1 straps (16.48 + 38.87n um for
-  VPWR, 6.2 um further for VGND, 2.2 um wide).
-- **`flow/run.sh` gives the container a HOME under analog/out**; the
-  image's login shell needs a `.bashrc` there or exits with code 2 before
-  running anything.
+- Git LFS breaks the shuttle build: TT's action checks out without LFS and Magic fails on the pointer file. Binaries the build reads are plain blobs; LFS is used only under `analog/out` (sim data, `analog/out/.gitattributes`), which CI never reads (verified green).
+- Ring clocks reach the 16-bit window counter through tap 0; with clocks only at ring sources STA failed by 1.5 ns. `(* keep *)` buffers in ring_mux and ring_divider give the SDC pins; the divided clock is constrained to 250 MHz.
+- A PDN strap clipped by the macro edge gets no via (PDN-0110): keep macro edges clear of the TopMetal1 straps (VPWR at 16.48 + 38.87n um, VGND 6.2 um further, 2.2 um wide).
+- `flow/run.sh` gives the container a HOME under analog/out; the image's login shell needs a `.bashrc` there or exits 2.
 
 ## Tiny Tapeout flow
 
-`make tools` clones `tt/` and builds the venv; `make harden` (about three
-minutes), `make precheck`, `make cocotb`. `main`'s CLAUDE.md has the full
-local-hardening story (LibreLane 3.0.5 in the venv, not the container's
-dev build; PDK at `~/pdk`). Push → CI builds (gds, precheck, gl_test,
-viewer, test, docs) → submit the repo URL at app.tinytapeout.com before the
-deadline. The only things `src/config.json` adds to the template are the
-macro block and the SDC files; the SDC sources LibreLane's base.sdc.
+`make tools` (clones `tt/`, builds the venv), `make harden` (~3 min), `make precheck`, `make cocotb`. Push; CI builds gds, precheck, gl_test, viewer, test, docs; submit the repo URL at app.tinytapeout.com. `src/config.json` adds only the macro block and the SDC files to the template; the SDC sources LibreLane's base.sdc. `main`'s CLAUDE.md has the local-hardening details.
 
 ## Conventions
 
-- `docs/*.png` and `*.gds` are plain git objects, deliberately not LFS
-  (`.gitattributes` says why).
+- `docs/*.png` and `*.gds` are plain git objects, not LFS (`.gitattributes` says why). `VERIFY_REUSE=1 make -C analog verify ...` re-analyses the stored runs (a run is reused only if its deck text is byte-identical, so never change string literals in `analog/verify/*.py`).
 - `tt/`, `venv/`, `build/`, `runs/`, `tt_submission/` are not committed.
-- Cell stand-in delays in `sim/sg13g2_cells_sim.v` and the expected
-  periods in `sim/tb_rings.v` must agree; both say so.
+- Cell stand-in delays in `sim/sg13g2_cells_sim.v` and expected periods in `sim/tb_rings.v` must agree.

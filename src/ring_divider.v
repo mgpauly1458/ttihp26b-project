@@ -1,49 +1,15 @@
-// ============================================================================
-// ring_divider.v -- programmable-tap ripple divider for the selected ring
-// ----------------------------------------------------------------------------
-// What it does
-//   Divides the ring clock by 1, 2, 4, ... 128, selected by tap_sel. The ring
-//   may run at several hundred MHz; the counter downstream would have to close
-//   timing at that speed, and whether it does would move with temperature.
-//   Divide first and the counter sees something comfortable. The ratio is
-//   exactly known, so the host multiplies it back in.
-//
-// Clock domain
-//   Ring domain. Every flop here is clocked by the ring or by the previous
-//   stage; nothing here sees the reference clock.
-//
-// Interface
+// ring_divider.v -- ripple divider, /1 to /128 by tap_sel, for the selected ring (ring domain only)
 //   ring_clk        the selected ring, raw
-//   reset           ASYNCHRONOUS, active high. Asynchronous is a deliberate
-//                   exception to the project's synchronous-reset rule: the
-//                   ring may be stopped (dead code, disabled) while reset is
-//                   applied, and a synchronous reset needs a clock edge to
-//                   act. With no edges the stages would never leave X.
-//   tap_sel [2:0]   0 = ring_clk itself (divide by 1) ... 7 = divide by 128
-//   divided_clk     the chosen tap
-//
-// How it works
-//   Seven toggle flops in a ripple chain: each flop's Q-bar feeds its own D,
-//   so it halves whatever clocks it, and each flop is clocked by the previous
-//   flop's Q. Ripple (asynchronous) is fine here: we are counting edges, not
-//   timing them, and the cumulative clock-to-Q skew down the chain is a fixed
-//   offset that does not change how many edges there are.
-//
-//   The brief's counting: "eight stages, divide by 1 to 128". Divide-by-1 is
-//   the raw ring, which needs no flop, so 1..128 takes seven flops plus the
-//   raw tap -- eight taps, seven flops. Written longhand: seven is not many.
-//
-// Timing-critical element
-//   q1 is the only flop that sees the raw ring and is the fastest thing in
-//   the whole design. It is kept to one flop with Q-bar fed back to D and
-//   nothing else on the path. Keep it that way.
-//
-// Assumptions
-//   * tap_sel changes only while no measurement is running (the register
-//     file enforces this). Changing it while running can produce a runt
-//     pulse on divided_clk -- the mux switches between two unrelated
-//     waveforms mid-period. tb_ring_divider measures this.
-// ============================================================================
+//   reset           ASYNCHRONOUS, active high: the ring may be stopped while reset is applied, and a synchronous
+//                   reset needs a clock edge, so the stages would never leave X
+//   tap_sel [2:0]   divide ratio = 2 ** tap_sel; 0 = the raw ring
+//   divided_clk     the chosen tap, through the (* keep *) buffer u_divout
+// - Seven toggle flops in a ripple chain (Q-bar to own D, clocked by the previous Q) plus the raw tap. Ripple skew
+//   is a fixed offset and does not change how many edges there are.
+// - q1 is the only flop on the raw ring and the fastest thing in the design: one flop, Q-bar to D, nothing else. Keep it so.
+// - tap_sel must change only while idle: the tap mux switching mid-period makes a runt pulse (tb_ring_divider).
+// - u_divout is a clock root in src/constraints.sdc, constrained to 250 MHz: a ring faster than that is measured at
+//   tap 1 or higher, the instrument's one usage rule. Tap 0 is for slow rings (analog ring, low codes).
 `default_nettype none
 
 module ring_divider (
@@ -53,7 +19,7 @@ module ring_divider (
     output wire       divided_clk
 );
 
-  reg tap;   // the tap mux output, before the named buffer below
+  reg tap;   // tap mux output, before the named buffer
 
   reg q1, q2, q3, q4, q5, q6, q7;
 
@@ -79,7 +45,7 @@ module ring_divider (
   always @(posedge q6 or posedge reset)
     if (reset) q7 <= 1'b0; else q7 <= ~q7;
 
-  // Tap select. divide ratio = 2 ** tap_sel.
+  // Tap mux: divide by 2 ** tap_sel.
   always @(*) begin
     case (tap_sel)
       3'd0:    tap = ring_clk;   // /1
@@ -93,13 +59,8 @@ module ring_divider (
     endcase
   end
 
-  // The divided clock leaves through a named buffer so that
-  // src/constraints.sdc can declare it a clock at u_div.u_divout/X. That
-  // declaration is where the instrument's one timing rule lives: the window
-  // logic in measure_core is timed for a divided ring of at most 250 MHz,
-  // so a ring faster than that must be measured through tap 1 or higher
-  // (the tap-0 path exists for slow rings, such as the analog ring at low
-  // codes). In simulation (-DSIM) the buffer is a plain assign.
+  // Named (* keep *) buffer so src/constraints.sdc can declare the divided ring a clock at
+  // u_div.u_divout/X. Plain assign in simulation (-DSIM).
 `ifdef SIM
   assign divided_clk = tap;
 `else

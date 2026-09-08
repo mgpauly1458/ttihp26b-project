@@ -1,11 +1,7 @@
-// ============================================================================
-// tb_pins.vh -- host-side helpers shared by the pin-level testbenches
-// ----------------------------------------------------------------------------
-// Included inside a testbench module that declares: clk, ui_in, uio_in,
-// uo_out, and the localparams for the register map. Implements the write
-// and read protocol from regfile.v exactly as a host would, with the
-// mandated waits, and a measurement sequence on top of them.
-// ============================================================================
+// tb_pins.vh -- host-side helpers for the pin-level testbenches (tb_top, tb_sweep)
+// Include inside a module that declares clk, ui_in, uio_in, uo_out and `integer errors`. Provides the
+// register-map localparams, host_write / host_read with the waits regfile.v mandates, wait_done,
+// read_result, and measure(ring, code, tap, n, tmo), which leaves `result` and `status` set.
 
   // Write map
   localparam [2:0] A_TRIM     = 3'd0,
@@ -34,7 +30,7 @@
 
   always @(*) ui_in = {1'b0, pin_rsel, pin_we, pin_addr};
 
-  // Host write: ADDR/WDATA, then WE high for 4 clocks, then WE low for 4.
+  // Host write: ADDR/WDATA, WE high 4 clocks, WE low 4.
   task host_write;
     input [2:0] a;
     input [7:0] d;
@@ -60,7 +56,7 @@
     end
   endtask
 
-  // Poll STATUS until done. Bounded so a hang fails instead of looping.
+  // Poll STATUS until done; bounded so a hang fails instead of looping.
   integer polls;
   task wait_done;
     begin
@@ -77,7 +73,7 @@
     end
   endtask
 
-  // Assemble RESULT from its four bytes.
+  // RESULT from its four bytes.
   reg [31:0] result;
   task read_result;
     begin
@@ -88,8 +84,7 @@
     end
   endtask
 
-  // Whole measurement: configure, start, wait, collect. Leaves `result`,
-  // `status` set.
+  // Configure, start, wait, collect: leaves `result` and `status`.
   reg [7:0] status;
   task measure;
     input [2:0]  ring;

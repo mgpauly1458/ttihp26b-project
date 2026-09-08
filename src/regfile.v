@@ -1,69 +1,18 @@
-// ============================================================================
-// regfile.v -- register file and pin interface
-// ----------------------------------------------------------------------------
-// What it does
-//   Turns the Tiny Tapeout pins into a handful of registers the host writes
-//   and reads: the trim code, which ring, which divider tap, how long to
-//   measure, when to give up, a start bit, a status byte and the 32-bit
-//   result. Statistically this is where the bugs live, so it is kept dull.
-//
-// Clock domain
-//   Reference domain (clk). Every input pin is asynchronous to it -- the
-//   host is a microcontroller -- and is treated accordingly (see Protocol).
-//
-// Pins (see docs/pinmap.md for the reasoning)
-//   ui_in[2:0]   ADDR   write address
-//   ui_in[3]     WE     write strobe, rising edge = one write
-//   ui_in[6:4]   RSEL   which byte appears on uo_out
-//   ui_in[7]     -      spare
-//   uio_in[7:0]  WDATA  write data (all bidirectionals are inputs)
-//   uo_out[7:0]  RDATA  the byte selected by RSEL, registered
-//
-// Write map (ADDR)                      Read map (RSEL)
-//   0  TRIM_CODE  [7:0]                   0  STATUS  {4'b0, write_ignored,
-//   1  RING_SEL   [2:0]                                timeout_error, busy, done}
-//   2  TAP_SEL    [2:0]                   1  RESULT[7:0]
-//   3  TARGET_N   [7:0]  low byte         2  RESULT[15:8]
-//   4  TARGET_N   [15:8] high byte        3  RESULT[23:16]
-//   5  TIMEOUT    [7:0]  low byte         4  RESULT[31:24]
-//   6  TIMEOUT    [15:8] high byte        5  TRIM_CODE readback
-//   7  CONTROL    bit 0 = START           6  {2'b0, TAP_SEL, RING_SEL} readback
-//                                         7  ID = 0xA5, constant
-//
-// Protocol
-//   Write: put ADDR and WDATA on the pins, then raise WE, hold everything
-//   for at least 4 clk periods, then lower WE. Do not change ADDR or WDATA
-//   until WE has been low for at least 4 clk periods. WE is passed through
-//   a two-flop synchroniser and its rising edge is detected; ADDR and WDATA
-//   are sampled on that detected edge, two to three clocks after the host
-//   raised WE, by which time they have been stable for at least that long.
-//   That is the only reason plain sampling of ADDR and WDATA is safe.
-//   Read: put RSEL on the pins, wait at least 3 clk periods, read uo_out.
-//   RSEL is sampled straight into the output register with no synchroniser;
-//   a read taken while RSEL is changing may return one wrong byte, and the
-//   wait is what avoids that. uo_out is registered so it never glitches.
-//
-// Rules enforced here
-//   * While busy, writes to TRIM_CODE, RING_SEL, TAP_SEL, TARGET_N and
-//     TIMEOUT are IGNORED, and so is START. Each of those would corrupt the
-//     measurement in progress: RING_SEL and TAP_SEL glitch the clock muxes,
-//     TRIM_CODE changes the ring mid-count, TARGET_N crosses into the ring
-//     domain unsynchronised and is only safe because it is static.
-//   * An ignored write sets STATUS.write_ignored, which stays set until the
-//     next START is accepted. The flag costs one flop and turns "my sweep
-//     script has a race" from a mystery into a status bit. Adopted.
-//   * RESULT is latched into a shadow register the moment done rises and
-//     the host reads the shadow. Without it, a new measurement starting
-//     between two byte reads would hand back a mix of two results -- a bug
-//     that appears rarely and looks like noise.
-//   * START is self-clearing: it is a one-cycle pulse to the core, not a
-//     stored bit.
-//
-// Reset values
-//   TRIM_CODE 0, RING_SEL 0, TAP_SEL 0, TARGET_N 256, TIMEOUT 65535. The
-//   host is expected to write all of them; the defaults just make a bare
-//   START after reset produce a finite, sane measurement.
-// ============================================================================
+// regfile.v -- register file and pin interface (clk domain; every input pin is asynchronous to clk)
+// Pins   ui_in[2:0] ADDR   ui_in[3] WE (rising edge = one write)   ui_in[6:4] RSEL   ui_in[7] spare
+//        uio_in[7:0] WDATA (all bidirectionals are inputs)          uo_out[7:0] byte selected by RSEL, registered
+// Write (ADDR)                                   Read (RSEL)
+//   0 TRIM_CODE[7:0]   1 RING_SEL[2:0]             0 STATUS = {4'b0, write_ignored, timeout_error, busy, done}
+//   2 TAP_SEL[2:0]     3/4 TARGET_N lo/hi byte     1/2/3/4 RESULT[7:0] / [15:8] / [23:16] / [31:24]
+//   5/6 TIMEOUT lo/hi  7 CONTROL bit 0 = START     5 TRIM_CODE   6 {2'b0, TAP_SEL, RING_SEL}   7 ID = 0xA5
+// Write: set ADDR/WDATA, WE high >= 4 clk, WE low >= 4 clk before changing them. WE is synchronised and edge-detected
+//   2-3 clk after the host raised it, so ADDR/WDATA have been stable that long: the only reason sampling them raw is safe.
+// Read: set RSEL, wait >= 3 clk, read uo_out (RSEL is unsynchronised; a byte read while it changes may be wrong).
+// Reset: TRIM 0, RING_SEL 0, TAP_SEL 0, TARGET_N 256, TIMEOUT 65535, so a bare START gives a finite measurement.
+// - While busy every write, START included, is ignored and sets STATUS.write_ignored until the next accepted START:
+//   RING_SEL/TAP_SEL would glitch the clock muxes, TRIM_CODE the ring, TARGET_N crosses to the ring domain unsynchronised.
+// - RESULT is a shadow latched when done rises, so a measurement starting between two byte reads cannot mix results.
+// - START is a self-clearing one-cycle pulse. Pin reasoning: docs/pinmap.md.
 `default_nettype none
 
 module regfile (
@@ -98,7 +47,7 @@ module regfile (
   wire [2:0] rsel  = ui_in[6:4];
   wire [7:0] wdata = uio_in;
 
-  // ---- write strobe: synchronise, then detect the rising edge ---------------
+  // ---- write strobe: synchronise, then rising edge --------------------------
   wire we_sync;
   reg  we_sync_q;
 
@@ -126,11 +75,11 @@ module regfile (
       write_ignored <= 1'b0;
     end else begin
       we_sync_q <= we_sync;
-      start     <= 1'b0;                 // self-clearing: a pulse, not a bit
+      start     <= 1'b0;                 // self-clearing pulse
 
       if (write_now) begin
         if (busy) begin
-          // Every register is off limits while measuring. See header.
+          // all writes blocked while measuring
           write_ignored <= 1'b1;
         end else begin
           case (addr)
@@ -144,7 +93,7 @@ module regfile (
             default: begin                 // 7: CONTROL
               if (wdata[0]) begin
                 start         <= 1'b1;
-                write_ignored <= 1'b0;   // a fresh measurement clears the flag
+                write_ignored <= 1'b0;   // an accepted START clears the flag
               end
             end
           endcase

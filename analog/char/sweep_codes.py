@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-"""Frequency and supply current of the ring against DAC code, in ngspice.
+"""Frequency and supply current of the ring against DAC code, one ngspice process per code in parallel.
 
-    ./run.sh python3 char/sweep_codes.py [--netlist FILE] [--codes 0,1,...]
-                                         [--corner mos_tt] [--temp 27]
-                                         [--out out/sweep.csv]
+    ./run.sh python3 char/sweep_codes.py [--netlist FILE] [--codes 0,1,...] [--corner mos_tt] [--temp 27]
+                                         [--vdd 1.2] [--tstop 3u] [--disabled] [--jobs N] [--out out/sweep.csv]
 
-One ngspice process per code, in parallel. Each deck powers the macro's
-subcircuit (default: spice/tt_analog_ring.spice, the same netlist LVS uses),
-drives the eight code bits as DC sources, runs a transient long enough for
-the slowest code to settle, and takes the frequency from eight periods of
-clk_out in the second half of the run (one period if it is that slow). Writes a CSV with code,
-frequency, supply current and the two bias voltages, and prints it.
+Writes the CSV (code, f_hz, idd_a, vbp_v, vbn_v, nrise, vout_avg) and prints it; decks and logs go to <out>.d/.
+- Frequency from eight periods in the second half of the run (one period if only two edges); tstop must let the slowest code settle.
 """
 import argparse
 import csv

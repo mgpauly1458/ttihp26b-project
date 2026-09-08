@@ -3,9 +3,8 @@
 
     scripts/plot_sweep.py build/sweep.csv docs/sweep.png
 
-Two figures are written: <out> with the eight overlays, and <out stem>_error
-with the relative error of every live measurement, so the quantisation is
-visible on its own axis. Timed-out codes are drawn at zero with a cross.
+Writes <out> (eight overlays) and <out stem>_error (relative error of every live measurement,
+so the quantisation gets its own axis). Timed-out codes are drawn at zero with a cross.
 """
 import csv
 import sys

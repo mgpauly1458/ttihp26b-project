@@ -1,98 +1,73 @@
-# Timing constraints: what the tile is told, and what that covers
+# Timing constraints
 
-`src/constraints.sdc` is the file. It sources LibreLane's `base.sdc` (the
-reference clock `clk` at 20 ns and the pin delays Tiny Tapeout sets) and
-adds the ring domains. `src/config.json` names it as both `PNR_SDC_FILE`
-and `SIGNOFF_SDC_FILE`, so placement, CTS, routing repairs and the final
-STA all see the same constraints. Last clean run: 0 setup and 0 hold
-violations at all three signoff corners (tt 25 C 1.20 V, ss 125 C 1.08 V,
-ff -40 C 1.32 V).
+`src/constraints.sdc` sources LibreLane's `base.sdc` (`clk` at 20 ns,
+Tiny Tapeout's pin delays) and adds the ring domains. `src/config.json`
+names it as `PNR_SDC_FILE` and `SIGNOFF_SDC_FILE`. Last clean run: 0 setup,
+0 hold at tt 25 C 1.20 V, ss 125 C 1.08 V, ff -40 C 1.32 V.
 
-## Clock domains
+## Clocks
 
-| clock | created on | period | what it clocks |
+| clock | created on | period | clocks |
 |---|---|---|---|
-| `clk` | the tile's clock pin | 20 ns | `regfile`, `measure_core`'s FSM and counters, the reference-side synchronisers |
-| `ring0`..`ring6` | `u_rings.u_ringN.u_out/X`, each standard-cell ring's `(* keep *)` output buffer | 1.6 ns (0.8 ns for the 11-stage ring 5) | nothing directly: they only reach the mux |
-| `ring7` | `u_rings.u_ring7/clk_out`, the analog macro's output pin | 1.6 ns (544 MHz simulated pre-layout at the fast corner, code 255; 275 MHz with parasitics) | likewise |
-| `ring_sel` | `u_mux.u_selout/X`, the named buffer on the selected ring | 0.8 ns | `u_div`'s first flop `q1`, the fastest flop in the design |
-| `div_ring` | `u_div.u_divout/X`, the named buffer on the divided ring | **4.0 ns** | `measure_core`'s window logic and its `arm` synchroniser |
+| `clk` | tile clock pin | 20 ns | `regfile`, `measure_core` FSM and counters, reference-side synchronisers |
+| `ring0`..`ring6` | `u_rings.u_ringN.u_out/X`, each cell ring's `(* keep *)` output buffer | 1.6 ns (0.8 ns for ring 5) | only the mux |
+| `ring7` | `u_rings.u_ring7/clk_out` | 1.6 ns (fast corner code 255: 544 MHz pre-layout, 275 MHz extracted) | only the mux |
+| `ring_sel` | `u_mux.u_selout/X` | 0.8 ns | `u_div.q1`, the fastest flop |
+| `div_ring` | `u_div.u_divout/X` | 4.0 ns | `measure_core` window logic and its `arm` synchroniser |
 
-`set_clock_groups -asynchronous` puts `clk` and every one of these in its
-own group: no path between them is timed. The two-flop synchronisers in
-`cdc_sync` are the only crossings and are false by construction.
+- `set_clock_groups -asynchronous`, every clock in its own group; the
+  two-flop `cdc_sync` synchronisers are the only crossings.
+- Each cell ring's loop is broken at its NAND's feedback input
+  (`set_disable_timing u_en -from B -to Y`), not by OpenSTA's loop breaker.
+- `u_selout` and `u_divout` are `(* keep *)` `sg13g2_buf_1` instances in
+  `ring_mux` and `ring_divider` (plain assigns under `-DSIM`): synthesis
+  renames nets, kept instances keep their name, so the SDC has pins to
+  hang `ring_sel` and `div_ring` on.
+- Why `div_ring`: with clocks only at the ring sources they propagated
+  through the divider's tap-0 path into the 16-bit window counter, which
+  STA timed at the raw 11-stage rate (0.9 ns) and failed by 1.5 ns at the
+  slow corner. A clock created on a pin stops the upstream clock there.
 
-Each standard-cell ring's loop is broken for STA at its NAND's feedback
-input (`set_disable_timing u_en -from B -to Y`), so the break is chosen
-here rather than by OpenSTA's loop breaker.
+## Usage rule
 
-## Why the two named buffers exist
+The divided ring must not exceed 250 MHz. STA passes the window logic at
+3.0 ns at the slow corner (331 MHz); 4.0 ns is the constraint with margin.
 
-Synthesis renames every net and gate it touches, so a clock cannot be
-created on "the mux output" by name. `ring_mux` and `ring_divider` each
-send their output through a `(* keep *)` `sg13g2_buf_1` instance
-(`u_selout`, `u_divout`); a kept cell instance survives with its name, and
-the SDC hangs the `ring_sel` and `div_ring` clocks on their `X` pins. In
-simulation (`-DSIM`) the buffers are plain assigns.
+| tap | safe for rings below |
+|---|---|
+| 3 (div 8) | 2 GHz: every ring at every corner |
+| 2 | 1 GHz |
+| 1 | 500 MHz |
+| 0 | 250 MHz: slow rings, e.g. the analog ring at low codes (2 MHz at code 0) |
 
-The divided clock is the one that mattered. The first hardening run created
-clocks only at the ring sources; they propagated through the mux and,
-via the divider's tap-0 path, straight into `measure_core`'s 16-bit window
-counter, which STA then timed at the raw 11-stage ring rate (0.9 ns) and
-failed by 1.5 ns at the slow corner. A clock created on a pin stops the
-upstream clock propagating past it, so the `div_ring` clock on `u_divout/X`
-is where the window logic's rate is set.
+Analog ring at code 255, fast corner: 275 MHz extracted (544 MHz
+pre-layout, still covered); 11-stage ring about 1 GHz. Testbenches use
+taps 3 and 4, the cocotb bench tap 3. `q1` at 0.8 ns passes with margin
+(period_min 0.54 ns at the slow corner).
 
-## The one usage rule this creates
+## Knowingly unconstrained
 
-**The divided ring must not exceed 250 MHz.** STA reports the window logic
-good to 3.0 ns at the slow corner (331 MHz), so 4.0 ns is the constraint
-with margin. A ring faster than 250 MHz must be measured through a higher
-tap: tap 3 (divide by 8) is safe for every ring at every corner (up to
-2 GHz), tap 2 for anything under 1 GHz, tap 1 under 500 MHz. The analog
-ring reaches 275 MHz at code 255 at the fast corner post-layout (544 MHz
-in the pre-layout netlist, which the constraint keeps covering), the
-11-stage ring about 1 GHz. Tap 0 (divide by 1) exists for slow rings, such
-as the analog ring at low codes (2 MHz at code 0). The testbenches use tap 3 and 4; the
-cocotb bench uses tap 3.
-
-The first divider flop `q1` is constrained at 0.8 ns (`ring_sel`) and
-passes with margin (period_min 0.54 ns at the slow corner): it is one flop
-with Q-bar back to D and nothing else, as `ring_divider.v` insists.
-
-## What is left unconstrained, knowingly
-
-- **The ripple stages `q2`..`q7`.** Each is clocked by the previous stage's
-  output, at half its rate. No generated clocks are declared for them, so
-  STA reports six unclocked register pins. Each runs at most at half the
-  rate `q1` is checked at, with the same one-flop structure, so they cannot
-  fail where `q1` passes.
-- **Region constraints for the rings.** Not applied. The placer spread each
-  ring's cells where density suited it, so the four "matched" 21-stage rings
-  in slots 0..3 are matched in netlist but not in placement. Their measured
-  frequencies will say as much about placement as about process. This is
-  the first thing to add if a second submission is made.
-- **Resizer immunity.** `(* keep *)` keeps a ring's cells but does not stop
-  OpenROAD's repair from resizing one. In the clean run no ring cell was
-  touched (the loops are not timing paths, so nothing asks for it); it is
-  not enforced.
+- Ripple stages `q2`..`q7`: no generated clocks (six unclocked register
+  pins reported). Each runs at half the previous stage's rate with the
+  same one-flop structure, so cannot fail where `q1` passes.
+- Region constraints for the rings: not applied; slots 0..3 are matched
+  in netlist, not in placement. First thing to add for a second submission.
+- Resizer immunity: `(* keep *)` does not stop OpenROAD repair resizing a
+  ring cell. None was touched in the clean run; not enforced.
 
 ## Lint
 
-`RUN_LINTER` stays on and the run is warning-free. The three warnings the
-design provoked are waived at the line that provokes them, with the reason
-beside each: the blackbox's unused inputs and undriven output
-(`tt_analog_ring.v`), the simulation-only parameter (`ring_21_min.v`) and
-`reset` used both synchronously and asynchronously (`project.v`; the divider
-needs it asynchronous because its clock may not be running).
+`RUN_LINTER` on, warning-free. Three waivers at the line that provokes
+each: the blackbox's unused inputs and undriven output
+(`tt_analog_ring.v`), the simulation-only parameter (`ring_21_min.v`),
+`reset` used both synchronously and asynchronously (`project.v`; the
+divider's clock may not be running).
 
 ## Gate-level simulation
 
-At gate level the standard-cell rings are real cells with zero delay, and
-a zero-delay ring loop does not advance simulation time. The cocotb bench
-(`test/test.py`) keeps `ena` low, which gates every ring enable, until it
-has selected ring 7, the analog macro; the macro is a blackbox in the
-gate-level netlist too, so its behavioural model is compiled in beside it
-(`test/Makefile`). Tiny Tapeout's `gl_test` job runs that bench with
-iverilog 13 (iverilog 12 leaves the PDK's flops at X; 14 cannot parse the
+Cell rings are zero-delay at gate level and a zero-delay loop does not
+advance simulation time. `test/test.py` keeps `ena` low, which gates every
+ring enable, until ring 7 is selected; the macro's model is compiled in
+beside the netlist (`test/Makefile`). Tiny Tapeout's `gl_test` runs it
+with iverilog 13 (12 leaves the PDK's flops at X; 14 cannot parse the
 cell models).
