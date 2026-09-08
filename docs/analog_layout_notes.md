@@ -127,13 +127,16 @@ so their fingers see different neighbours at the row ends than a bit-7
 finger in the middle of a full row does (stress and well-proximity effects
 are systematic and not in the Monte Carlo models). *Mitigation:* the array
 is arranged so that the smallest bits are at the LSB end where an error of
-a fraction of a unit matters least to the frequency map (an LSB is ~2 MHz
-of 332), the instrument measures the whole code-to-frequency curve on the
-bench anyway, and the mismatch Monte Carlo puts the *random* DNL at the
-major carries at a small fraction of an LSB with margin for a systematic
-component of the same size. *Residual:* no dummy fingers at the row ends,
-no common-centroid ordering of the rows. Both are the first two things to
-add if measured DNL at the small bits is larger than simulated.
+a fraction of a unit matters least to the frequency map (an LSB is ~1 MHz
+of 164 post-layout), the instrument measures the whole code-to-frequency
+curve on the bench anyway, and the mismatch Monte Carlo puts the *random*
+DNL of the array itself at -0.39 LSB worst in 200 samples. *Residual:* at
+the whole-block level, post-layout, 1 of 64 mismatch samples reverses the
+127-128 frequency step by 0.1 % (`analog_verification.md`, section 6):
+the parasitics halved the step, the finger mismatch did not shrink. No
+dummy fingers at the row ends, no common-centroid ordering of the rows,
+no thermometer coding of the top bits; those are the first things to add
+in a second version.
 
 **Concern: IR drop along the bars.** A Metal1 VGND bar is 0.3 um wide and
 serves two rows of eight fingers: 16 x 2.4 uA = 38 uA at full scale over

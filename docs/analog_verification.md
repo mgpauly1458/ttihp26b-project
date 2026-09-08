@@ -345,12 +345,28 @@ codes 0 / 16 / 128 / 255, typical; 90 to 275 MHz at code 255 over the
 signoff corners). The pre/post figure is `analog_ring_sim_post.png`. The
 ring-induced ripple on the bias nodes roughly doubles to 1.6 mV on `vbp`
 and stays at 5 to 8 mV on `vbn`. The post-layout corner, Monte Carlo and
-noise runs (appendix, "ring_post") repeat the pre-layout conclusions:
-monotonic everywhere, stopped ring holds, same relative spreads. The RTL
-model, the cocotb tests, the tile's constraints and the datasheet numbers
-were all moved to the post-layout values; the divider's tap rule only gets
-easier. The lesson for the layout is in `analog_layout_notes.md`: the
-minimum-size inverters should have been two to three times wider.
+noise runs (appendix, "ring_post") repeat the pre-layout conclusions with
+one exception worth stating plainly. Monotonic in code at all 45 PVT
+points; the stopped ring holds everywhere; start-up is at most 430 ns
+(slow-hot-low corner, code 0); die-to-die and mismatch spreads are the
+same in relative terms (2.1 % sigma at code 255 under mismatch, span
+f(255)/f(0) 75 to 89); the injected bias noise gives 14 ps of period
+jitter at code 16 and 1.3 ps at 128, 47 and 14 ppm on 50-period means.
+The exception: **one of 64 mismatch samples has f(128) below f(127)**, by
+0.12 MHz against a mean step of 0.58 MHz (the pre-layout run had 0 of 64
+with a 1.2 MHz mean step). The parasitics halved every frequency step
+while the random current mismatch of the DAC's fingers did not shrink, so
+the 127-128 carry sits about 1.2 sigma from a reversed step: expect a
+percent or two of dies to show a small non-monotonic step at that one
+code, of the order of 0.1 % of the frequency. For the instrument that is
+a measurable feature of a binary DAC, not a fault (the code-to-frequency
+map is measured anyway), and the fix for a second version is the one the
+digital design's notes already anticipated: thermometer-code the top two
+bits, or add dummies and a common-centroid row order. The RTL model, the
+cocotb tests, the tile's constraints and the datasheet numbers were all
+moved to the post-layout values; the divider's tap rule only gets easier.
+The lesson for the layout is in `analog_layout_notes.md`: the minimum-size
+inverters should have been two to three times wider.
 
 **7. The tile around it: bounded, and one number to remember.** Injected
 supply ripple, ground bounce, random supply noise, a supply step and
@@ -390,8 +406,9 @@ crosstalk onto every pin, pre and post layout (appendix, "env" and
   buffer a wider last stage.
 
 **What would change the design, in order:** wider stage inverters (the
-post-layout halving); larger MND/MPM for the bias flicker noise; a wider
-output stage against crosstalk; dummies and a common-centroid row order in
-the DAC for the 127-128 carry margin; a cascode on the DAC output for the
+post-layout halving); thermometer coding of the top DAC bits, or dummies
+and a common-centroid row order, for the 127-128 carry (1 of 64 post-layout
+samples reverses it); larger MND/MPM for the bias flicker noise; a wider
+output stage against crosstalk; a cascode on the DAC output for the
 compression and the supply pushing. None of them is needed for the block
 to do what the tile asks of it.
