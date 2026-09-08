@@ -1,0 +1,42 @@
+* stage noise at its trip point, code 16
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/out/blocks/blocks.spice
+Vdd VPWR 0 1.2
+Vc0 code[0] 0 0
+Vc1 code[1] 0 0
+Vc2 code[2] 0 0
+Vc3 code[3] 0 0
+Vc4 code[4] 0 1.2
+Vc5 code[5] 0 0
+Vc6 code[6] 0 0
+Vc7 code[7] 0 0
+Xdac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR 0 csro_dac
+XMPD vbp vbp VPWR VPWR sg13_lv_pmos w=48u l=0.5u ng=24
+XMPM vbn vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+XMND vbn vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+Vin b 0 dc 0.6 ac 1
+Xdut b y vbp vbn VPWR 0 csro_stage
+Xload y z vbp vbn VPWR 0 csro_stage
+Xload2 z zz vbp vbn VPWR 0 csro_stage
+.control
+dc Vin 0 1.2 0.001
+meas dc vtrip find v(b) when v(y)=0.6
+let vlo = vtrip - 0.005
+let vhi = vtrip + 0.005
+meas dc ylo find v(y) when v(b)=$&vlo
+meas dc yhi find v(y) when v(b)=$&vhi
+let gain = (yhi - ylo)/0.01
+echo "vtrip=$&vtrip gain=$&gain"
+alter Vin dc = $&vtrip
+op
+echo "vy_op=$&v(y)"
+noise v(y) Vin dec 20 1k 100G
+setplot noise2
+let on_tot = onoise_total
+let in_tot = inoise_total
+echo "onoise_tot=$&on_tot inoise_tot=$&in_tot"
+setplot noise1
+wrdata onoise.txt onoise_spectrum
+.endc
+.end

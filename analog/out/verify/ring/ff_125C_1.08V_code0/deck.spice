@@ -1,0 +1,43 @@
+* tt_analog_ring, code 0
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_ff
+.option temp=125
+.include /work/analog/spice/tt_analog_ring.spice
+Vdd VPWR 0 1.08
+Vc0 code[0] 0 0
+Vc1 code[1] 0 0
+Vc2 code[2] 0 0
+Vc3 code[3] 0 0
+Vc4 code[4] 0 0
+Vc5 code[5] 0 0
+Vc6 code[6] 0 0
+Vc7 code[7] 0 0
+Ven enable 0 pulse(0 1.08 5.263e-07 0.1n)
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR 0 tt_analog_ring
+Cload clk_out 0 15f
+.control
+op
+let idd_dis = -i(Vdd)
+echo "idd_dis=$&idd_dis vbp=$&v(xdut.vbp) vbn=$&v(xdut.vbn) clk_dis=$&v(clk_out)"
+tran 1.754e-09 1.053e-05
+let tm = 6.316e-06
+let ten = 5.263e-07
+meas tran vhold_min min v(clk_out) from=0 to=$&ten
+meas tran tfirst when v(clk_out)=1.08/2 fall=1
+meas tran t1 when v(clk_out)=1.08/2 rise=1 from=$&tm
+meas tran t2 when v(clk_out)=1.08/2 rise=2 from=$&tm
+meas tran t3 when v(clk_out)=1.08/2 rise=3 from=$&tm
+meas tran t4 when v(clk_out)=1.08/2 rise=4 from=$&tm
+meas tran t5 when v(clk_out)=1.08/2 rise=5 from=$&tm
+meas tran t6 when v(clk_out)=1.08/2 rise=6 from=$&tm
+meas tran t7 when v(clk_out)=1.08/2 rise=7 from=$&tm
+meas tran t8 when v(clk_out)=1.08/2 rise=8 from=$&tm
+meas tran t9 when v(clk_out)=1.08/2 rise=9 from=$&tm
+meas tran t10 when v(clk_out)=1.08/2 rise=10 from=$&tm
+meas tran t11 when v(clk_out)=1.08/2 rise=11 from=$&tm
+meas tran t12 when v(clk_out)=1.08/2 rise=12 from=$&tm
+meas tran idd_run avg i(Vdd) from=$&tm
+meas tran vmax max v(clk_out) from=$&tm
+meas tran vmin min v(clk_out) from=$&tm
+
+.endc
+.end

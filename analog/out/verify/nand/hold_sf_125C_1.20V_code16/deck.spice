@@ -1,0 +1,30 @@
+* NAND hold: a=0, sweep b
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_sf
+.option temp=125
+.include /work/analog/out/blocks/blocks.spice
+Vdd VPWR 0 1.2
+Vc0 code[0] 0 0
+Vc1 code[1] 0 0
+Vc2 code[2] 0 0
+Vc3 code[3] 0 0
+Vc4 code[4] 0 1.2
+Vc5 code[5] 0 0
+Vc6 code[6] 0 0
+Vc7 code[7] 0 0
+Xdac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR 0 csro_dac
+XMPD vbp vbp VPWR VPWR sg13_lv_pmos w=48u l=0.5u ng=24
+XMPM vbn vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+XMND vbn vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+Va a 0 0
+Vb b 0 0
+Xnand a b y vbp vbn VPWR 0 csro_nand
+Xload y z vbp vbn VPWR 0 csro_stage
+Xload2 z zz vbp vbn VPWR 0 csro_stage
+.control
+dc Vb 0 1.2 0.01
+meas dc ymin min v(y)
+meas dc ymax max v(y)
+meas dc idd_max max i(Vdd)
+meas dc idd_min min i(Vdd)
+.endc
+.end

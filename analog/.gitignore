@@ -1,1 +1,6 @@
-out/
+# Simulation, PEX, DRC/LVS and characterisation results under out/ are
+# committed (large data files through Git LFS, see out/.gitattributes) so
+# the hour-long runs need not be repeated. Only regenerable bulk is ignored.
+out/.cache/
+out/tile_3d.glb
+__pycache__/

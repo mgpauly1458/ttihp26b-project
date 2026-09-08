@@ -1,0 +1,343 @@
+
+Note: Compatibility modes selected: hs a
+
+
+Circuit: * tt_analog_ring, code 64
+
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+ Reference value :  0.00000e+00
+No. of Data Rows : 1
+idd_dis=0.000212965 vbp=0.536714 vbn=0.420093 clk_dis=1.08
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+vpwr                                      1.08
+code[0]                                      0
+code[1]                                      0
+code[2]                                      0
+code[3]                                      0
+code[4]                                      0
+code[5]                                      0
+code[6]                                   1.08
+code[7]                                      0
+enable                                       0
+xdut.vbp                              0.536714
+clk_out                                   1.08
+xdut.b1                            1.61645e-07
+xdut.s3                            5.59591e-07
+xdut.s2                                   1.08
+xdut.n_126                                1.08
+xdut.s1                            5.59591e-07
+xdut.n_125                                1.08
+xdut.s10                                  1.08
+xdut.s6                                   1.08
+xdut.s5                            5.59591e-07
+xdut.n_128                                1.08
+xdut.s9                            5.59591e-07
+xdut.n_133                                1.08
+xdut.s4                                   1.08
+xdut.n_129                                1.08
+xdut.s8                                   1.08
+xdut.n_132                                1.08
+xdut.s7                            5.59591e-07
+xdut.n_130                                1.08
+xdut.n_127                                1.08
+xdut.n_131                                1.08
+xdut.s0                                   1.08
+xdut.n_124                                1.08
+xdut.n_71                          4.94981e-07
+xdut.n_72                           4.9498e-07
+xdut.n_70                          3.40607e-08
+xdut.n_77                           4.9498e-07
+xdut.n_75                          3.40607e-08
+xdut.n_73                          3.40607e-08
+xdut.n_67                          3.40607e-08
+xdut.n_76                          3.40607e-08
+xdut.n_69                           4.9498e-07
+xdut.n_74                           4.9498e-07
+xdut.n_122                                1.08
+xdut.n_i1005                          0.913945
+xdut.n_68                          5.06579e-08
+xdut.vbn                              0.420093
+ven#branch                         1.03585e-11
+vc7#branch                          3.0638e-12
+vc6#branch                        -3.52925e-08
+vc5#branch                          7.6595e-13
+vc4#branch                         3.82975e-13
+vc3#branch                         1.91487e-13
+vc2#branch                         9.57437e-14
+vc1#branch                         4.78719e-14
+vc0#branch                         2.39359e-14
+vdd#branch                        -0.000212965
+
+ Reference value :  0.00000e+00
+ Reference value :  4.79062e-09
+ Reference value :  9.55162e-09
+ Reference value :  1.39952e-08
+ Reference value :  1.84388e-08
+ Reference value :  2.53158e-08
+ Reference value :  3.07116e-08
+ Reference value :  3.30130e-08
+ Reference value :  3.53406e-08
+ Reference value :  3.78798e-08
+ Reference value :  4.03068e-08
+ Reference value :  4.27402e-08
+ Reference value :  4.53852e-08
+ Reference value :  4.78186e-08
+ Reference value :  5.04636e-08
+ Reference value :  5.29608e-08
+ Reference value :  5.53942e-08
+ Reference value :  5.80392e-08
+ Reference value :  6.03668e-08
+ Reference value :  6.28002e-08
+ Reference value :  6.51961e-08
+ Reference value :  6.75237e-08
+ Reference value :  7.00629e-08
+ Reference value :  7.29195e-08
+ Reference value :  7.60935e-08
+ Reference value :  7.92313e-08
+ Reference value :  8.26169e-08
+ Reference value :  8.55793e-08
+ Reference value :  8.80127e-08
+ Reference value :  9.05158e-08
+ Reference value :  9.29492e-08
+ Reference value :  9.57000e-08
+ Reference value :  9.79218e-08
+ Reference value :  1.00038e-07
+ Reference value :  1.02770e-07
+ Reference value :  1.05926e-07
+ Reference value :  1.09206e-07
+ Reference value :  1.12698e-07
+ Reference value :  1.15343e-07
+ Reference value :  1.17634e-07
+ Reference value :  1.20067e-07
+ Reference value :  1.22607e-07
+ Reference value :  1.25040e-07
+ Reference value :  1.27791e-07
+ Reference value :  1.30823e-07
+ Reference value :  1.33362e-07
+ Reference value :  1.35901e-07
+ Reference value :  1.38441e-07
+ Reference value :  1.41067e-07
+ Reference value :  1.43483e-07
+ Reference value :  1.46022e-07
+ Reference value :  1.48561e-07
+ Reference value :  1.50995e-07
+ Reference value :  1.53640e-07
+ Reference value :  1.55931e-07
+ Reference value :  1.58364e-07
+ Reference value :  1.61009e-07
+ Reference value :  1.63443e-07
+ Reference value :  1.65665e-07
+ Reference value :  1.67745e-07
+ Reference value :  1.70072e-07
+ Reference value :  1.72823e-07
+ Reference value :  1.75256e-07
+ Reference value :  1.77690e-07
+ Reference value :  1.80193e-07
+ Reference value :  1.83049e-07
+ Reference value :  1.85589e-07
+ Reference value :  1.87916e-07
+ Reference value :  1.90350e-07
+ Reference value :  1.92747e-07
+ Reference value :  1.95075e-07
+ Reference value :  1.97614e-07
+ Reference value :  2.00047e-07
+ Reference value :  2.02481e-07
+ Reference value :  2.04991e-07
+ Reference value :  2.07417e-07
+ Reference value :  2.10168e-07
+ Reference value :  2.12601e-07
+ Reference value :  2.15035e-07
+ Reference value :  2.17961e-07
+ Reference value :  2.21135e-07
+ Reference value :  2.24415e-07
+ Reference value :  2.26954e-07
+ Reference value :  2.29810e-07
+ Reference value :  2.32525e-07
+ Reference value :  2.35805e-07
+ Reference value :  2.38556e-07
+ Reference value :  2.40989e-07
+ Reference value :  2.43492e-07
+ Reference value :  2.45926e-07
+ Reference value :  2.48571e-07
+ Reference value :  2.51110e-07
+ Reference value :  2.53543e-07
+ Reference value :  2.55958e-07
+ Reference value :  2.59009e-07
+ Reference value :  2.62394e-07
+ Reference value :  2.65145e-07
+ Reference value :  2.68636e-07
+ Reference value :  2.71034e-07
+ Reference value :  2.73467e-07
+ Reference value :  2.76324e-07
+ Reference value :  2.78757e-07
+ Reference value :  2.81489e-07
+ Reference value :  2.84434e-07
+ Reference value :  2.88031e-07
+ Reference value :  2.90571e-07
+ Reference value :  2.93004e-07
+ Reference value :  2.95401e-07
+ Reference value :  2.97729e-07
+ Reference value :  3.00585e-07
+ Reference value :  3.03548e-07
+ Reference value :  3.06933e-07
+ Reference value :  3.09860e-07
+ Reference value :  3.12399e-07
+ Reference value :  3.14832e-07
+ Reference value :  3.17266e-07
+ Reference value :  3.19699e-07
+ Reference value :  3.21673e-07
+ Reference value :  3.23895e-07
+ Reference value :  3.26223e-07
+ Reference value :  3.28339e-07
+ Reference value :  3.30455e-07
+ Reference value :  3.32753e-07
+ Reference value :  3.35391e-07
+ Reference value :  3.38142e-07
+ Reference value :  3.41210e-07
+ Reference value :  3.44596e-07
+ Reference value :  3.47628e-07
+ Reference value :  3.50273e-07
+ Reference value :  3.52812e-07
+ Reference value :  3.55245e-07
+ Reference value :  3.57890e-07
+ Reference value :  3.60182e-07
+ Reference value :  3.62615e-07
+ Reference value :  3.65154e-07
+ Reference value :  3.67588e-07
+ Reference value :  3.70233e-07
+ Reference value :  3.72524e-07
+ Reference value :  3.74958e-07
+ Reference value :  3.77497e-07
+ Reference value :  3.79930e-07
+ Reference value :  3.82469e-07
+ Reference value :  3.84761e-07
+ Reference value :  3.87194e-07
+ Reference value :  3.89839e-07
+ Reference value :  3.92273e-07
+ Reference value :  3.94706e-07
+ Reference value :  3.97103e-07
+ Reference value :  3.99537e-07
+ Reference value :  4.02182e-07
+ Reference value :  4.04615e-07
+ Reference value :  4.07049e-07
+ Reference value :  4.09446e-07
+ Reference value :  4.11879e-07
+ Reference value :  4.14630e-07
+ Reference value :  4.17592e-07
+ Reference value :  4.20237e-07
+ Reference value :  4.22741e-07
+ Reference value :  4.25174e-07
+ Reference value :  4.27713e-07
+ Reference value :  4.30147e-07
+ Reference value :  4.32580e-07
+ Reference value :  4.35083e-07
+ Reference value :  4.37516e-07
+ Reference value :  4.40056e-07
+ Reference value :  4.42595e-07
+ Reference value :  4.45451e-07
+ Reference value :  4.48378e-07
+ Reference value :  4.50811e-07
+ Reference value :  4.53985e-07
+ Reference value :  4.56313e-07
+ Reference value :  4.59275e-07
+ Reference value :  4.61778e-07
+ Reference value :  4.64423e-07
+ Reference value :  4.68232e-07
+ Reference value :  4.71512e-07
+ Reference value :  4.74544e-07
+ Reference value :  4.76977e-07
+ Reference value :  4.79516e-07
+ Reference value :  4.82056e-07
+ Reference value :  4.84595e-07
+ Reference value :  4.86992e-07
+ Reference value :  4.89425e-07
+ Reference value :  4.92070e-07
+ Reference value :  4.94504e-07
+ Reference value :  4.96937e-07
+ Reference value :  4.99335e-07
+ Reference value :  5.01768e-07
+ Reference value :  5.04307e-07
+ Reference value :  5.06741e-07
+ Reference value :  5.09174e-07
+ Reference value :  5.11677e-07
+ Reference value :  5.14110e-07
+ Reference value :  5.16650e-07
+ Reference value :  5.19083e-07
+ Reference value :  5.21516e-07
+ Reference value :  5.24037e-07
+ Reference value :  5.26453e-07
+ Reference value :  5.28992e-07
+ Reference value :  5.31637e-07
+ Reference value :  5.34176e-07
+ Reference value :  5.36802e-07
+ Reference value :  5.39113e-07
+ Reference value :  5.41546e-07
+ Reference value :  5.44614e-07
+ Reference value :  5.47577e-07
+ Reference value :  5.50186e-07
+ Reference value :  5.52831e-07
+ Reference value :  5.56110e-07
+ Reference value :  5.59179e-07
+ Reference value :  5.61824e-07
+ Reference value :  5.64115e-07
+ Reference value :  5.66548e-07
+ Reference value :  5.69088e-07
+ Reference value :  5.71521e-07
+ Reference value :  5.74060e-07
+ Reference value :  5.76458e-07
+ Reference value :  5.79103e-07
+ Reference value :  5.81748e-07
+ Reference value :  5.84287e-07
+ Reference value :  5.86932e-07
+ Reference value :  5.89541e-07
+ Reference value :  5.92397e-07
+ Reference value :  5.95677e-07
+ Reference value :  5.98745e-07
+ Reference value :  6.01566e-07
+ Reference value :  6.04740e-07
+ Reference value :  6.07702e-07
+ Reference value :  6.10241e-07
+ Reference value :  6.12886e-07
+ Reference value :  6.15178e-07
+ Reference value :  6.17717e-07
+ Reference value :  6.20679e-07
+ Reference value :  6.24277e-07
+ Reference value :  6.27309e-07
+ Reference value :  6.29742e-07
+ Reference value :  6.32387e-07
+ Reference value :  6.34807e-07
+No. of Data Rows : 6031
+vhold_min           =  1.08000e+00 at=  2.41224e-10
+tfirst              =  3.88011e-08
+t1                  =  3.89925e-07
+t2                  =  4.02690e-07
+t3                  =  4.15456e-07
+t4                  =  4.28222e-07
+t5                  =  4.40987e-07
+t6                  =  4.53753e-07
+t7                  =  4.66519e-07
+t8                  =  4.79284e-07
+t9                  =  4.92050e-07
+t10                 =  5.04816e-07
+t11                 =  5.17581e-07
+t12                 =  5.30347e-07
+idd_run             =  -2.20882e-04 from=  3.81000e-07 to=  6.34900e-07
+vmax                =  1.09279e+00 at=  4.53985e-07
+vmin                =  -3.71487e-03 at=  4.66222e-07
+Note: Simulation executed from .control section 
+Warning: m=xx on .subckt line will override multiplier m hierarchy!
+
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed

@@ -1,0 +1,21 @@
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 char/characterize.py'
+ngspice did not report 'qtot':
+
+Note: No compatibility mode selected!
+
+
+Circuit: * tt_analog_ring characterisation
+
+Error on line 374 or its substitute:
+  n.xdut.xmp1_0.nsg13_lv_pmos xdut.s1 xdut.s0 xdut.p1 vpwr xdut.xmp1_0:sg13g2_lv_pmos_psp w=    5.000000000000000e-07     l=    1.300000000000000e-07     nf=    1.000000000000000e+00     mult=    1.000000000000000e+00     as=    1.700000000000000e-13     ad=    1.700000000000000e-13     ps=    1.680000000000000e-06     pd=    1.680000000000000e-06     dta=    0.000000000000000e+00     ngcon=2 delvto=0 factuo=1
+device already exists, bail out
+    Simulation interrupted due to error!
+
+Error: incomplete or empty netlist
+       or no ".plot", ".print", or ".fourier" lines in batch mode;
+no simulations run!
+

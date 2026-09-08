@@ -1,0 +1,29 @@
+* environment: slow_enable {} code 255
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/out/pex/tt_analog_ring.pex.spice
+Vdd VPWR 0 dc 1.2
+Vc0 code[0] VPWR 0
+Vc1 code[1] VPWR 0
+Vc2 code[2] VPWR 0
+Vc3 code[3] VPWR 0
+Vc4 code[4] VPWR 0
+Vc5 code[5] VPWR 0
+Vc6 code[6] VPWR 0
+Vc7 code[7] VPWR 0
+Ven enable 0 pulse(0 1.2 6.024e-09 5n)
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR 0 tt_analog_ring
+Cload clk_out 0 15f
+
+.control
+tran 2.008e-11 1.807e-07
+let ts = 6.024e-08
+meas tran vmin_out min v(clk_out) from=$&ts
+meas tran vmax_out max v(clk_out) from=$&ts
+
+
+
+
+wrdata clk.txt v(clk_out)
+.endc
+.end

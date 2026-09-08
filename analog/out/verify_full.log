@@ -1,0 +1,318 @@
+./run.sh python3 verify/dac.py --jobs 14
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 verify/dac.py --jobs 14'
+## DAC: current against code
+Drain held at 0.6 V. Endpoint fit; DNL/INL in units of the fitted LSB.
+**Signoff corners** (the three LibreLane times the tile at):
+| PVT | I(0) uA | I(1)-I(0) uA | unit uA | I(255) uA | DNL min | DNL max | at code | |INL| max | monotonic |
+|---|---|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 5.16 | 2.58 | 2.575 | 662 | -0.000 | 0.000 | 128 | 0.00 | yes |
+| ss_125C_1.08V | 2.66 | 1.31 | 1.307 | 336 | -0.000 | 0.000 | 128 | 0.00 | yes |
+| ff_-40C_1.32V | 8.62 | 4.31 | 4.306 | 1107 | -0.000 | 0.000 | 128 | 0.00 | yes |
+
+**All 45 PVT points**, extremes:
+|  | min | at | max | at |
+|---|---|---|---|---|
+| unit current uA | 1.307 | ss_125C_1.08V | 4.306 | ff_-40C_1.32V |
+| full scale uA | 336 | ss_125C_1.08V | 1107 | ff_-40C_1.32V |
+| code-0 current uA | 2.66 | ss_125C_1.08V | 8.62 | ff_-40C_1.32V |
+| DNL min | -0.001 | ff_125C_1.32V | -0.000 | ss_-40C_1.08V |
+| DNL max | 0.000 | ss_-40C_1.08V | 0.000 | ff_125C_1.32V |
+| |INL| max | 0.00 | ss_-40C_1.08V | 0.00 | ff_125C_1.32V |
+
+Monotonic at 45 of 45 PVT points.
+
+**Drain voltage sensitivity** (typical): the units are in triode, so the current follows the drain.
+| PVT | I(0) uA | I(1)-I(0) uA | unit uA | I(255) uA | DNL min | DNL max | at code | |INL| max | monotonic |
+|---|---|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 5.16 | 2.58 | 2.575 | 662 | -0.000 | 0.000 | 128 | 0.00 | yes |
+| tt_27C_1.20V_vd0.46 | 4.43 | 2.21 | 2.212 | 569 | -0.000 | 0.000 | 128 | 0.00 | yes |
+| tt_27C_1.20V_vd0.85 | 5.66 | 2.82 | 2.825 | 726 | -0.000 | 0.000 | 128 | 0.00 | yes |
+
+## DAC: mismatch Monte Carlo, 200 samples (mos_tt_mismatch, 27 C, 1.2 V)
+|  | value |
+|---|---|
+| samples monotonic | 200 / 200 |
+| worst DNL (most negative step) | -0.393 LSB at code 128 |
+| DNL min, mean over samples | -0.106 LSB |
+| |INL| max, worst sample | 0.25 LSB |
+| worst-DNL codes (count) | 128 (70), 64 (30), 192 (19) |
+| unit current sigma/mean | 0.05 % |
+
+## DAC: process Monte Carlo, 100 samples (mos_tt_stat, 27 C, 1.2 V)
+|  | mean | sigma | sigma/mean | min | max |
+|---|---|---|---|---|---|
+| unit current uA | 2.560 | 0.113 | 4.4 % | 2.304 | 2.793 |
+| code-0 current uA | 5.13 | 0.24 | 4.6 % | 4.61 | 5.67 |
+
+Monotonic in 100 / 100 samples (global variation moves every finger together, so it cannot break the weighting).
+
+./run.sh python3 verify/bias.py --jobs 14
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 verify/bias.py --jobs 14'
+## Bias chain: operating points against code
+Stage starve devices measured with their drains at 0.6 V. The nominal mirror ratio is 48:1 (24 x 2 um diode, 1 um stage device).
+
+**Signoff corners:**
+| PVT | code | vbp V | vbn V | I_dac uA | I_stage(p) uA | I_stage(n) uA | I_dac/I_stage |
+|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 0.855 | 0.255 | 5.7 | 0.13 | 0.18 | 44.0 |
+| tt_27C_1.20V | 1 | 0.839 | 0.270 | 8.5 | 0.19 | 0.27 | 44.1 |
+| tt_27C_1.20V | 16 | 0.746 | 0.352 | 49.9 | 1.12 | 1.33 | 44.7 |
+| tt_27C_1.20V | 128 | 0.557 | 0.501 | 322.6 | 7.04 | 7.34 | 45.8 |
+| tt_27C_1.20V | 255 | 0.461 | 0.572 | 569.3 | 12.32 | 12.45 | 46.2 |
+| ss_125C_1.08V | 0 | 0.804 | 0.196 | 2.8 | 0.06 | 0.09 | 45.7 |
+| ss_125C_1.08V | 1 | 0.785 | 0.213 | 4.2 | 0.09 | 0.14 | 45.7 |
+| ss_125C_1.08V | 16 | 0.687 | 0.303 | 24.5 | 0.53 | 0.68 | 45.9 |
+| ss_125C_1.08V | 128 | 0.514 | 0.453 | 158.6 | 3.41 | 3.66 | 46.6 |
+| ss_125C_1.08V | 255 | 0.430 | 0.523 | 282.8 | 6.03 | 6.24 | 46.9 |
+| ff_-40C_1.32V | 0 | 0.962 | 0.271 | 10.0 | 0.24 | 0.34 | 40.8 |
+| ff_-40C_1.32V | 1 | 0.947 | 0.284 | 14.9 | 0.36 | 0.49 | 41.1 |
+| ff_-40C_1.32V | 16 | 0.852 | 0.364 | 88.3 | 2.05 | 2.39 | 43.0 |
+| ff_-40C_1.32V | 128 | 0.639 | 0.522 | 578.7 | 12.87 | 13.25 | 45.0 |
+| ff_-40C_1.32V | 255 | 0.525 | 0.600 | 1021.1 | 22.46 | 22.46 | 45.5 |
+
+**All 45 PVT points**, per-stage PMOS current extremes (this is what sets the ring's delay):
+| code | min I_stage(p) uA | at | max I_stage(p) uA | at | max/min |
+|---|---|---|---|---|---|
+| 0 | 0.06 | ss_125C_1.08V | 0.24 | ff_-40C_1.32V | 4.0 |
+| 1 | 0.09 | ss_125C_1.08V | 0.36 | ff_-40C_1.32V | 3.9 |
+| 16 | 0.53 | ss_125C_1.08V | 2.05 | ff_-40C_1.32V | 3.8 |
+| 128 | 3.41 | ss_125C_1.08V | 12.87 | ff_-40C_1.32V | 3.8 |
+| 255 | 6.03 | ss_125C_1.08V | 22.46 | ff_-40C_1.32V | 3.7 |
+
+I_dac / I_stage(p) over every PVT point and code >= 1: 41.1 .. 47.3 (nominal 48; the deviation is the diode and the stage device sitting at different drain voltages).
+
+## Bias chain: mismatch Monte Carlo, 200 samples (mos_tt_mismatch, 27 C, 1.2 V)
+| code | stage PMOS current sigma/mean %, mean | worst sample | worst max-min % | stage NMOS sigma/mean % | MPM/MPD ratio sigma % | I_dac sigma % |
+|---|---|---|---|---|---|---|
+| 1 | 7.4 | 12.4 | 42.5 | 18.9 | 8.1 | 1.32 |
+| 16 | 4.5 | 7.8 | 26.8 | 12.4 | 4.9 | 0.26 |
+| 255 | 1.7 | 3.1 | 10.8 | 5.3 | 1.9 | 0.11 |
+
+Each row: across the eleven stages within one sample (mean and worst over samples), then the mirror ratio and the DAC current across samples.
+
+## Bias chain: noise at the bias nodes (typical, 27 C, 1.2 V)
+| code | vbn noise uVrms 1k-1G | 1-1G | vbn LSB step mV | noise/LSB % (1k-1G) | vbp noise uVrms 1k-1G | 1-1G | vbp LSB step mV | noise/LSB % |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 679.1 | 686.3 | 11.17 | 6.08 | 189.0 | 189.4 | 12.24 | 1.54 |
+| 16 | 585.3 | 594.1 | 3.12 | 18.76 | 147.4 | 147.9 | 3.72 | 3.96 |
+| 128 | 499.1 | 511.5 | 0.75 | 66.85 | 86.2 | 87.3 | 0.99 | 8.70 |
+| 255 | 473.5 | 488.1 | 0.43 | 110.29 | 66.2 | 67.6 | 0.59 | 11.21 |
+
+Integrated output noise (rms) of the bias nodes with the code held, from ngspice `.noise` (PSP thermal + flicker; ngspice reports onoise_total as the rms voltage). "LSB step" is how far the node moves for one code step at that code; noise/LSB is the rms noise as a percentage of that step, i.e. how much of the 8-bit control the bias noise blurs.
+
+./run.sh python3 verify/stage.py --jobs 14
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 verify/stage.py --jobs 14'
+## Stage: delay against code and corner
+A starved inverter driven by and loading identical stages, with the real bias chain at the code shown. The last column is 1 / (11 x (tPLH + tPHL)): the period an 11-stage ring of these would have.
+
+**Signoff corners:**
+| PVT | code | tPLH ps | tPHL ps | mean ps | rise 20-80 ps | fall 20-80 ps | slope up V/ns | slope down V/ns | 11-stage ring MHz |
+|---|---|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 9818 | 10878 | 10348 | 16233 | 11466 | 0.05 | 0.10 | 4.4 |
+| tt_27C_1.20V | 16 | 1011 | 1208 | 1110 | 1801 | 1443 | 0.53 | 0.67 | 41.0 |
+| tt_27C_1.20V | 128 | 170 | 210 | 190 | 262 | 238 | 3.46 | 3.39 | 238.8 |
+| tt_27C_1.20V | 255 | 114 | 136 | 125 | 154 | 139 | 6.07 | 5.72 | 363.4 |
+| ss_125C_1.08V | 0 | 17341 | 20090 | 18716 | 29550 | 21057 | 0.02 | 0.05 | 2.4 |
+| ss_125C_1.08V | 16 | 1765 | 2253 | 2009 | 3198 | 2649 | 0.28 | 0.32 | 22.6 |
+| ss_125C_1.08V | 128 | 309 | 390 | 350 | 457 | 431 | 1.81 | 1.71 | 130.0 |
+| ss_125C_1.08V | 255 | 203 | 250 | 227 | 261 | 252 | 3.17 | 2.89 | 200.5 |
+| ff_-40C_1.32V | 0 | 6586 | 6502 | 6544 | 10035 | 6666 | 0.08 | 0.18 | 6.9 |
+| ff_-40C_1.32V | 16 | 673 | 751 | 712 | 1152 | 873 | 0.79 | 1.27 | 63.9 |
+| ff_-40C_1.32V | 128 | 104 | 128 | 116 | 171 | 148 | 5.76 | 6.00 | 391.6 |
+| ff_-40C_1.32V | 255 | 69 | 83 | 76 | 102 | 87 | 10.25 | 10.04 | 598.0 |
+
+**All 45 PVT points**, delay extremes:
+| code | fastest mean delay ps | at | slowest mean delay ps | at | slow/fast |
+|---|---|---|---|---|---|
+| 0 | 6544 | ff_-40C_1.32V | 19033 | sf_125C_1.08V | 2.91 |
+| 16 | 712 | ff_-40C_1.32V | 2009 | ss_125C_1.08V | 2.82 |
+| 128 | 116 | ff_-40C_1.32V | 350 | ss_125C_1.08V | 3.01 |
+| 255 | 76 | ff_-40C_1.32V | 227 | ss_125C_1.08V | 2.98 |
+
+## Stage: thermal noise to timing jitter (typical, 27 C, 1.2 V)
+| code | trip point V | gain at trip | output noise mVrms (1k-100G) | slope V/ns | sigma_td per transition ps | sigma per period ps (x sqrt 22) | ppm of period | ppm over N=200 periods |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 0.610 | -17.9 | 48.88 | 0.07 | 679.6 | 3187.7 | 14002 | 990 |
+| 16 | 0.620 | -18.9 | 20.70 | 0.60 | 34.5 | 161.7 | 6625 | 468 |
+| 128 | 0.605 | -18.1 | 5.88 | 3.43 | 1.7 | 8.0 | 1922 | 136 |
+| 255 | 0.605 | -18.0 | 5.68 | 5.89 | 1.0 | 4.5 | 1641 | 116 |
+
+Estimate: output noise of the stage held at its trip point (ngspice `.noise`, the load being the next stage), divided by the output slope at the half-rail crossing from the transient. Twenty-two such transitions make a period, uncorrelated, so the period jitter is sqrt(22) larger; a measurement of N periods averages it by sqrt(N). This is the white-noise floor of the instrument; it excludes the bias chain (bias.py) and the supply.
+
+./run.sh python3 verify/nand.py --jobs 14
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 verify/nand.py --jobs 14'
+## NAND: enable=0 holds the loop
+The output of the starved NAND with `enable` low, over a full-rail sweep of the feedback input, loaded by a stage. It never leaves the high rail; the stopped ring is stopped.
+
+| PVT | code | VDD | min V(out) with enable=0 | as fraction of VDD | supply current uA (enable=0, whole NAND+bias, min over b) |
+|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 1.20 | 1.2000 | 1.0000 | 5.8 |
+| tt_27C_1.20V | 16 | 1.20 | 1.2000 | 1.0000 | 51.1 |
+| tt_27C_1.20V | 255 | 1.20 | 1.2000 | 1.0000 | 581.7 |
+| ss_125C_1.08V | 0 | 1.08 | 1.0799 | 0.9999 | 2.9 |
+| ss_125C_1.08V | 16 | 1.08 | 1.0800 | 1.0000 | 25.0 |
+| ss_125C_1.08V | 255 | 1.08 | 1.0800 | 1.0000 | 288.9 |
+| ff_-40C_1.32V | 0 | 1.32 | 1.3200 | 1.0000 | 10.2 |
+| ff_-40C_1.32V | 16 | 1.32 | 1.3200 | 1.0000 | 90.4 |
+| ff_-40C_1.32V | 255 | 1.32 | 1.3200 | 1.0000 | 1043.6 |
+
+Worst over all 135 runs (45 PVT x 3 codes): V(out) min = 1.0789 V = 99.90 % of VDD at ff_125C_1.08V code 0.
+
+## NAND: as the eleventh inverter (enable=1)
+| PVT | code | NAND tPLH ps | NAND tPHL ps | stage tPLH ps | stage tPHL ps | NAND/stage (mean) |
+|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 13890 | 11059 | 9818 | 10878 | 1.21 |
+| tt_27C_1.20V | 16 | 1450 | 1227 | 1011 | 1208 | 1.21 |
+| tt_27C_1.20V | 255 | 160 | 146 | 114 | 136 | 1.22 |
+| ss_125C_1.08V | 0 | 25594 | 20278 | 17341 | 20090 | 1.23 |
+| ss_125C_1.08V | 16 | 2599 | 2288 | 1765 | 2253 | 1.22 |
+| ss_125C_1.08V | 255 | 287 | 263 | 203 | 250 | 1.21 |
+| ff_-40C_1.32V | 0 | 9126 | 6499 | 6586 | 6502 | 1.19 |
+| ff_-40C_1.32V | 16 | 945 | 761 | 673 | 751 | 1.20 |
+| ff_-40C_1.32V | 255 | 98 | 90 | 69 | 83 | 1.23 |
+
+NAND delay / stage delay over all PVT points and codes: 1.14 .. 1.24. (Its NMOS are 0.6 um against the stage's 0.3 um to make up for the series stack.)
+
+./run.sh python3 verify/buffer.py --jobs 14
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 verify/buffer.py --jobs 14'
+## Output buffer: swing and edges at 332 MHz
+**Signoff corners**, both loads:
+| PVT | load fF | VDD | V high | V low | high/VDD | low/VDD | rise 20-80 ps | fall 20-80 ps | delay ps |
+|---|---|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 15 | 1.20 | 1.239 | -0.0308 | 1.032 | -0.0256 | 49 | 51 | 115 |
+| tt_27C_1.20V | 108 | 1.20 | 1.210 | -0.0079 | 1.008 | -0.0066 | 258 | 245 | 262 |
+| ss_125C_1.08V | 15 | 1.08 | 1.117 | -0.0307 | 1.034 | -0.0284 | 78 | 82 | 171 |
+| ss_125C_1.08V | 108 | 1.08 | 1.088 | -0.0071 | 1.008 | -0.0065 | 401 | 403 | 404 |
+| ff_-40C_1.32V | 15 | 1.32 | 1.354 | -0.0250 | 1.026 | -0.0189 | 33 | 34 | 83 |
+| ff_-40C_1.32V | 108 | 1.32 | 1.330 | -0.0075 | 1.008 | -0.0057 | 165 | 168 | 177 |
+
+**All 45 PVT points into 108 fF**: lowest high level 1.328 V (100.6 % of VDD) at ff_125C_1.32V; highest low level -0.0056 V at ff_125C_1.32V; slowest rise 401 ps at ss_125C_1.08V, slowest fall 403 ps at ss_125C_1.08V.
+
+./run.sh python3 verify/ring.py --jobs 14
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 verify/ring.py --jobs 14'
+## Whole block: frequency and current against code
+The macro's own netlist (the LVS reference), clk_out into 15 fF, released from enable=0 and measured over the last 16 of 40 nominal periods.
+
+**Signoff corners:**
+| PVT | code | f MHz | Idd running uA | Idd disabled uA | vbp V | vbn V | start-up ns | stage.py predicts MHz |
+|---|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 3.81 | 6.6 | 5.8 | 0.855 | 0.255 | 127.3 | 4.4 |
+| tt_27C_1.20V | 1 | 5.80 | 9.6 | 8.7 | 0.839 | 0.270 | 84.2 | n/a |
+| tt_27C_1.20V | 2 | 7.82 | 12.7 | 11.5 | 0.827 | 0.281 | 63.0 | n/a |
+| tt_27C_1.20V | 4 | 11.90 | 18.7 | 17.3 | 0.808 | 0.298 | 42.2 | n/a |
+| tt_27C_1.20V | 8 | 20.11 | 30.7 | 28.6 | 0.782 | 0.321 | 25.4 | n/a |
+| tt_27C_1.20V | 16 | 36.53 | 54.3 | 51.1 | 0.746 | 0.352 | 14.5 | 41.0 |
+| tt_27C_1.20V | 32 | 68.35 | 100.3 | 94.9 | 0.698 | 0.391 | 8.0 | n/a |
+| tt_27C_1.20V | 64 | 125.64 | 187.5 | 178.2 | 0.636 | 0.440 | 4.6 | n/a |
+| tt_27C_1.20V | 128 | 215.66 | 344.9 | 329.7 | 0.557 | 0.501 | 2.8 | 238.8 |
+| tt_27C_1.20V | 255 | 331.97 | 604.6 | 581.7 | 0.461 | 0.572 | 1.9 | 363.4 |
+| ss_125C_1.08V | 0 | 2.11 | 3.3 | 2.9 | 0.804 | 0.196 | 229.9 | 2.4 |
+| ss_125C_1.08V | 1 | 3.22 | 4.8 | 4.3 | 0.785 | 0.213 | 152.0 | n/a |
+| ss_125C_1.08V | 2 | 4.34 | 6.2 | 5.7 | 0.771 | 0.226 | 113.5 | n/a |
+| ss_125C_1.08V | 4 | 6.63 | 9.2 | 8.5 | 0.751 | 0.245 | 75.4 | n/a |
+| ss_125C_1.08V | 8 | 11.25 | 15.0 | 14.1 | 0.723 | 0.270 | 45.4 | n/a |
+| ss_125C_1.08V | 16 | 20.44 | 26.6 | 25.0 | 0.687 | 0.303 | 25.8 | 22.6 |
+| ss_125C_1.08V | 32 | 38.00 | 49.1 | 46.5 | 0.641 | 0.343 | 14.4 | n/a |
+| ss_125C_1.08V | 64 | 69.21 | 91.6 | 87.3 | 0.584 | 0.393 | 8.3 | n/a |
+| ss_125C_1.08V | 128 | 118.46 | 169.4 | 162.1 | 0.514 | 0.453 | 5.0 | 130.0 |
+| ss_125C_1.08V | 255 | 184.03 | 299.7 | 288.9 | 0.430 | 0.523 | 3.3 | 200.5 |
+| ff_-40C_1.32V | 0 | 5.95 | 12.2 | 10.2 | 0.962 | 0.271 | 81.5 | 6.9 |
+| ff_-40C_1.32V | 1 | 8.97 | 17.8 | 15.3 | 0.947 | 0.284 | 54.2 | n/a |
+| ff_-40C_1.32V | 2 | 12.01 | 23.2 | 20.4 | 0.935 | 0.295 | 40.7 | n/a |
+| ff_-40C_1.32V | 4 | 18.11 | 33.8 | 30.5 | 0.917 | 0.311 | 27.5 | n/a |
+| ff_-40C_1.32V | 8 | 30.42 | 54.9 | 50.6 | 0.890 | 0.333 | 16.6 | n/a |
+| ff_-40C_1.32V | 16 | 55.36 | 96.8 | 90.4 | 0.852 | 0.364 | 9.4 | 63.9 |
+| ff_-40C_1.32V | 32 | 105.16 | 179.1 | 168.6 | 0.800 | 0.404 | 5.1 | n/a |
+| ff_-40C_1.32V | 64 | 198.70 | 336.0 | 318.4 | 0.730 | 0.456 | 2.9 | n/a |
+| ff_-40C_1.32V | 128 | 350.25 | 620.6 | 591.6 | 0.639 | 0.522 | 1.7 | 391.6 |
+| ff_-40C_1.32V | 255 | 543.78 | 1087.4 | 1043.6 | 0.525 | 0.600 | 1.1 | 598.0 |
+
+**All 45 PVT points**, frequency extremes per code, and monotonicity:
+| code | slowest MHz | at | fastest MHz | at | fast/slow |
+|---|---|---|---|---|---|
+| 0 | 2.06 | sf_125C_1.08V | 5.95 | ff_-40C_1.32V | 2.88 |
+| 1 | 3.12 | sf_125C_1.08V | 17.87 | sf_-40C_1.20V | 5.72 |
+| 2 | 4.20 | sf_125C_1.08V | 12.07 | fs_-40C_1.32V | 2.87 |
+| 4 | 6.39 | sf_125C_1.08V | 18.23 | fs_-40C_1.32V | 2.85 |
+| 8 | 10.88 | sf_125C_1.08V | 30.45 | fs_-40C_1.32V | 2.80 |
+| 16 | 20.10 | sf_125C_1.08V | 55.36 | ff_-40C_1.32V | 2.75 |
+| 32 | 38.00 | ss_125C_1.08V | 105.16 | ff_-40C_1.32V | 2.77 |
+| 64 | 69.21 | ss_125C_1.08V | 198.70 | ff_-40C_1.32V | 2.87 |
+| 128 | 118.46 | ss_125C_1.08V | 350.25 | ff_-40C_1.32V | 2.96 |
+| 255 | 184.03 | ss_125C_1.08V | 543.78 | ff_-40C_1.32V | 2.95 |
+
+f(code) monotonic over the codes simulated at 44 of 45 PVT points; NOT at sf_-40C_1.20V.
+
+**Stopped** (enable=0, every PVT point and code): clk_out never below 1.080 V at the operating point, 1.080 V during the hold. Disabled supply current is the DAC's (2.9 .. 1044 uA over codes and corners). **Start-up**: worst release-to-first-edge 230 ns at ss_125C_1.08V code 0.
+
+**Supply pushing and temperature coefficient** (typical process):
+| code | f @1.08 V | f @1.20 V | f @1.32 V | %/V | f @-40 C | f @125 C | ppm/C |
+|---|---|---|---|---|---|---|---|
+| 16 | 33.2 | 36.5 | 38.8 | 64.0 | 46.9 | 23.7 | -39 |
+| 128 | 178.3 | 215.7 | 248.2 | 135.2 | 255.7 | 163.6 | -26 |
+| 255 | 268.2 | 332.0 | 392.1 | 155.4 | 384.6 | 268.3 | -21 |
+
+## Whole block: mismatch Monte Carlo, 64 samples (mos_tt_mismatch, 27 C, 1.2 V)
+| code | mean MHz | sigma MHz | sigma % | min | max |
+|---|---|---|---|---|---|
+| 0 | 3.79 | 0.382 | 10.08 | 3.16 | 5.02 |
+| 15 | 34.26 | 2.335 | 6.82 | 29.98 | 39.75 |
+| 16 | 36.32 | 2.487 | 6.85 | 31.47 | 43.01 |
+| 127 | 214.04 | 8.122 | 3.79 | 197.78 | 232.59 |
+| 128 | 215.22 | 8.231 | 3.82 | 199.40 | 234.86 |
+| 255 | 331.53 | 9.330 | 2.81 | 310.73 | 352.67 |
+
+Major-carry steps: f(16) - f(15) = 1.253 .. 3.260 MHz, f(128) - f(127) = 0.138 .. 2.274 MHz. Non-monotonic samples: 0 at 15->16, 0 at 127->128, of 64.
+
+## Whole block: process Monte Carlo, 32 samples (mos_tt_stat, 27 C, 1.2 V)
+| code | mean MHz | sigma MHz | sigma % | min | max |
+|---|---|---|---|---|---|
+| 0 | 3.84 | 0.219 | 5.71 | 3.18 | 4.19 |
+| 16 | 36.39 | 1.945 | 5.34 | 30.56 | 39.40 |
+| 255 | 327.69 | 18.406 | 5.62 | 281.85 | 364.00 |
+
+f(255)/f(0), the span of the scale, 76.2 .. 92.9 across samples.
+
+## Whole block: noise on the bias node and the jitter it makes
+| code | vbp current noise pA/sqrt(Hz) (white, 10M-1G) | vbp impedance kohm (1 kHz) | vbp voltage noise nV/sqrt(Hz) at 1 kHz | white-part voltage noise nV/sqrt(Hz) |
+|---|---|---|---|---|
+| 16 | 4.47 | 1.3 | 151.6 | 6.0 |
+| 128 | 8.51 | 0.4 | 163.7 | 3.4 |
+
+**Transient with the bias-node current noise injected** (typical, 27 C, 1.2 V; 600 periods; `quiet` = same run without the source, the numerical floor):
+| code | run | periods | mean period ns | period jitter ps rms | ppm | jitter of 50-period means ps | ppm |
+|---|---|---|---|---|---|---|---|
+| 16 | quiet | 612 | 27.3217 | 0.15 | 5 | 0.00 | 0 |
+| 16 | noise | 612 | 27.3211 | 10.16 | 372 | 1.23 | 45 |
+| 128 | quiet | 617 | 4.6294 | 0.03 | 7 | 0.01 | 1 |
+| 128 | noise | 617 | 4.6292 | 0.84 | 181 | 0.12 | 27 |
+
+The injected source carries the white part of the current noise every device on vbp contributes (DAC units, diode, always-on units), measured by `.noise` at the same operating point and divided by the node's impedance from an `ac` analysis. Flicker noise below 10 MHz is not injected: the bias node's own time constant already filters it into slow drift, which a reciprocal count averages, and the stage's own thermal jitter is in stage.py.
+
+python3 verify/report.py
+wrote /home/maxwell/github-repos/tinytapeout/tt26b-project/docs/analog_verification_results.md
+EXIT 0

@@ -1,0 +1,48 @@
+* stage delay at code 128
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=-40
+.include /work/analog/out/blocks/blocks.spice
+Vdd VPWR 0 1.2
+Vc0 code[0] 0 0
+Vc1 code[1] 0 0
+Vc2 code[2] 0 0
+Vc3 code[3] 0 0
+Vc4 code[4] 0 0
+Vc5 code[5] 0 0
+Vc6 code[6] 0 0
+Vc7 code[7] 0 1.2
+Xdac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR 0 csro_dac
+XMPD vbp vbp VPWR VPWR sg13_lv_pmos w=48u l=0.5u ng=24
+XMPM vbn vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+XMND vbn vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+Vin a 0 pulse(0 1.2 2.315e-09 50p 50p 4.63e-09 9.259e-09)
+Xdrv a b vbp vbn VPWR 0 csro_stage
+Xdut b y vbp vbn VPWR 0 csro_stage
+Xload y z vbp vbn VPWR 0 csro_stage
+Xload2 z zz vbp vbn VPWR 0 csro_stage
+.control
+tran 4.63e-12 2.778e-08
+let vh = 1.2/2
+meas tran tin_f when v(b)=vh fall=2
+meas tran tout_r when v(y)=vh rise=2
+meas tran tin_r when v(b)=vh rise=2
+meas tran tout_f when v(y)=vh fall=2
+let tplh = tout_r - tin_f
+let tphl = tout_f - tin_r
+echo "tplh=$&tplh tphl=$&tphl"
+meas tran t40r when v(y)=0.48 rise=2
+meas tran t60r when v(y)=0.72 rise=2
+meas tran t60f when v(y)=0.72 fall=2
+meas tran t40f when v(y)=0.48 fall=2
+let sr_r = 0.24/(t60r - t40r)
+let sr_f = -0.24/(t40f - t60f)
+echo "sr_r=$&sr_r sr_f=$&sr_f"
+meas tran tr when v(y)=0.24 rise=2
+meas tran tr8 when v(y)=0.96 rise=2
+meas tran tf when v(y)=0.96 fall=2
+meas tran tf2 when v(y)=0.24 fall=2
+let trise = tr8 - tr
+let tfall = tf2 - tf
+echo "trise=$&trise tfall=$&tfall"
+.endc
+.end

@@ -1,0 +1,35 @@
+* Block subcircuits netlisted from analog/xschem/*.sch by verify/netlist_blocks.py
+* GENERATED - do not edit. Pin order as PINS in that script.
+
+.subckt csro_dac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR VGND
+XD0 vbp code[0] VGND VGND sg13_lv_nmos w=0.15u l=8u ng=1 m=1 mm_ok=1
+XD1 vbp code[1] VGND VGND sg13_lv_nmos w=0.3u l=8u ng=2 m=1 mm_ok=1
+XD2 vbp code[2] VGND VGND sg13_lv_nmos w=0.6u l=8u ng=4 m=1 mm_ok=1
+XD3 vbp code[3] VGND VGND sg13_lv_nmos w=1.2u l=8u ng=8 m=1 mm_ok=1
+XD4 vbp code[4] VGND VGND sg13_lv_nmos w=2.4u l=8u ng=16 m=1 mm_ok=1
+XD5 vbp code[5] VGND VGND sg13_lv_nmos w=4.8u l=8u ng=32 m=1 mm_ok=1
+XD6 vbp code[6] VGND VGND sg13_lv_nmos w=9.6u l=8u ng=64 m=1 mm_ok=1
+XD7 vbp code[7] VGND VGND sg13_lv_nmos w=19.2u l=8u ng=128 m=1 mm_ok=1
+XDON vbp VPWR VGND VGND sg13_lv_nmos w=0.3u l=8u ng=2 m=1 mm_ok=1
+.ends csro_dac
+
+.subckt csro_stage in out vbp vbn VPWR VGND
+XMPS net1 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1 m=1 mm_ok=1
+XMP out in net1 VPWR sg13_lv_pmos w=0.5u l=0.13u ng=1 m=1 mm_ok=1
+XMN out in net2 VGND sg13_lv_nmos w=0.3u l=0.13u ng=1 m=1 mm_ok=1
+XMNS net2 vbn VGND VGND sg13_lv_nmos w=0.5u l=0.5u ng=1 m=1 mm_ok=1
+.ends csro_stage
+
+.subckt csro_nand a b out vbp vbn VPWR VGND
+XMPS0 net1 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1 m=1 mm_ok=1
+XMPA0 out a net1 VPWR sg13_lv_pmos w=0.5u l=0.13u ng=1 m=1 mm_ok=1
+XMPB0 out b net1 VPWR sg13_lv_pmos w=0.5u l=0.13u ng=1 m=1 mm_ok=1
+XMNB0 out b net2 VGND sg13_lv_nmos w=0.6u l=0.13u ng=1 m=1 mm_ok=1
+XMNA0 net2 a net3 VGND sg13_lv_nmos w=0.6u l=0.13u ng=1 m=1 mm_ok=1
+XMNS0 net3 vbn VGND VGND sg13_lv_nmos w=0.5u l=0.5u ng=1 m=1 mm_ok=1
+.ends csro_nand
+
+.subckt csro_inv in out VPWR VGND
+XMBP out in VPWR VPWR sg13_lv_pmos w=0.5u l=0.13u ng=1 m=1 mm_ok=1
+XMBN out in VGND VGND sg13_lv_nmos w=0.3u l=0.13u ng=1 m=1 mm_ok=1
+.ends csro_inv

@@ -1,0 +1,23 @@
+* csro_dac: I(code) into Vd=0.6
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt_mismatch
+.option temp=27
+.option seed=1122
+.include /work/analog/out/blocks/blocks.spice
+Vdd VPWR 0 1.2
+Vd vbp 0 0.6
+Vsw sw 0 dc 0
+Bc0 code[0] 0 V = 1.2*(floor(V(sw)/1) - 2*floor(V(sw)/2))
+Bc1 code[1] 0 V = 1.2*(floor(V(sw)/2) - 2*floor(V(sw)/4))
+Bc2 code[2] 0 V = 1.2*(floor(V(sw)/4) - 2*floor(V(sw)/8))
+Bc3 code[3] 0 V = 1.2*(floor(V(sw)/8) - 2*floor(V(sw)/16))
+Bc4 code[4] 0 V = 1.2*(floor(V(sw)/16) - 2*floor(V(sw)/32))
+Bc5 code[5] 0 V = 1.2*(floor(V(sw)/32) - 2*floor(V(sw)/64))
+Bc6 code[6] 0 V = 1.2*(floor(V(sw)/64) - 2*floor(V(sw)/128))
+Bc7 code[7] 0 V = 1.2*(floor(V(sw)/128) - 2*floor(V(sw)/256))
+Xdac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR 0 csro_dac
+.control
+dc Vsw 0 255 1
+let iout = -i(Vd)
+wrdata iout.txt iout
+.endc
+.end

@@ -1,0 +1,49 @@
+
+Note: No compatibility mode selected!
+
+
+Circuit: * output buffer into 108 ff
+
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+vpwr                                      1.32
+s10                                          0
+b1                                        1.32
+clk_out                             3.7149e-09
+vin#branch                         2.14875e-12
+vdd#branch                        -1.45665e-11
+
+ Reference value :  5.77000e-10
+ Reference value :  1.80900e-09
+ Reference value :  3.00700e-09
+ Reference value :  4.09500e-09
+ Reference value :  5.25500e-09
+ Reference value :  6.51900e-09
+ Reference value :  7.73500e-09
+ Reference value :  8.92700e-09
+ Reference value :  1.00010e-08
+ Reference value :  1.12010e-08
+ Reference value :  1.24630e-08
+ Reference value :  1.36930e-08
+ Reference value :  1.48470e-08
+ Reference value :  1.59830e-08
+ Reference value :  1.71890e-08
+No. of Data Rows : 9115
+vmax                =  1.33167e+00 at=  1.38710e-08
+vmin                =  -9.22254e-03 at=  1.53710e-08
+tr2                 =  9.43459e-09
+tr8                 =  9.67910e-09
+tf8                 =  1.09570e-08
+tf2                 =  1.11938e-08
+trise=2.4451E-10 tfall=2.3677E-10
+tin_r               =  9.28600e-09
+tout_r              =  9.54002e-09
+tpd=2.54022E-10
+Note: Simulation executed from .control section 

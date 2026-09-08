@@ -1,0 +1,69 @@
+* bias chain: vbp, vbn, I_dac, stage currents vs code
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/out/blocks/blocks.spice
+Vdd VPWR 0 1.08
+Vsw sw 0 dc 0
+Bc0 code[0] 0 V = 1.08*(floor(V(sw)/1) - 2*floor(V(sw)/2))
+Bc1 code[1] 0 V = 1.08*(floor(V(sw)/2) - 2*floor(V(sw)/4))
+Bc2 code[2] 0 V = 1.08*(floor(V(sw)/4) - 2*floor(V(sw)/8))
+Bc3 code[3] 0 V = 1.08*(floor(V(sw)/8) - 2*floor(V(sw)/16))
+Bc4 code[4] 0 V = 1.08*(floor(V(sw)/16) - 2*floor(V(sw)/32))
+Bc5 code[5] 0 V = 1.08*(floor(V(sw)/32) - 2*floor(V(sw)/64))
+Bc6 code[6] 0 V = 1.08*(floor(V(sw)/64) - 2*floor(V(sw)/128))
+Bc7 code[7] 0 V = 1.08*(floor(V(sw)/128) - 2*floor(V(sw)/256))
+Xdac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR 0 csro_dac
+Vmpd VPWR vpd 0
+XMPD vbp vbp vpd VPWR sg13_lv_pmos w=48u l=0.5u ng=24
+Vmpm VPWR vpm 0
+XMPM vbn vbp vpm VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+XMND vbn vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+XSP0 sp0 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP0 sp0 0 0.6
+XSN0 sn0 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN0 sn0 0 0.6
+XSP1 sp1 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP1 sp1 0 0.6
+XSN1 sn1 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN1 sn1 0 0.6
+XSP2 sp2 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP2 sp2 0 0.6
+XSN2 sn2 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN2 sn2 0 0.6
+XSP3 sp3 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP3 sp3 0 0.6
+XSN3 sn3 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN3 sn3 0 0.6
+XSP4 sp4 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP4 sp4 0 0.6
+XSN4 sn4 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN4 sn4 0 0.6
+XSP5 sp5 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP5 sp5 0 0.6
+XSN5 sn5 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN5 sn5 0 0.6
+XSP6 sp6 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP6 sp6 0 0.6
+XSN6 sn6 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN6 sn6 0 0.6
+XSP7 sp7 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP7 sp7 0 0.6
+XSN7 sn7 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN7 sn7 0 0.6
+XSP8 sp8 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP8 sp8 0 0.6
+XSN8 sn8 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN8 sn8 0 0.6
+XSP9 sp9 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP9 sp9 0 0.6
+XSN9 sn9 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN9 sn9 0 0.6
+XSP10 sp10 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP10 sp10 0 0.6
+XSN10 sn10 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN10 sn10 0 0.6
+.control
+dc Vsw 0 255 1
+wrdata bias.txt v(vbp) v(vbn) i(Vmpd) i(Vmpm) i(VSP0) i(VSP1) i(VSP2) i(VSP3) i(VSP4) i(VSP5) i(VSP6) i(VSP7) i(VSP8) i(VSP9) i(VSP10) i(VSN0) i(VSN1) i(VSN2) i(VSN3) i(VSN4) i(VSN5) i(VSN6) i(VSN7) i(VSN8) i(VSN9) i(VSN10)
+.endc
+.end

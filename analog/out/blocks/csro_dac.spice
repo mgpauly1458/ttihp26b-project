@@ -1,0 +1,24 @@
+** sch_path: /work/analog/xschem/csro_dac.sch
+**.subckt csro_dac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR VGND
+*.ipin code[0]
+*.ipin code[1]
+*.ipin code[2]
+*.ipin code[3]
+*.ipin code[4]
+*.ipin code[5]
+*.ipin code[6]
+*.ipin code[7]
+*.opin vbp
+*.iopin VPWR
+*.iopin VGND
+XD0 vbp code[0] VGND VGND sg13_lv_nmos w=0.15u l=8u ng=1 m=1 mm_ok=1
+XD1 vbp code[1] VGND VGND sg13_lv_nmos w=0.3u l=8u ng=2 m=1 mm_ok=1
+XD2 vbp code[2] VGND VGND sg13_lv_nmos w=0.6u l=8u ng=4 m=1 mm_ok=1
+XD3 vbp code[3] VGND VGND sg13_lv_nmos w=1.2u l=8u ng=8 m=1 mm_ok=1
+XD4 vbp code[4] VGND VGND sg13_lv_nmos w=2.4u l=8u ng=16 m=1 mm_ok=1
+XD5 vbp code[5] VGND VGND sg13_lv_nmos w=4.8u l=8u ng=32 m=1 mm_ok=1
+XD6 vbp code[6] VGND VGND sg13_lv_nmos w=9.6u l=8u ng=64 m=1 mm_ok=1
+XD7 vbp code[7] VGND VGND sg13_lv_nmos w=19.2u l=8u ng=128 m=1 mm_ok=1
+XDON vbp VPWR VGND VGND sg13_lv_nmos w=0.3u l=8u ng=2 m=1 mm_ok=1
+**.ends
+.end

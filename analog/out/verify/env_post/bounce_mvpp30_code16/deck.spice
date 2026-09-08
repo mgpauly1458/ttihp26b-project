@@ -1,0 +1,29 @@
+* environment: bounce {'mvpp': 30} code 16
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/out/pex/tt_analog_ring.pex.spice
+Vdd VPWR 0 dc 1.2
+Vc0 code[0] gb 0
+Vc1 code[1] gb 0
+Vc2 code[2] gb 0
+Vc3 code[3] gb 0
+Vc4 code[4] VPWR 0
+Vc5 code[5] gb 0
+Vc6 code[6] gb 0
+Vc7 code[7] gb 0
+Ven enable VPWR 0
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR gb tt_analog_ring
+Cload clk_out 0 15f
+Vgb gb 0 pulse(-0.015 0.015 0 1n 1n 9n 20n)
+.control
+tran 5e-11 5.42e-06
+let ts = 5.42e-07
+meas tran vmin_out min v(clk_out) from=$&ts
+meas tran vmax_out max v(clk_out) from=$&ts
+
+
+
+
+wrdata clk.txt v(clk_out)
+.endc
+.end

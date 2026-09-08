@@ -1,0 +1,94 @@
+* bias chain noise at code 255
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/out/blocks/blocks.spice
+Vdd VPWR 0 1.2 ac 1
+Vc0 code[0] 0 1.2
+Vc1 code[1] 0 1.2
+Vc2 code[2] 0 1.2
+Vc3 code[3] 0 1.2
+Vc4 code[4] 0 1.2
+Vc5 code[5] 0 1.2
+Vc6 code[6] 0 1.2
+Vc7 code[7] 0 1.2
+Xdac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR 0 csro_dac
+Vmpd VPWR vpd 0
+XMPD vbp vbp vpd VPWR sg13_lv_pmos w=48u l=0.5u ng=24
+Vmpm VPWR vpm 0
+XMPM vbn vbp vpm VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+XMND vbn vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+XSP0 sp0 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP0 sp0 0 0.6
+XSN0 sn0 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN0 sn0 0 0.6
+XSP1 sp1 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP1 sp1 0 0.6
+XSN1 sn1 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN1 sn1 0 0.6
+XSP2 sp2 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP2 sp2 0 0.6
+XSN2 sn2 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN2 sn2 0 0.6
+XSP3 sp3 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP3 sp3 0 0.6
+XSN3 sn3 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN3 sn3 0 0.6
+XSP4 sp4 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP4 sp4 0 0.6
+XSN4 sn4 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN4 sn4 0 0.6
+XSP5 sp5 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP5 sp5 0 0.6
+XSN5 sn5 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN5 sn5 0 0.6
+XSP6 sp6 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP6 sp6 0 0.6
+XSN6 sn6 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN6 sn6 0 0.6
+XSP7 sp7 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP7 sp7 0 0.6
+XSN7 sn7 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN7 sn7 0 0.6
+XSP8 sp8 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP8 sp8 0 0.6
+XSN8 sn8 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN8 sn8 0 0.6
+XSP9 sp9 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP9 sp9 0 0.6
+XSN9 sn9 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN9 sn9 0 0.6
+XSP10 sp10 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+VSP10 sp10 0 0.6
+XSN10 sn10 vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+VSN10 sn10 0 0.6
+.control
+op
+echo "vbp_op=$&v(vbp) vbn_op=$&v(vbn)"
+noise v(vbn) Vdd dec 10 1 1G
+setplot noise2
+let vbn_tot_1 = onoise_total
+echo "vbn_1Hz=$&vbn_tot_1"
+setplot noise1
+wrdata vbn_spec.txt onoise_spectrum
+noise v(vbn) Vdd dec 10 1k 1G
+setplot noise4
+let vbn_tot_1k = onoise_total
+echo "vbn_1kHz=$&vbn_tot_1k"
+noise v(vbp) Vdd dec 10 1 1G
+setplot noise6
+let vbp_tot_1 = onoise_total
+echo "vbp_1Hz=$&vbp_tot_1"
+noise v(vbp) Vdd dec 10 1k 1G
+setplot noise8
+let vbp_tot_1k = onoise_total
+echo "vbp_1kHz=$&vbp_tot_1k"
+noise v(vbn) Vdd dec 10 1k 1Meg
+setplot noise10
+let vbn_lf = onoise_total
+echo "vbn_lf=$&vbn_lf"
+noise v(vbp) Vdd dec 10 1k 1Meg
+setplot noise12
+let vbp_lf = onoise_total
+echo "vbp_lf=$&vbp_lf"
+.endc
+.end

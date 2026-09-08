@@ -1,4 +1,5 @@
-# Binary artefacts are committed as plain git objects, NOT through Git LFS:
-# Tiny Tapeout's build clones the repository without LFS, and a pointer file
-# in place of analog/macro/*.gds makes Magic fail to read the macro
-# (CI run 34158145310). The files are small (the GDS is 160 KB).
+# Git LFS is used ONLY for the simulation data under analog/out
+# (analog/out/.gitattributes). Everything the Tiny Tapeout build reads --
+# analog/macro/*.gds|lef, analog/lib/*.lib, docs/*.png -- is a plain git
+# object: TT's checkout has no LFS, and a pointer file in place of the macro
+# GDS broke Magic (CI run 34158145310).

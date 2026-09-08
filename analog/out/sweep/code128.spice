@@ -1,0 +1,30 @@
+* tt_analog_ring code sweep: code=128
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/out/csro_v24_2.0.spice
+Vdd VPWR 0 1.2
+Ven enable 0 1.2
+Vc0 code[0] 0 0
+Vc1 code[1] 0 0
+Vc2 code[2] 0 0
+Vc3 code[3] 0 0
+Vc4 code[4] 0 0
+Vc5 code[5] 0 0
+Vc6 code[6] 0 0
+Vc7 code[7] 0 1.2
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR 0 tt_analog_ring
+Cload clk_out 0 15f
+.control
+op
+let idd = -i(Vdd)
+let vbp = v(xdut.vbp)
+let vbn = v(xdut.vbn)
+echo "OP idd=$&idd vbp=$&vbp vbn=$&vbn"
+tran 20p 3u
+let thalf = 3u/2
+meas tran t1 when v(clk_out)=1.2/2 rise=1 from=$&thalf
+meas tran t2 when v(clk_out)=1.2/2 rise=2 from=$&thalf
+meas tran t9 when v(clk_out)=1.2/2 rise=9 from=$&thalf
+meas tran vout_avg avg v(clk_out) from=$&thalf
+.endc
+.end

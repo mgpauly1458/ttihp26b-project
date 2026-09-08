@@ -1,0 +1,85 @@
+
+Note: No compatibility mode selected!
+
+
+Circuit: * nand as inverter: a=1, pulse b
+
+Doing analysis at TEMP = -40.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+vpwr                                      1.08
+code[0]                                   1.08
+code[1]                                   1.08
+code[2]                                   1.08
+code[3]                                   1.08
+code[4]                                   1.08
+code[5]                                   1.08
+code[6]                                   1.08
+code[7]                                   1.08
+vbp                                   0.382548
+vbn                                   0.602116
+a                                         1.08
+p                                            0
+xdrv.net1                                 1.08
+b                                         1.08
+xdrv.net2                          5.63653e-09
+xnand.net1                                1.08
+y                                  2.31069e-07
+xnand.net2                         2.09565e-07
+xnand.net3                         1.84464e-07
+xload.net1                                1.08
+z                                         1.08
+xload.net2                         5.63653e-09
+xload2.net1                               1.08
+zz                                 6.49561e-08
+xload2.net2                         5.2029e-08
+vin#branch                         5.66216e-12
+va#branch                         -2.85881e-12
+vc7#branch                        -1.31929e-08
+vc6#branch                        -6.58918e-09
+vc5#branch                        -3.28731e-09
+vc4#branch                        -1.63638e-09
+vc3#branch                         -8.1091e-10
+vc2#branch                        -3.98177e-10
+vc1#branch                         -1.9181e-10
+vc0#branch                        -8.86268e-11
+vdd#branch                        -0.000558709
+
+ Reference value :  8.81914e-11
+ Reference value :  9.97815e-10
+ Reference value :  1.76232e-09
+ Reference value :  2.43400e-09
+ Reference value :  3.34965e-09
+ Reference value :  4.27433e-09
+ Reference value :  4.97191e-09
+ Reference value :  5.70383e-09
+ Reference value :  6.61947e-09
+ Reference value :  7.53000e-09
+ Reference value :  8.14776e-09
+ Reference value :  9.01221e-09
+ Reference value :  9.92183e-09
+ Reference value :  1.07519e-08
+ Reference value :  1.13664e-08
+ Reference value :  1.22971e-08
+ Reference value :  1.32399e-08
+ Reference value :  1.39579e-08
+ Reference value :  1.46959e-08
+ Reference value :  1.56507e-08
+ Reference value :  1.65844e-08
+ Reference value :  1.72097e-08
+ Reference value :  1.80380e-08
+No. of Data Rows : 6046
+tin_f               =  7.69871e-09
+tout_r              =  7.86120e-09
+tin_r               =  1.07242e-08
+tout_f              =  1.09013e-08
+tplh=1.62492E-10 tphl=1.7712E-10
+Note: Simulation executed from .control section 
+Note: Starting dynamic gmin stepping
+Note: Dynamic gmin stepping completed

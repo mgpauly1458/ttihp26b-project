@@ -1,0 +1,10 @@
+07-Sep-2026 15:48:49 | INFO    | KLayout version detected: 0.30.11 (required >= 0.30.5)
+07-Sep-2026 15:48:49 | INFO    | Using DRC JSON file: /foss/pdks/ihp-sg13g2/libs.tech/klayout/python/sg13g2_pycell_lib/sg13g2_tech_mod.json
+07-Sep-2026 15:48:49 | INFO    | Running IHP-SG13G2 density checks on design /work/analog/macro/tt_analog_ring.gds, topcell: tt_analog_ring
+07-Sep-2026 15:48:54 | INFO    | Completed running Density checks.
+07-Sep-2026 15:48:54 | ERROR   | ==================================================================================
+07-Sep-2026 15:48:54 | ERROR   | ❌ --- KLayout DRC Check Failed: Violations were detected in the layout. --- ❌
+07-Sep-2026 15:48:54 | ERROR   | ==================================================================================
+07-Sep-2026 15:48:54 | ERROR   | Violated rules are : {'TM2.c', 'TM1.c', 'M5.j', 'M3.j', 'AFil.g', 'M4.j', 'M1.j', 'M2.j'}
+
+07-Sep-2026 15:48:54 | INFO    | Total DRC Run time: 5.09 seconds (including execution, analysis, and reporting)

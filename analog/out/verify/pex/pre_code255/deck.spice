@@ -1,0 +1,22 @@
+* pre/post-layout in-situ block metrics, code 255
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/spice/tt_analog_ring.spice
+Vdd VPWR 0 1.2
+Vc0 code[0] 0 1.2
+Vc1 code[1] 0 1.2
+Vc2 code[2] 0 1.2
+Vc3 code[3] 0 1.2
+Vc4 code[4] 0 1.2
+Vc5 code[5] 0 1.2
+Vc6 code[6] 0 1.2
+Vc7 code[7] 0 1.2
+Ven enable 0 pulse(0 1.2 6.024e-09 0.1n)
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR 0 tt_analog_ring
+Cload clk_out 0 15f
+.control
+tran 1.004e-11 1.205e-07
+let t0 = 1.114e-07
+wrdata nodes.txt v(xdut.s0) v(xdut.s1) v(xdut.s2) v(xdut.s3) v(xdut.s4) v(xdut.s5) v(xdut.s6) v(xdut.s7) v(xdut.s8) v(xdut.s9) v(xdut.s10) v(xdut.b1) v(clk_out) v(xdut.vbp) v(xdut.vbn)
+.endc
+.end

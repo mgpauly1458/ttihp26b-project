@@ -1,0 +1,20 @@
+[INFO] USER_ID: 1000, GROUP_ID: 1000
+[INFO] Final PATH variable: /headless/.local/bin:/foss/tools/bin:/foss/tools/sak:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/foss/tools/kactus2:/foss/tools/klayout:/foss/tools/osic-multitool
+[INFO] Final PYTHONPATH variable: /headless/.local/lib/python3.12/site-packages:/usr/lib/python312.zip:/usr/lib/python3.12:/usr/lib/python3.12/lib-dynload:/usr/local/lib/python3.12/dist-packages:/usr/lib/python3/dist-packages:/foss/tools/ngspyce/local/lib/python3.12/dist-packages:/foss/tools/openems/local/lib/python3.12/dist-packages:/foss/tools/pyopus/local/lib/python3.12/dist-packages:/foss/tools/yosys/share/yosys/python3:/foss/tools/klayout/pymod:/foss/tools/vacask/lib/vacask/python
+[INFO] SKIPPING UI STARTUP
+[INFO] Executing command: 'python3 char/characterize.py --netlist out/pex/tt_analog_ring.pex.spice --out out/char_post'
+  Cin(code[0]) = 18.1 fF
+  Cin(code[1]) = 31.4 fF
+  Cin(code[2]) = 55.3 fF
+  Cin(code[3]) = 102.3 fF
+  Cin(code[4]) = 190.1 fF
+  Cin(code[5]) = 372.3 fF
+  Cin(code[6]) = 744.6 fF
+  Cin(code[7]) = 1515.5 fF
+  Cin(enable) = 13.2 fF
+  load 0.001 pF: rise 0.0910 ns, fall 0.0850 ns, f = 105.5 MHz
+  load 0.0234 pF: rise 0.1350 ns, fall 0.1250 ns, f = 105.4 MHz
+  load 0.05 pF: rise 0.1760 ns, fall 0.1660 ns, f = 105.4 MHz
+  load 0.108 pF: rise 0.2830 ns, fall -9.2200 ns, f = 105.4 MHz
+wrote /work/analog/lib/tt_analog_ring.lib
+EXIT 0

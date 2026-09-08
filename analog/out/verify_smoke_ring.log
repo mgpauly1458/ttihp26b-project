@@ -1,0 +1,67 @@
+## Whole block: frequency and current against code
+The macro's own netlist (the LVS reference), clk_out into 15 fF, released from enable=0 and measured over the last 16 of 40 nominal periods.
+
+**Signoff corners:**
+| PVT | code | f MHz | Idd running uA | Idd disabled uA | vbp V | vbn V | start-up ns | stage.py predicts MHz |
+|---|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 16 | 36.53 | 54.3 | 51.1 | 0.746 | 0.352 | 14.5 | 41.0 |
+| tt_27C_1.20V | 255 | 331.97 | 604.6 | 581.7 | 0.461 | 0.572 | 1.9 | 363.4 |
+| ss_125C_1.08V | 16 | 20.44 | 26.6 | 25.0 | 0.687 | 0.303 | 25.8 | 22.6 |
+| ss_125C_1.08V | 255 | 184.03 | 299.7 | 288.9 | 0.430 | 0.523 | 3.3 | 200.5 |
+| ff_-40C_1.32V | 16 | 55.36 | 96.8 | 90.4 | 0.852 | 0.364 | 9.4 | 63.9 |
+| ff_-40C_1.32V | 255 | 543.78 | 1087.4 | 1043.6 | 0.525 | 0.600 | 1.1 | 598.0 |
+
+**All 45 PVT points**, frequency extremes per code, and monotonicity:
+| code | slowest MHz | at | fastest MHz | at | fast/slow |
+|---|---|---|---|---|---|
+| 16 | 20.10 | sf_125C_1.08V | 55.36 | ff_-40C_1.32V | 2.75 |
+| 255 | 184.03 | ss_125C_1.08V | 543.78 | ff_-40C_1.32V | 2.95 |
+
+f(code) monotonic over the codes simulated at 45 of 45 PVT points.
+
+**Stopped** (enable=0, every PVT point and code): clk_out never below 1.080 V at the operating point, 1.080 V during the hold. Disabled supply current is the DAC's (25.0 .. 1044 uA over codes and corners). **Start-up**: worst release-to-first-edge 26 ns at ss_125C_1.08V code 16.
+
+**Supply pushing and temperature coefficient** (typical process):
+| code | f @1.08 V | f @1.20 V | f @1.32 V | %/V | f @-40 C | f @125 C | ppm/C |
+|---|---|---|---|---|---|---|---|
+| 16 | 33.2 | 36.5 | 38.8 | 64.0 | 46.9 | 23.7 | -39 |
+| 255 | 268.2 | 332.0 | 392.1 | 155.4 | 384.6 | 268.3 | -21 |
+
+## Whole block: mismatch Monte Carlo, 2 samples (mos_tt_mismatch, 27 C, 1.2 V)
+| code | mean MHz | sigma MHz | sigma % | min | max |
+|---|---|---|---|---|---|
+| 0 | 3.97 | 0.104 | 2.63 | 3.89 | 4.04 |
+| 15 | 34.91 | 0.996 | 2.85 | 34.20 | 35.61 |
+| 16 | 36.81 | 0.379 | 1.03 | 36.54 | 37.07 |
+| 127 | 215.41 | 2.499 | 1.16 | 213.64 | 217.18 |
+| 128 | 216.78 | 2.589 | 1.19 | 214.95 | 218.61 |
+| 255 | 332.77 | 2.896 | 0.87 | 330.73 | 334.82 |
+
+Major-carry steps: f(16) - f(15) = 1.462 .. 2.335 MHz, f(128) - f(127) = 1.311 .. 1.437 MHz. Non-monotonic samples: 0 at 15->16, 0 at 127->128, of 2.
+
+## Whole block: process Monte Carlo, 2 samples (mos_tt_stat, 27 C, 1.2 V)
+| code | mean MHz | sigma MHz | sigma % | min | max |
+|---|---|---|---|---|---|
+| 0 | 3.86 | 0.064 | 1.65 | 3.81 | 3.90 |
+| 16 | 36.88 | 0.647 | 1.75 | 36.42 | 37.33 |
+| 255 | 328.21 | 4.564 | 1.39 | 324.99 | 331.44 |
+
+f(255)/f(0), the span of the scale, 85.0 .. 85.3 across samples.
+
+## Whole block: noise on the bias node and the jitter it makes
+| code | vbp current noise pA/sqrt(Hz) (white, 10M-1G) | vbp impedance kohm (1 kHz) | vbp voltage noise nV/sqrt(Hz) at 1 kHz | white-part voltage noise nV/sqrt(Hz) |
+|---|---|---|---|---|
+| 16 | 4.47 | 1.3 | 151.6 | 6.0 |
+| 128 | 8.51 | 0.4 | 163.7 | 3.4 |
+
+**Transient with the bias-node current noise injected** (typical, 27 C, 1.2 V; 600 periods; `quiet` = same run without the source, the numerical floor):
+| code | run | periods | mean period ns | period jitter ps rms | ppm | jitter of 50-period means ps | ppm |
+|---|---|---|---|---|---|---|---|
+| 16 | quiet | 611 | 27.3776 | 9.48 | 346 | 0.16 | 6 |
+| 16 | noise | 612 | 27.3423 | 10.61 | 388 | 1.37 | 50 |
+| 128 | quiet | 616 | 4.6369 | 0.22 | 48 | 0.00 | 1 |
+| 128 | noise | 617 | 4.6319 | 0.86 | 186 | 0.12 | 26 |
+
+The injected source carries the white part of the current noise every device on vbp contributes (DAC units, diode, always-on units), measured by `.noise` at the same operating point and divided by the node's impedance from an `ac` analysis. Flicker noise below 10 MHz is not injected: the bias node's own time constant already filters it into slow drift, which a reciprocal count averages, and the stage's own thermal jitter is in stage.py.
+
+DONE

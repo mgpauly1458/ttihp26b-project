@@ -1,0 +1,115 @@
+=== bias
+Warning: Noise input source vdd has no AC value
+doAnalyses: ac input not found
+
+noise simulation(s) aborted
+Error: no such plot named noise8
+Warning from checkvalid: vector onoise_total is not available or has zero length.
+Error: RHS "onoise_total" invalid
+Error: &vbp_tot_1k: no such variable.
+Error: incomplete or empty netlist
+       or no ".plot", ".print", or ".fourier" lines in batch mode;
+no simulations run!
+
+## Bias chain: operating points against code
+Stage starve devices measured with their drains at 0.6 V. The nominal mirror ratio is 48:1 (24 x 2 um diode, 1 um stage device).
+
+**Signoff corners:**
+| PVT | code | vbp V | vbn V | I_dac uA | I_stage(p) uA | I_stage(n) uA | I_dac/I_stage |
+|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 0.855 | 0.255 | 5.7 | 0.13 | -0.18 | 44.0 |
+| tt_27C_1.20V | 1 | 0.839 | 0.270 | 8.5 | 0.19 | -0.27 | 44.1 |
+| tt_27C_1.20V | 16 | 0.746 | 0.352 | 49.9 | 1.12 | -1.33 | 44.7 |
+| tt_27C_1.20V | 128 | 0.557 | 0.501 | 322.6 | 7.04 | -7.34 | 45.8 |
+| tt_27C_1.20V | 255 | 0.461 | 0.572 | 569.3 | 12.32 | -12.45 | 46.2 |
+| ss_125C_1.08V | 0 | 0.804 | 0.196 | 2.8 | 0.06 | -0.09 | 45.7 |
+| ss_125C_1.08V | 1 | 0.785 | 0.213 | 4.2 | 0.09 | -0.14 | 45.7 |
+| ss_125C_1.08V | 16 | 0.687 | 0.303 | 24.5 | 0.53 | -0.68 | 45.9 |
+| ss_125C_1.08V | 128 | 0.514 | 0.453 | 158.6 | 3.41 | -3.66 | 46.6 |
+| ss_125C_1.08V | 255 | 0.430 | 0.523 | 282.8 | 6.03 | -6.24 | 46.9 |
+| ff_-40C_1.32V | 0 | 0.962 | 0.271 | 10.0 | 0.24 | -0.34 | 40.8 |
+| ff_-40C_1.32V | 1 | 0.947 | 0.284 | 14.9 | 0.36 | -0.49 | 41.1 |
+| ff_-40C_1.32V | 16 | 0.852 | 0.364 | 88.3 | 2.05 | -2.39 | 43.0 |
+| ff_-40C_1.32V | 128 | 0.639 | 0.522 | 578.7 | 12.87 | -13.25 | 45.0 |
+| ff_-40C_1.32V | 255 | 0.525 | 0.600 | 1021.1 | 22.46 | -22.46 | 45.5 |
+
+**All 45 PVT points**, per-stage PMOS current extremes (this is what sets the ring's delay):
+| code | min I_stage(p) uA | at | max I_stage(p) uA | at | max/min |
+|---|---|---|---|---|---|
+| 0 | 0.06 | ss_125C_1.08V | 0.24 | ff_-40C_1.32V | 4.0 |
+| 1 | 0.09 | ss_125C_1.08V | 0.36 | ff_-40C_1.32V | 3.9 |
+| 16 | 0.53 | ss_125C_1.08V | 2.05 | ff_-40C_1.32V | 3.8 |
+| 128 | 3.41 | ss_125C_1.08V | 12.87 | ff_-40C_1.32V | 3.8 |
+| 255 | 6.03 | ss_125C_1.08V | 22.46 | ff_-40C_1.32V | 3.7 |
+
+I_dac / I_stage(p) over every PVT point and code >= 1: 41.1 .. 47.3 (nominal 48; the deviation is the diode and the stage device sitting at different drain voltages).
+
+## Bias chain: mismatch Monte Carlo, 6 samples (mos_tt_mismatch, 27 C, 1.2 V)
+| code | stage PMOS current sigma/mean %, mean | worst sample | worst max-min % | stage NMOS sigma/mean % | MPM/MPD ratio sigma % | I_dac sigma % |
+|---|---|---|---|---|---|---|
+| 1 | 8.1 | 12.4 | 42.5 | -20.2 | 4.9 | 0.97 |
+| 16 | 4.9 | 7.8 | 26.8 | -13.3 | 2.7 | 0.15 |
+| 255 | 1.8 | 3.1 | 10.8 | -5.8 | 0.8 | 0.05 |
+
+Each row: across the eleven stages within one sample (mean and worst over samples), then the mirror ratio and the DAC current across samples.
+
+## Bias chain: noise at the bias nodes (typical, 27 C, 1.2 V)
+| code | vbn noise uVrms 1k-1G | 1-1G | vbn LSB step mV | noise/LSB % (1k-1G) | vbp noise uVrms 1k-1G | 1-1G | vbp LSB step mV | noise/LSB % |
+|---|---|---|---|---|---|---|---|---|
+
+Integrated output noise of the bias nodes with the code held, from ngspice `.noise` (PSP thermal + flicker). "LSB step" is how far the node moves for one code step at that code; noise/LSB is the rms noise as a percentage of that step, i.e. how much of the 8-bit control the bias noise blurs.
+
+=== stage
+Traceback (most recent call last):
+  File "/work/analog/verify/stage.py", line 203, in <module>
+    main()
+  File "/work/analog/verify/stage.py", line 125, in main
+    C.meas(log, "sr_r") * 1e-9, -C.meas(log, "sr_f") * 1e-9,
+    ~~~~~~~~~~~~~~~~~~~~^~~~~~
+TypeError: unsupported operand type(s) for *: 'NoneType' and 'float'
+=== nand
+## NAND: enable=0 holds the loop
+The output of the starved NAND with `enable` low, over a full-rail sweep of the feedback input, loaded by a stage. It never leaves the high rail; the stopped ring is stopped.
+
+| PVT | code | VDD | min V(out) with enable=0 | as fraction of VDD | supply current uA (enable=0, whole NAND+bias, min over b) |
+|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 1.20 | 1.2000 | 1.0000 | 5.8 |
+| tt_27C_1.20V | 16 | 1.20 | 1.2000 | 1.0000 | 51.1 |
+| tt_27C_1.20V | 255 | 1.20 | 1.2000 | 1.0000 | 581.7 |
+| ss_125C_1.08V | 0 | 1.08 | 1.0799 | 0.9999 | 2.9 |
+| ss_125C_1.08V | 16 | 1.08 | 1.0800 | 1.0000 | 25.0 |
+| ss_125C_1.08V | 255 | 1.08 | 1.0800 | 1.0000 | 288.9 |
+| ff_-40C_1.32V | 0 | 1.32 | 1.3200 | 1.0000 | 10.2 |
+| ff_-40C_1.32V | 16 | 1.32 | 1.3200 | 1.0000 | 90.4 |
+| ff_-40C_1.32V | 255 | 1.32 | 1.3200 | 1.0000 | 1043.6 |
+
+Worst over all 135 runs (45 PVT x 3 codes): V(out) min = 1.0789 V = 99.90 % of VDD at ff_125C_1.08V code 0.
+
+## NAND: as the eleventh inverter (enable=1)
+| PVT | code | NAND tPLH ps | NAND tPHL ps | stage tPLH ps | stage tPHL ps | NAND/stage (mean) |
+|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 0 | 13890 | 11059 | n/a | n/a | n/a |
+| tt_27C_1.20V | 16 | 1450 | 1227 | n/a | n/a | n/a |
+| tt_27C_1.20V | 255 | 160 | 146 | n/a | n/a | n/a |
+| ss_125C_1.08V | 0 | 25594 | 20278 | n/a | n/a | n/a |
+| ss_125C_1.08V | 16 | 2599 | 2288 | n/a | n/a | n/a |
+| ss_125C_1.08V | 255 | 287 | 263 | n/a | n/a | n/a |
+| ff_-40C_1.32V | 0 | 9126 | 6499 | n/a | n/a | n/a |
+| ff_-40C_1.32V | 16 | 945 | 761 | n/a | n/a | n/a |
+| ff_-40C_1.32V | 255 | 98 | 90 | n/a | n/a | n/a |
+
+=== buffer
+## Output buffer: swing and edges at 332 MHz
+**Signoff corners**, both loads:
+| PVT | load fF | VDD | V high | V low | high/VDD | low/VDD | rise 20-80 ps | fall 20-80 ps | delay ps |
+|---|---|---|---|---|---|---|---|---|---|
+| tt_27C_1.20V | 15 | 1.20 | 1.239 | -0.0308 | 1.032 | -0.0256 | 49 | 51 | 115 |
+| tt_27C_1.20V | 108 | 1.20 | 1.210 | -0.0079 | 1.008 | -0.0066 | 258 | 245 | 262 |
+| ss_125C_1.08V | 15 | 1.08 | 1.117 | -0.0307 | 1.034 | -0.0284 | 78 | 82 | 171 |
+| ss_125C_1.08V | 108 | 1.08 | 1.088 | -0.0071 | 1.008 | -0.0065 | 401 | 403 | 404 |
+| ff_-40C_1.32V | 15 | 1.32 | 1.354 | -0.0250 | 1.026 | -0.0189 | 33 | 34 | 83 |
+| ff_-40C_1.32V | 108 | 1.32 | 1.330 | -0.0075 | 1.008 | -0.0057 | 165 | 168 | 177 |
+
+**All 45 PVT points into 108 fF**: lowest high level 1.328 V (100.6 % of VDD) at ff_125C_1.32V; highest low level -0.0056 V at ff_125C_1.32V; slowest rise 401 ps at ss_125C_1.08V, slowest fall 403 ps at ss_125C_1.08V.
+
+DONE

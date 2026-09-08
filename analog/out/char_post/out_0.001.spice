@@ -1,0 +1,27 @@
+* tt_analog_ring characterisation
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.include /work/analog/out/pex/tt_analog_ring.pex.spice
+Vdd VPWR 0 1.2
+Vcode0 code[0] 0 0
+Vcode1 code[1] 0 0
+Vcode2 code[2] 0 0
+Vcode3 code[3] 0 0
+Vcode4 code[4] 0 0
+Vcode5 code[5] 0 0
+Vcode6 code[6] 0 0
+Vcode7 code[7] 0 1.2
+Venable enable 0 1.2
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR 0 tt_analog_ring
+Cl clk_out 0 0.001p
+.control
+tran 10p 400n
+* one full edge each way, well inside the run (LAST could straddle an edge
+* cut off by tstop and come out negative)
+meas tran r20 when v(clk_out)=0.24 rise=3 from=200n
+meas tran r80 when v(clk_out)=0.96 rise=3 from=200n
+meas tran f80 when v(clk_out)=0.96 fall=3 from=200n
+meas tran f20 when v(clk_out)=0.24 fall=3 from=200n
+meas tran ta when v(clk_out)=0.6 rise=1 from=200n
+meas tran tb when v(clk_out)=0.6 rise=5 from=200n
+.endc
+.end

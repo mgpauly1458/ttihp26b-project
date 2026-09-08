@@ -1,0 +1,17 @@
+** sch_path: /work/analog/xschem/csro_nand.sch
+**.subckt csro_nand a b out vbp VPWR vbn VGND
+*.ipin a
+*.ipin b
+*.opin out
+*.ipin vbp
+*.iopin VPWR
+*.ipin vbn
+*.iopin VGND
+XMPS0 net1 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1 m=1 mm_ok=1
+XMPA0 out a net1 VPWR sg13_lv_pmos w=0.5u l=0.13u ng=1 m=1 mm_ok=1
+XMPB0 out b net1 VPWR sg13_lv_pmos w=0.5u l=0.13u ng=1 m=1 mm_ok=1
+XMNB0 out b net2 VGND sg13_lv_nmos w=0.6u l=0.13u ng=1 m=1 mm_ok=1
+XMNA0 net2 a net3 VGND sg13_lv_nmos w=0.6u l=0.13u ng=1 m=1 mm_ok=1
+XMNS0 net3 vbn VGND VGND sg13_lv_nmos w=0.5u l=0.5u ng=1 m=1 mm_ok=1
+**.ends
+.end

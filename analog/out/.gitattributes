@@ -1,0 +1,11 @@
+# Data files in this tree go through Git LFS. Only analog/out uses LFS:
+# nothing the Tiny Tapeout build reads (analog/macro, analog/lib, docs) may,
+# because its checkout has no LFS and would see pointer files.
+*.txt   filter=lfs diff=lfs merge=lfs -text
+*.gz    filter=lfs diff=lfs merge=lfs -text
+*.oas   filter=lfs diff=lfs merge=lfs -text
+*.lyrdb filter=lfs diff=lfs merge=lfs -text
+*.lvsdb filter=lfs diff=lfs merge=lfs -text
+*.png   filter=lfs diff=lfs merge=lfs -text
+*.glb   filter=lfs diff=lfs merge=lfs -text
+*.cir   filter=lfs diff=lfs merge=lfs -text

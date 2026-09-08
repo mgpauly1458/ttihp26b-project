@@ -1,0 +1,46 @@
+* hand netlist for sizing; ports match the macro: code[7:0] enable clk_out VPWR VGND
+.param LU=8u WU=0.15u
+.param WPS=1.0u LPS=0.5u WNS=0.5u LNS=0.5u NGP0=24 WP0F=4.0u
+.param WPI=0.5u WNI=0.3u LI=0.13u
+
+.subckt stg in out vbp vbn VPWR VGND
+XMPS p vbp VPWR VPWR sg13_lv_pmos w={WPS} l={LPS}
+XMP  out in p VPWR sg13_lv_pmos w={WPI} l={LI}
+XMN  out in n VGND sg13_lv_nmos w={WNI} l={LI}
+XMNS n vbn VGND VGND sg13_lv_nmos w={WNS} l={LNS}
+.ends
+
+.subckt tt_analog_ring code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR VGND
+XD0 vbp code[0] VGND VGND sg13_lv_nmos w={WU*1}   l={LU} ng=1
+XD1 vbp code[1] VGND VGND sg13_lv_nmos w={WU*2}   l={LU} ng=2
+XD2 vbp code[2] VGND VGND sg13_lv_nmos w={WU*4}   l={LU} ng=4
+XD3 vbp code[3] VGND VGND sg13_lv_nmos w={WU*8}   l={LU} ng=8
+XD4 vbp code[4] VGND VGND sg13_lv_nmos w={WU*16}  l={LU} ng=16
+XD5 vbp code[5] VGND VGND sg13_lv_nmos w={WU*32}  l={LU} ng=32
+XD6 vbp code[6] VGND VGND sg13_lv_nmos w={WU*64}  l={LU} ng=64
+XD7 vbp code[7] VGND VGND sg13_lv_nmos w={WU*128} l={LU} ng=128
+XDON vbp VPWR VGND VGND sg13_lv_nmos w={WU} l={LU} ng=1
+XMP0 vbp vbp VPWR VPWR sg13_lv_pmos w={WP0F*NGP0} l={LPS} ng={NGP0}
+XMP1 vbn vbp VPWR VPWR sg13_lv_pmos w={WPS} l={LPS} ng=1
+XMN0 vbn vbn VGND VGND sg13_lv_nmos w={WNS} l={LNS} ng=1
+XMPS0 p0 vbp VPWR VPWR sg13_lv_pmos w={WPS} l={LPS}
+XMPA0 s0 enable p0 VPWR sg13_lv_pmos w={WPI} l={LI}
+XMPB0 s0 s10 p0 VPWR sg13_lv_pmos w={WPI} l={LI}
+XMNB0 s0 s10 na0 VGND sg13_lv_nmos w={WNI*2} l={LI}
+XMNA0 na0 enable n0 VGND sg13_lv_nmos w={WNI*2} l={LI}
+XMNS0 n0 vbn VGND VGND sg13_lv_nmos w={WNS} l={LNS}
+X1  s0 s1  vbp vbn VPWR VGND stg
+X2  s1 s2  vbp vbn VPWR VGND stg
+X3  s2 s3  vbp vbn VPWR VGND stg
+X4  s3 s4  vbp vbn VPWR VGND stg
+X5  s4 s5  vbp vbn VPWR VGND stg
+X6  s5 s6  vbp vbn VPWR VGND stg
+X7  s6 s7  vbp vbn VPWR VGND stg
+X8  s7 s8  vbp vbn VPWR VGND stg
+X9  s8 s9  vbp vbn VPWR VGND stg
+X10 s9 s10 vbp vbn VPWR VGND stg
+XBP1 b1 s0 VPWR VPWR sg13_lv_pmos w=0.5u l=0.13u
+XBN1 b1 s0 VGND VGND sg13_lv_nmos w=0.3u l=0.13u
+XBP2 clk_out b1 VPWR VPWR sg13_lv_pmos w=2.0u l=0.13u
+XBN2 clk_out b1 VGND VGND sg13_lv_nmos w=1.0u l=0.13u
+.ends

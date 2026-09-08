@@ -1,0 +1,26 @@
+* bias node noise + impedance at code 16
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=27
+.include /work/analog/out/verify/tt_analog_ring.pex.exposed.spice
+Vdd VPWR 0 1.2
+Vc0 code[0] 0 0
+Vc1 code[1] 0 0
+Vc2 code[2] 0 0
+Vc3 code[3] 0 0
+Vc4 code[4] 0 1.2
+Vc5 code[5] 0 0
+Vc6 code[6] 0 0
+Vc7 code[7] 0 0
+Ven enable 0 0
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR 0 vbp vbn tt_analog_ring
+Cload clk_out 0 15f
+Iac 0 vbp dc 0 ac 1
+.control
+op
+ac dec 10 1k 10G
+wrdata z.txt vm(vbp)
+noise v(vbp) Iac dec 10 1k 10G
+setplot noise1
+wrdata sv.txt onoise_spectrum
+.endc
+.end

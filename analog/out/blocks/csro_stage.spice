@@ -1,0 +1,14 @@
+** sch_path: /work/analog/xschem/csro_stage.sch
+**.subckt csro_stage in out vbp VPWR vbn VGND
+*.ipin in
+*.opin out
+*.ipin vbp
+*.iopin VPWR
+*.ipin vbn
+*.iopin VGND
+XMPS net1 vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1 m=1 mm_ok=1
+XMP out in net1 VPWR sg13_lv_pmos w=0.5u l=0.13u ng=1 m=1 mm_ok=1
+XMN out in net2 VGND sg13_lv_nmos w=0.3u l=0.13u ng=1 m=1 mm_ok=1
+XMNS net2 vbn VGND VGND sg13_lv_nmos w=0.5u l=0.5u ng=1 m=1 mm_ok=1
+**.ends
+.end

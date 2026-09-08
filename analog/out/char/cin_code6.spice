@@ -1,0 +1,21 @@
+* tt_analog_ring characterisation
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.include /work/analog/spice/tt_analog_ring.spice
+Vdd VPWR 0 1.2
+Vcode0 code[0] 0 0
+Vcode1 code[1] 0 0
+Vcode2 code[2] 0 0
+Vcode3 code[3] 0 0
+Vcode4 code[4] 0 0
+Vcode5 code[5] 0 0
+Vin code[6] 0 pwl(0 0 1n 0 201n 1.2 300n 1.2)
+Vcode7 code[7] 0 0
+Venable enable 0 1.2
+Xdut code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] enable clk_out VPWR 0 tt_analog_ring
+Cl clk_out 0 0.01p
+.control
+tran 50p 250n
+let q = integ(-i(Vin))
+meas tran qtot find q at=201n
+.endc
+.end

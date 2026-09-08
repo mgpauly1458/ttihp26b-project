@@ -1,0 +1,1012 @@
+*********************************************************
+*** NGSPICE file created by KLayout-PEX 0.3.15
+*** -----------------------------------------------------
+***     Extraction Engine: KPEX/2.5D
+***     Technology: ihp_sg13g2
+***     Date: 2026-09-08 00:25:19
+*********************************************************
+
+.SUBCKT tt_analog_ring VGND VPWR b1 clk_out code[0] code[1] code[2] code[3]
++ code[4] code[5] code[6] code[7] enable s0 s1 s10 s2 s3 s4 s5 s6 s7 s8 s9 vbn
++ vbp
+M$1 vbp code[0] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.1005P
++ PS=1.34U PD=1.34U rfmode=0
+M$2 vbp code[1] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$3 VGND code[1] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$4 vbp VPWR VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P PS=1.34U
++ PD=0.74U rfmode=0
+M$5 VGND VPWR vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P PS=0.74U
++ PD=1.34U rfmode=0
+M$6 clk_out b1 VPWR VPWR sg13_lv_pmos L=0.13U W=2U AS=0.68P AD=0.68P PS=4.68U
++ PD=4.68U rfmode=0
+M$7 clk_out b1 VGND VGND sg13_lv_nmos L=0.13U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$8 s3 s2 \$126 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$9 s2 s1 \$125 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$10 b1 s10 VPWR VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$11 s6 s5 \$128 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$12 s10 s9 \$133 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$13 s5 s4 \$129 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$14 s9 s8 \$132 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$15 s7 s6 \$130 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$16 s4 s3 \$127 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$17 s8 s7 \$131 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$18 s1 s0 \$124 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$19 s1 s0 \$71 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$20 b1 s10 VGND VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$21 s7 s6 \$72 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$22 s8 s7 \$70 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$23 s3 s2 \$77 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$24 s2 s1 \$75 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$25 s6 s5 \$73 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$26 s10 s9 \$67 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$27 s4 s3 \$76 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$28 s9 s8 \$69 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$29 s5 s4 \$74 VGND sg13_lv_nmos L=0.13U W=0.3U AS=0.102P AD=0.102P PS=1.28U
++ PD=1.28U rfmode=0
+M$30 s0 enable \$122 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.17P AD=0.095P
++ PS=1.68U PD=0.88U rfmode=0
+M$31 \$122 s10 s0 VPWR sg13_lv_pmos L=0.13U W=0.5U AS=0.095P AD=0.17P PS=0.88U
++ PD=1.68U rfmode=0
+M$32 \$I1005 enable \$68 VGND sg13_lv_nmos L=0.13U W=0.6U AS=0.204P AD=0.114P
++ PS=1.88U PD=0.98U rfmode=0
+M$33 s0 s10 \$I1005 VGND sg13_lv_nmos L=0.13U W=0.6U AS=0.114P AD=0.204P
++ PS=0.98U PD=1.88U rfmode=0
+M$34 vbn vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$35 \$72 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$36 \$77 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$37 \$68 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$38 \$75 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$39 \$73 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$40 \$69 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$41 \$76 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$42 \$67 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$43 \$71 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$44 \$74 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$45 \$70 vbn VGND VGND sg13_lv_nmos L=0.5U W=0.5U AS=0.17P AD=0.17P PS=1.68U
++ PD=1.68U rfmode=0
+M$46 vbn vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$47 \$130 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$48 \$122 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$49 \$128 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$50 \$125 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$51 \$124 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$52 \$127 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$53 \$126 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$54 \$132 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$55 \$129 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$56 \$133 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$57 \$131 vbp VPWR VPWR sg13_lv_pmos L=0.5U W=1U AS=0.34P AD=0.34P PS=2.68U
++ PD=2.68U rfmode=0
+M$58 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.68P AD=0.38P PS=4.68U
++ PD=2.38U rfmode=0
+M$59 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$60 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$61 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$62 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$63 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$64 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$65 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$66 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$67 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$68 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$69 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$70 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$71 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$72 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$73 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$74 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$75 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$76 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$77 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$78 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$79 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$80 vbp vbp VPWR VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.38P PS=2.38U
++ PD=2.38U rfmode=0
+M$81 VPWR vbp vbp VPWR sg13_lv_pmos L=0.5U W=2U AS=0.38P AD=0.68P PS=2.38U
++ PD=4.68U rfmode=0
+M$82 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$83 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$84 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$85 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$86 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$87 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$88 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$89 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$90 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$91 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$92 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$93 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$94 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$95 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$96 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$97 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$98 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$99 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$100 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$101 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$102 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$103 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$104 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$105 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$106 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$107 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$108 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$109 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$110 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$111 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$112 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$113 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$114 vbp code[3] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$115 VGND code[3] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$116 vbp code[3] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$117 VGND code[3] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$118 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$119 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$120 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$121 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$122 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$123 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$124 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$125 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$126 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$127 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$128 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$129 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$130 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$131 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$132 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$133 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$134 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$135 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$136 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$137 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$138 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$139 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$140 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$141 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$142 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$143 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$144 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$145 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$146 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$147 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$148 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$149 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$150 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$151 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$152 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$153 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$154 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$155 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$156 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$157 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$158 vbp code[2] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$159 VGND code[2] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$160 vbp code[2] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$161 VGND code[2] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$162 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$163 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$164 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$165 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$166 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$167 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$168 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$169 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$170 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$171 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$172 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$173 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$174 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$175 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$176 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$177 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$178 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$179 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$180 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$181 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$182 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$183 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$184 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$185 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$186 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$187 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$188 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$189 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$190 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$191 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$192 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$193 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$194 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$195 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$196 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$197 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$198 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$199 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$200 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$201 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$202 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$203 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$204 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$205 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$206 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$207 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$208 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$209 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$210 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$211 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$212 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$213 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$214 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$215 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$216 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$217 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$218 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$219 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$220 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$221 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$222 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$223 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$224 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$225 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$226 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$227 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$228 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$229 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$230 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$231 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$232 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$233 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$234 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$235 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$236 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$237 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$238 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$239 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$240 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$241 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$242 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$243 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$244 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$245 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$246 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$247 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$248 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$249 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$250 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$251 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$252 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$253 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$254 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$255 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$256 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$257 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$258 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$259 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$260 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$261 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$262 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$263 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$264 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$265 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$266 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$267 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$268 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$269 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$270 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$271 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$272 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$273 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$274 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$275 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$276 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$277 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$278 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$279 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$280 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$281 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$282 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$283 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$284 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$285 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$286 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$287 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$288 vbp code[7] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$289 VGND code[7] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$290 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$291 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$292 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$293 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$294 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$295 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$296 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$297 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$298 vbp code[3] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$299 VGND code[3] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$300 vbp code[3] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$301 VGND code[3] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$302 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$303 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$304 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$305 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$306 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$307 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$308 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$309 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$310 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$311 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$312 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$313 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$314 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$315 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$316 vbp code[4] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$317 VGND code[4] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$318 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$319 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$320 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$321 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$322 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$323 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$324 vbp code[5] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$325 VGND code[5] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$326 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$327 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$328 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$329 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+M$330 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.1005P AD=0.0555P
++ PS=1.34U PD=0.74U rfmode=0
+M$331 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$332 vbp code[6] VGND VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.0555P
++ PS=0.74U PD=0.74U rfmode=0
+M$333 VGND code[6] vbp VGND sg13_lv_nmos L=8U W=0.15U AS=0.0555P AD=0.1005P
++ PS=0.74U PD=1.34U rfmode=0
+Cext_1 \$122 \$68 3.55077a
+Cext_2 \$122 enable 49.7938a
+Cext_3 \$122 s0 121.127a
+Cext_4 \$122 s10 21.4871a
+Cext_5 \$122 vbn 0.204793a
+Cext_6 \$122 vbp 29.8022a
+Cext_7 \$122 VGND 2.68005a
+Cext_8 \$122 VPWR 166.113a
+Cext_9 \$122 VSUBS 141.491a
+Cext_10 \$124 s0 15.1402a
+Cext_11 \$124 s1 55.1192a
+Cext_12 \$124 s10 4.90318a
+Cext_13 \$124 vbn 0.204793a
+Cext_14 \$124 vbp 25.7215a
+Cext_15 \$124 VGND 0.912863a
+Cext_16 \$124 VPWR 70.0244a
+Cext_17 \$124 VSUBS 71.0801a
+Cext_18 \$125 s1 15.1402a
+Cext_19 \$125 s10 4.90318a
+Cext_20 \$125 s2 55.1192a
+Cext_21 \$125 vbn 0.204793a
+Cext_22 \$125 vbp 25.7215a
+Cext_23 \$125 VGND 0.912863a
+Cext_24 \$125 VPWR 70.0244a
+Cext_25 \$125 VSUBS 71.0801a
+Cext_26 \$126 s10 4.81458a
+Cext_27 \$126 s2 15.1402a
+Cext_28 \$126 s3 55.1192a
+Cext_29 \$126 vbn 0.204793a
+Cext_30 \$126 vbp 25.8001a
+Cext_31 \$126 VGND 1.13341a
+Cext_32 \$126 VPWR 71.3847a
+Cext_33 \$126 VSUBS 71.0801a
+Cext_34 \$127 s10 4.90318a
+Cext_35 \$127 s3 15.1402a
+Cext_36 \$127 s4 55.1192a
+Cext_37 \$127 vbn 0.204793a
+Cext_38 \$127 vbp 25.8468a
+Cext_39 \$127 VGND 0.912863a
+Cext_40 \$127 VPWR 70.0244a
+Cext_41 \$127 VSUBS 71.0801a
+Cext_42 \$128 s10 4.90318a
+Cext_43 \$128 s5 15.1402a
+Cext_44 \$128 s6 55.1192a
+Cext_45 \$128 vbn 0.204793a
+Cext_46 \$128 vbp 25.8468a
+Cext_47 \$128 VGND 0.912863a
+Cext_48 \$128 VPWR 70.0244a
+Cext_49 \$128 VSUBS 71.0801a
+Cext_50 \$129 s10 4.90318a
+Cext_51 \$129 s4 15.1402a
+Cext_52 \$129 s5 55.1192a
+Cext_53 \$129 vbn 0.204793a
+Cext_54 \$129 vbp 25.8468a
+Cext_55 \$129 VGND 0.912863a
+Cext_56 \$129 VPWR 70.0244a
+Cext_57 \$129 VSUBS 71.0801a
+Cext_58 \$130 s10 4.90318a
+Cext_59 \$130 s6 15.1402a
+Cext_60 \$130 s7 55.1192a
+Cext_61 \$130 vbn 0.204793a
+Cext_62 \$130 vbp 25.6806a
+Cext_63 \$130 VGND 0.912863a
+Cext_64 \$130 VPWR 70.3666a
+Cext_65 \$130 VSUBS 71.0801a
+Cext_66 \$131 s10 4.90318a
+Cext_67 \$131 s7 15.1402a
+Cext_68 \$131 s8 55.1192a
+Cext_69 \$131 vbn 0.204793a
+Cext_70 \$131 vbp 25.8468a
+Cext_71 \$131 VGND 0.912863a
+Cext_72 \$131 VPWR 70.0244a
+Cext_73 \$131 VSUBS 71.0801a
+Cext_74 \$132 s10 4.90318a
+Cext_75 \$132 s8 15.1402a
+Cext_76 \$132 s9 55.1192a
+Cext_77 \$132 vbn 0.204793a
+Cext_78 \$132 vbp 25.8468a
+Cext_79 \$132 VGND 0.912863a
+Cext_80 \$132 VPWR 70.0244a
+Cext_81 \$132 VSUBS 71.0801a
+Cext_82 \$133 s10 60.0027a
+Cext_83 \$133 s9 15.1402a
+Cext_84 \$133 vbp 26.1729a
+Cext_85 \$133 VGND 0.907499a
+Cext_86 \$133 VPWR 72.6623a
+Cext_87 \$133 VSUBS 71.0801a
+Cext_88 \$67 s10 39.0833a
+Cext_89 \$67 s9 22.5715a
+Cext_90 \$67 vbn 12.9857a
+Cext_91 \$67 vbp 18.2475a
+Cext_92 \$67 VGND 82.3152a
+Cext_93 \$67 VSUBS 32.6825a
+Cext_94 \$68 \$I1005 64.9264a
+Cext_95 \$68 enable 9.41952a
+Cext_96 \$68 vbn 16.4473a
+Cext_97 \$68 vbp 0.144348a
+Cext_98 \$68 VGND 86.0631a
+Cext_99 \$68 VPWR 0.107675a
+Cext_100 \$68 VSUBS 48.6973a
+Cext_101 \$69 s8 22.5715a
+Cext_102 \$69 s9 39.0833a
+Cext_103 \$69 vbn 14.0739a
+Cext_104 \$69 vbp 0.334631a
+Cext_105 \$69 VGND 83.232a
+Cext_106 \$69 VSUBS 32.6825a
+Cext_107 \$70 s7 22.5715a
+Cext_108 \$70 s8 39.0833a
+Cext_109 \$70 vbn 14.0739a
+Cext_110 \$70 VGND 83.232a
+Cext_111 \$70 VSUBS 32.6825a
+Cext_112 \$71 s0 22.5715a
+Cext_113 \$71 s1 39.0833a
+Cext_114 \$71 vbn 14.0739a
+Cext_115 \$71 VGND 83.232a
+Cext_116 \$71 VSUBS 32.7723a
+Cext_117 \$72 s6 22.4762a
+Cext_118 \$72 s7 39.0833a
+Cext_119 \$72 vbn 14.0739a
+Cext_120 \$72 VGND 83.9332a
+Cext_121 \$72 VSUBS 32.6825a
+Cext_122 \$73 s5 22.5715a
+Cext_123 \$73 s6 39.0833a
+Cext_124 \$73 vbn 14.0739a
+Cext_125 \$73 VGND 83.232a
+Cext_126 \$73 VSUBS 32.6825a
+Cext_127 \$74 s4 22.5715a
+Cext_128 \$74 s5 39.0833a
+Cext_129 \$74 vbn 14.0739a
+Cext_130 \$74 VGND 83.232a
+Cext_131 \$74 VSUBS 32.6825a
+Cext_132 \$75 s1 22.5715a
+Cext_133 \$75 s2 39.0833a
+Cext_134 \$75 vbn 14.0739a
+Cext_135 \$75 VGND 83.232a
+Cext_136 \$75 VSUBS 32.6825a
+Cext_137 \$76 s3 22.5715a
+Cext_138 \$76 s4 39.0833a
+Cext_139 \$76 vbn 14.0739a
+Cext_140 \$76 VGND 83.232a
+Cext_141 \$76 VSUBS 32.6825a
+Cext_142 \$77 s2 22.5715a
+Cext_143 \$77 s3 39.0833a
+Cext_144 \$77 vbn 14.0739a
+Cext_145 \$77 VGND 85.2414a
+Cext_146 \$77 VSUBS 32.6825a
+Cext_147 \$I1005 enable 5.91922a
+Cext_148 \$I1005 s0 64.2969a
+Cext_149 \$I1005 s10 5.91922a
+Cext_150 \$I1005 vbn 0.655726a
+Cext_151 \$I1005 VGND 14.7347a
+Cext_152 \$I1005 VPWR 0.123057a
+Cext_153 \$I1005 VSUBS 12.2928a
+Cext_154 b1 clk_out 213.583a
+Cext_155 b1 s10 275.475a
+Cext_156 b1 vbp 8.86504a
+Cext_157 clk_out s10 1.73287a
+Cext_158 clk_out s8 0.130333a
+Cext_159 clk_out s9 0.13783a
+Cext_160 clk_out vbn 1.11368a
+Cext_161 clk_out vbp 8.41073a
+Cext_162 code[0] code[1] 3.81552f
+Cext_163 code[0] code[2] 34.6197a
+Cext_164 code[0] code[3] 34.897a
+Cext_165 code[0] code[4] 69.5166a
+Cext_166 code[0] code[5] 139.033a
+Cext_167 code[0] code[6] 278.067a
+Cext_168 code[0] code[7] 556.133a
+Cext_169 code[0] enable 13.4179a
+Cext_170 code[0] vbp 426.112a
+Cext_171 code[1] code[2] 3.37646f
+Cext_172 code[1] code[3] 18.3064a
+Cext_173 code[1] code[4] 36.6128a
+Cext_174 code[1] code[5] 73.2255a
+Cext_175 code[1] code[6] 146.451a
+Cext_176 code[1] code[7] 293.623a
+Cext_177 code[1] enable 21.7603a
+Cext_178 code[1] vbp 699.357a
+Cext_179 code[2] code[3] 5.49861f
+Cext_180 code[2] code[4] 36.3537a
+Cext_181 code[2] code[5] 72.7074a
+Cext_182 code[2] code[6] 145.415a
+Cext_183 code[2] code[7] 291.55a
+Cext_184 code[2] enable 6.48522a
+Cext_185 code[2] vbn 14.0185a
+Cext_186 code[2] vbp 1.42547f
+Cext_187 code[3] code[4] 4.52549f
+Cext_188 code[3] code[5] 72.7074a
+Cext_189 code[3] code[6] 145.415a
+Cext_190 code[3] code[7] 291.55a
+Cext_191 code[3] enable 19.9332a
+Cext_192 code[3] s0 0.845591a
+Cext_193 code[3] s1 0.969857a
+Cext_194 code[3] s10 0.324778a
+Cext_195 code[3] s2 0.969857a
+Cext_196 code[3] s3 0.969857a
+Cext_197 code[3] s4 0.969857a
+Cext_198 code[3] s5 0.969857a
+Cext_199 code[3] s6 0.969857a
+Cext_200 code[3] s7 0.969857a
+Cext_201 code[3] s8 0.969857a
+Cext_202 code[3] s9 0.124266a
+Cext_203 code[3] vbn 37.7485a
+Cext_204 code[3] vbp 2.82733f
+Cext_205 code[4] code[5] 4.4125f
+Cext_206 code[4] code[6] 145.415a
+Cext_207 code[4] code[7] 291.55a
+Cext_208 code[4] enable 31.8533a
+Cext_209 code[4] vbp 5.58092f
+Cext_210 code[5] code[6] 4.1716f
+Cext_211 code[5] code[7] 291.55a
+Cext_212 code[5] enable 87.7799a
+Cext_213 code[5] vbp 11.1628f
+Cext_214 code[6] code[7] 3.67563f
+Cext_215 code[6] enable 279.41a
+Cext_216 code[6] vbp 22.3257f
+Cext_217 code[7] enable 1.62863f
+Cext_218 code[7] vbp 44.6294f
+Cext_219 enable s0 92.9916a
+Cext_220 enable s10 193.456a
+Cext_221 enable vbn 67.5341a
+Cext_222 enable vbp 2.48807f
+Cext_223 s0 s1 135.542a
+Cext_224 s0 s10 124.35a
+Cext_225 s0 vbn 230.397a
+Cext_226 s0 vbp 109.071a
+Cext_227 s1 s10 31.8462a
+Cext_228 s1 s2 142.784a
+Cext_229 s1 vbn 216.419a
+Cext_230 s1 vbp 121.15a
+Cext_231 s10 s2 27.8201a
+Cext_232 s10 s3 27.8645a
+Cext_233 s10 s4 27.8645a
+Cext_234 s10 s5 27.8645a
+Cext_235 s10 s6 27.7955a
+Cext_236 s10 s7 27.8596a
+Cext_237 s10 s8 27.8645a
+Cext_238 s10 s9 229.733a
+Cext_239 s10 vbn 47.631a
+Cext_240 s10 vbp 3.75793f
+Cext_241 s2 s3 142.784a
+Cext_242 s2 vbn 216.419a
+Cext_243 s2 vbp 121.067a
+Cext_244 s3 s4 142.784a
+Cext_245 s3 vbn 216.419a
+Cext_246 s3 vbp 121.416a
+Cext_247 s4 s5 142.784a
+Cext_248 s4 vbn 216.419a
+Cext_249 s4 vbp 121.416a
+Cext_250 s5 s6 142.784a
+Cext_251 s5 vbn 216.419a
+Cext_252 s5 vbp 121.416a
+Cext_253 s6 s7 142.748a
+Cext_254 s6 vbn 216.095a
+Cext_255 s6 vbp 121.424a
+Cext_256 s7 s8 142.748a
+Cext_257 s7 vbn 216.376a
+Cext_258 s7 vbp 121.847a
+Cext_259 s8 s9 142.748a
+Cext_260 s8 vbn 216.419a
+Cext_261 s8 vbp 124.244a
+Cext_262 s9 vbn 173.086a
+Cext_263 s9 vbp 141.127a
+Cext_264 vbn vbp 7.7347f
+Cext_265 VGND b1 160.683a
+Cext_266 VGND clk_out 407.411a
+Cext_267 VGND code[0] 1.1599f
+Cext_268 VGND code[1] 978.041a
+Cext_269 VGND code[2] 1.47504f
+Cext_270 VGND code[3] 2.76026f
+Cext_271 VGND code[4] 5.11581f
+Cext_272 VGND code[5] 9.67284f
+Cext_273 VGND code[6] 18.9192f
+Cext_274 VGND code[7] 37.9115f
+Cext_275 VGND enable 455.269a
+Cext_276 VGND s0 97.1975a
+Cext_277 VGND s1 90.919a
+Cext_278 VGND s10 107.069a
+Cext_279 VGND s2 92.5257a
+Cext_280 VGND s3 90.7772a
+Cext_281 VGND s4 90.919a
+Cext_282 VGND s5 90.919a
+Cext_283 VGND s6 97.1117a
+Cext_284 VGND s7 100.011a
+Cext_285 VGND s8 90.919a
+Cext_286 VGND s9 88.4873a
+Cext_287 VGND vbn 1.24245f
+Cext_288 VGND vbp 95.45f
+Cext_289 VGND VPWR 3.24064f
+Cext_290 VGND VSUBS 68.4477f
+Cext_291 VPWR b1 125.786a
+Cext_292 VPWR clk_out 249.958a
+Cext_293 VPWR code[0] 59.5352a
+Cext_294 VPWR code[1] 39.7505a
+Cext_295 VPWR code[2] 1.70794a
+Cext_296 VPWR enable 654.652a
+Cext_297 VPWR s0 15.165a
+Cext_298 VPWR s1 48.4258a
+Cext_299 VPWR s10 295.534a
+Cext_300 VPWR s2 48.2908a
+Cext_301 VPWR s3 48.4258a
+Cext_302 VPWR s4 48.4258a
+Cext_303 VPWR s5 48.4258a
+Cext_304 VPWR s6 51.1485a
+Cext_305 VPWR s7 51.3466a
+Cext_306 VPWR s8 48.4258a
+Cext_307 VPWR s9 47.8534a
+Cext_308 VPWR vbn 153.546a
+Cext_309 VPWR vbp 5.24451f
+Cext_310 VPWR VSUBS 18.745f
+Cext_311 VSUBS b1 856.979a
+Cext_312 VSUBS clk_out 678.599a
+Cext_313 VSUBS code[0] 1.9296f
+Cext_314 VSUBS code[1] 2.73911f
+Cext_315 VSUBS code[2] 4.58615f
+Cext_316 VSUBS code[3] 9.08909f
+Cext_317 VSUBS code[4] 15.1639f
+Cext_318 VSUBS code[5] 29.8722f
+Cext_319 VSUBS code[6] 59.3723f
+Cext_320 VSUBS code[7] 120.135f
+Cext_321 VSUBS enable 4.79984f
+Cext_322 VSUBS s0 760.019a
+Cext_323 VSUBS s1 738.564a
+Cext_324 VSUBS s10 1.83226f
+Cext_325 VSUBS s2 736.105a
+Cext_326 VSUBS s3 736.105a
+Cext_327 VSUBS s4 736.105a
+Cext_328 VSUBS s5 736.105a
+Cext_329 VSUBS s6 736.071a
+Cext_330 VSUBS s7 735.881a
+Cext_331 VSUBS s8 735.754a
+Cext_332 VSUBS s9 732.77a
+Cext_333 VSUBS vbn 5.4132f
+Cext_334 VSUBS vbp 33.0044f
+.ENDS tt_analog_ring

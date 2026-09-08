@@ -1,0 +1,35 @@
+* NAND as inverter: a=1, pulse b
+.lib /foss/pdks/ihp-sg13g2/libs.tech/ngspice/models/cornerMOSlv.lib mos_tt
+.option temp=125
+.include /work/analog/out/blocks/blocks.spice
+Vdd VPWR 0 1.32
+Vc0 code[0] 0 1.32
+Vc1 code[1] 0 1.32
+Vc2 code[2] 0 1.32
+Vc3 code[3] 0 1.32
+Vc4 code[4] 0 1.32
+Vc5 code[5] 0 1.32
+Vc6 code[6] 0 1.32
+Vc7 code[7] 0 1.32
+Xdac code[0] code[1] code[2] code[3] code[4] code[5] code[6] code[7] vbp VPWR 0 csro_dac
+XMPD vbp vbp VPWR VPWR sg13_lv_pmos w=48u l=0.5u ng=24
+XMPM vbn vbp VPWR VPWR sg13_lv_pmos w=1u l=0.5u ng=1
+XMND vbn vbn 0 0 sg13_lv_nmos w=0.5u l=0.5u ng=1
+Va a 0 1.32
+Vin p 0 pulse(0 1.32 1.506e-09 50p 50p 3.012e-09 6.024e-09)
+Xdrv p b vbp vbn VPWR 0 csro_stage
+Xnand a b y vbp vbn VPWR 0 csro_nand
+Xload y z vbp vbn VPWR 0 csro_stage
+Xload2 z zz vbp vbn VPWR 0 csro_stage
+.control
+tran 3.012e-12 1.807e-08
+let vh = 1.32/2
+meas tran tin_f when v(b)=vh fall=2
+meas tran tout_r when v(y)=vh rise=2
+meas tran tin_r when v(b)=vh rise=2
+meas tran tout_f when v(y)=vh fall=2
+let tplh = tout_r - tin_f
+let tphl = tout_f - tin_r
+echo "tplh=$&tplh tphl=$&tphl"
+.endc
+.end
