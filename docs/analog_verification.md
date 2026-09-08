@@ -332,8 +332,66 @@ the ring frequency (1 / 22 delays) runs 8 to 15 % above the whole-block
 transient at every corner, the difference being the NAND and the buffer's
 load on stage 10.
 
-**What would change the design, in order:** larger MND/MPM for the bias
-flicker noise; dummies and a common-centroid row order in the DAC for the
-127-128 carry margin; a cascode on the DAC output for the compression and
-the supply pushing. None of the three is needed for the block to do what
-the tile asks of it.
+**6. Post-layout: the parasitics are not negligible, and nothing breaks.**
+kpex finds 721 fF of parasitic capacitance in the macro. Two thirds of it
+is on the DAC's code buses and `vbp` bars, where it adds 16 to 90 % to
+gate loads that are DC controls (bus settling through a 500 ohm driver goes
+from 1.5 to 1.8 ns on `code[7]`); the shipped Liberty carries the new pin
+capacitances. The part that matters is small in absolute terms and large in
+proportion: each stage output carries 1.7 fF of wiring against about 1 fF
+of device, so every stage delay doubles and the ring runs at half its
+pre-layout frequency at every code and corner (2.0 / 18 / 105 / 164 MHz at
+codes 0 / 16 / 128 / 255, typical; 90 to 275 MHz at code 255 over the
+signoff corners). The pre/post figure is `analog_ring_sim_post.png`. The
+ring-induced ripple on the bias nodes roughly doubles to 1.6 mV on `vbp`
+and stays at 5 to 8 mV on `vbn`. The post-layout corner, Monte Carlo and
+noise runs (appendix, "ring_post") repeat the pre-layout conclusions:
+monotonic everywhere, stopped ring holds, same relative spreads. The RTL
+model, the cocotb tests, the tile's constraints and the datasheet numbers
+were all moved to the post-layout values; the divider's tap rule only gets
+easier. The lesson for the layout is in `analog_layout_notes.md`: the
+minimum-size inverters should have been two to three times wider.
+
+**7. The tile around it: bounded, and one number to remember.** Injected
+supply ripple, ground bounce, random supply noise, a supply step and
+crosstalk onto every pin, pre and post layout (appendix, "env" and
+"env_post"):
+
+- *Supply is the sensitivity.* A 50 mV step moves the frequency by 3.4 to
+  3.9 % at code 16 and 7.8 to 7.9 % at code 255, within tens of ns, as the
+  static pushing predicted; there is no loop filter, the ring follows the
+  supply at once. A 50 MHz ripple shifts the *mean* frequency by tens of
+  ppm at 10 mV p-p, 140 to 350 ppm at 30 mV and 0.16 to 0.4 % at 100 mV
+  (the counter reads the mean; the shift is the curvature of f against
+  VDD), and adds 35 to 130 ps of cycle-to-cycle jitter at 30 mV, which the
+  reciprocal count averages to a few ps over 25 periods. 10 mV rms of
+  broadband supply noise: +50 to +500 ppm and 10 to 30 ps of jitter. 30 mV
+  p-p ground bounce: -140 to -350 ppm, 30 to 130 ps jitter. So: measure
+  with the digital side quiet (only the reference clock running, the code
+  changed between measurements), and expect a few hundred ppm of
+  supply-driven scatter otherwise. The pushing number converts any
+  observed shift back into millivolts.
+- *The inputs do not care.* A full-swing 50 MHz aggressor through 20 fF
+  moves a code gate by 33 to 60 mV around its rail and the frequency by
+  under 30 ppm; onto `enable` it dips the running ring's enable to 1.14 V
+  (under 80 ppm) and, with the ring stopped, lifts enable to 60 mV: the
+  ring stays stopped. A 5 ns enable edge starts the ring cleanly with no
+  short early period.
+- *The output is the one thing to route with care.* `clk_out` drives 15 fF
+  through a 2 um / 1 um inverter. Aggressor coupling of 5, 10 and 20 fF
+  leaves it clean at both codes on both netlists (undershoot to -0.1 V,
+  no extra edge at the divider's 0.6 V threshold); at 30 fF the
+  post-layout run at code 16 shows one extra edge per run (the dip crosses
+  the threshold; pre-layout it stopped at 0.17 V short). 30 fF is an
+  aggressor running beside `clk_out` at minimum spacing for a few hundred
+  microns; the hardened tile's route to the mux is tens of microns and
+  the flow's routing keeps other nets off the macro. It is nevertheless
+  the sharpest edge in this block: a second version would give the output
+  buffer a wider last stage.
+
+**What would change the design, in order:** wider stage inverters (the
+post-layout halving); larger MND/MPM for the bias flicker noise; a wider
+output stage against crosstalk; dummies and a common-centroid row order in
+the DAC for the 127-128 carry margin; a cascode on the DAC output for the
+compression and the supply pushing. None of them is needed for the block
+to do what the tile asks of it.

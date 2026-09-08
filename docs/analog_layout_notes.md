@@ -184,6 +184,18 @@ starve devices set the current, so the frequency at a given code hardly
 changes with inverter width once the wiring dominates), and shorten the
 output straps by moving the jog slot next to the NMOS strip.
 
+**Concern: the output is a 15 fF node next to a digital tile.** `clk_out`
+leaves on Metal3 through a 2 um / 1 um inverter into what is essentially
+the mux's gate. Injected crosstalk of 20 fF from a full-swing 50 MHz
+aggressor leaves it clean; 30 fF puts one extra edge per run at the
+divider's threshold at low codes post-layout (`analog_verification.md`,
+section 7). *Assessment:* 30 fF is a neighbour at minimum spacing for a
+few hundred microns, and the hardened tile routes `clk_out` tens of
+microns to the mux with nothing else allowed over the macro; the halo and
+the obstruction layers in the LEF are what keep it that way. *Mitigation
+next time:* a wider last buffer stage, or a Schmitt-type receiver in the
+divider.
+
 **Concern: flicker noise of the small bias devices.** MND and MPM are single
 0.5 um and 1 um fingers of L = 0.5 um. Their flicker noise appears directly
 on `vbn`: the verification finds about 110-125 uV rms of slow (1 kHz-1 MHz)

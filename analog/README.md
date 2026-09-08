@@ -99,7 +99,7 @@ lvs-sch` proves they match the GDS too.
 
 ## Simulated behaviour
 
-Typical corner, 1.2 V, 27 °C, `clk_out` into 15 fF (`make sim`):
+**Pre-layout**, typical corner, 1.2 V, 27 °C, `clk_out` into 15 fF (`make sim`):
 
 | code | f / MHz | supply current / µA |
 |---|---|---|
@@ -127,11 +127,20 @@ line. Two things do this, both physical and both worth measuring:
 - **The ring has a delay floor.** Above ~15 µA per stage the starve devices
   are no longer the bottleneck and the inverters' own delay takes over.
 
+**Post-layout the ring is half as fast.** With the extracted parasitics
+(`make pex`; kpex 2.5D) every stage output carries about 1.7 fF of wiring
+against about 1 fF of minimum-size devices, so the delay doubles at every
+code and corner: 2.0 MHz at code 0, 18 MHz at 16, 105 MHz at 128, 164 MHz at
+255 (typical), 90 MHz at ss/125 °C/1.08 V and 275 MHz at ff/-40 °C/1.32 V
+at code 255. The shape of the curve, its monotonicity and the noise picture
+do not change. `docs/analog_ring_sim_post.png` puts the two side by side;
+the RTL model, the Liberty file and the tile's constraints use the
+post-layout numbers.
+
 Over the full PVT box (5 process corners, -40 to 125 °C, 1.08 to 1.32 V)
-the frequency at any code spans a factor of about 3: code 255 runs 184 MHz
-at ss/125 °C/1.08 V and 544 MHz at ff/-40 °C/1.32 V; die-to-die sigma is
+the frequency at any code spans a factor of about 3; die-to-die sigma is
 about 5.5 %. The map stays monotonic at every corner and in every
-Monte Carlo sample (`docs/analog_verification.md`).
+Monte Carlo sample, pre and post layout (`docs/analog_verification.md`).
 
 The code-to-frequency map is monotonic throughout, which is what the
 instrument needs. The compression is a known, simulated shape that the
@@ -229,9 +238,14 @@ capacitances it carries move little with corner.
 
 ## What the generator does not do yet
 
-- **Parasitic extraction.** The row is dense enough that wire capacitance
-  will shift the frequency by some percent; kpex is in the container and
-  the previous block's notes on `main` describe the shape of a `make pex`.
+- **Parasitic resistance.** kpex extracts capacitance (`make pex`, and it
+  is simulated: `make sim-post`, `make verify-ring-post`,
+  `make verify-env-post`). The DAC's Metal1 bars carry tens of microamps;
+  their resistance is argued, not simulated (`docs/analog_layout_notes.md`).
+- **Wider stage inverters.** The extracted wiring on the stage outputs is
+  as large as the minimum-size devices driving it, which is why the
+  post-layout ring is half as fast. Wider inverters or shorter output
+  straps are the first layout change for a second version.
 - **The schematic is generated.** `xschem/make_sch.py` writes the sheets so
   the ten stages and eight DAC legs land on grid; edit the .sch files
   directly if you prefer, but then stop running `make sch`.

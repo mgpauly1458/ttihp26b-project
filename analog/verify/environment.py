@@ -33,9 +33,11 @@ Cases
   enable          the same aggressor onto `enable`: with the ring stopped
                   (does it stay stopped? clk_out level) and running (period
                   disturbance). Also a slow 5 ns enable edge: clean start?
-  output          the aggressor coupled through 30 fF onto clk_out with its
-                  15 fF load: extra edges at the divider's threshold would
-                  be counted as ring cycles.
+  output          the aggressor coupled through 5, 10, 20 and 30 fF onto
+                  clk_out with its 15 fF load: extra edges at the divider's
+                  threshold would be counted as ring cycles. 30 fF is an
+                  aggressor running beside clk_out at minimum spacing for
+                  hundreds of microns; the real route is tens.
 
 What the tile's multiplexer cannot do
   Tiny Tapeout's mux passes the pins; the design's register file latches a
@@ -51,14 +53,18 @@ import os
 import common as C
 
 CODES = [16, 255]
-N_RUN = 300
+N_RUN = 200
+XOUT_FF = [5, 10, 20, 30]     # coupling onto clk_out, fF
 VDD = 1.2
 CLOAD = "15f"
 
 
 def deck(netlist, code, case, params, n_run=N_RUN):
     T = 1 / C.f_nom(code)
-    tstop, step = n_run * T, T / 150
+    # the same maximum step for every case of a code: the trnoise source forces
+    # 100 ps steps, and a reference run stepped differently would differ by
+    # ~0.1 % from numerics alone
+    tstop, step = n_run * T, min(T / 150, 50e-12)
     t_settle = 20 * T
     vpwr, vgnd = "VPWR", "0"
     src = [f"Vdd VPWR 0 dc {VDD}"]
@@ -76,25 +82,29 @@ def deck(netlist, code, case, params, n_run=N_RUN):
         a = params["mvpp"] * 1e-3
         vgnd = "gb"
         extra.append(f"Vgb gb 0 pulse({-a/2:.4g} {a/2:.4g} 0 1n 1n 9n 20n)")
+    # The tile drives the code and enable from the same VPWR/VGND the macro
+    # sees, so a high bit is tied to the (rippling, stepping) VPWR node and a
+    # low bit to the (bouncing) ground node, not to ideal levels.
+    hi, lo = "VPWR", vgnd
     codes = []
     for k in range(8):
-        lvl = VDD if (code >> k) & 1 else 0
+        rail = hi if (code >> k) & 1 else lo
         if case == "xcode" and k == params["bit"]:
-            codes.append(f"Vc{k} c{k}s 0 {lvl}\nRd{k} c{k}s code[{k}] 500\nCx{k} ag code[{k}] 20f")
+            codes.append(f"Vc{k} c{k}s {rail} 0\nRd{k} c{k}s code[{k}] 500\nCx{k} ag code[{k}] 20f")
         else:
-            codes.append(f"Vc{k} code[{k}] 0 {lvl}")
+            codes.append(f"Vc{k} code[{k}] {rail} 0")
     if case == "xenable_stopped":
-        en = "Ven ens 0 0\nRden ens enable 500\nCxe ag enable 20f"
+        en = f"Ven ens {lo} 0\nRden ens enable 500\nCxe ag enable 20f"
     elif case == "xenable_running":
-        en = f"Ven ens 0 {VDD}\nRden ens enable 500\nCxe ag enable 20f"
+        en = f"Ven ens {hi} 0\nRden ens enable 500\nCxe ag enable 20f"
     elif case == "slow_enable":
-        en = f"Ven enable 0 pulse(0 {VDD} {2*T:.4g} 5n)"
+        en = f"Ven enable {lo} pulse(0 {VDD} {2*T:.4g} 5n)"
     else:
-        en = f"Ven enable 0 {VDD}"
+        en = f"Ven enable {hi} 0"
     if case.startswith("x"):
-        extra.append("Vag ag 0 pulse(0 1.2 0 0.2n 0.2n 9.8n 20n)")
+        extra.append(f"Vag ag {lo} pulse(0 1.2 0 0.2n 0.2n 9.8n 20n)")
     if case == "xout":
-        extra.append("Cxo ag clk_out 30f")
+        extra.append(f"Cxo ag clk_out {params['ff']}f")
     return f"""* environment: {case} {params} code {code}
 {C.corner()}.include {netlist}
 {chr(10).join(src)}
@@ -148,12 +158,14 @@ def main():
 
     cases = [("quiet", {}), ("ripple", {"mvpp": 10}), ("ripple", {"mvpp": 30}), ("ripple", {"mvpp": 100}),
              ("noise", {"mvrms": 10}), ("step", {}), ("bounce", {"mvpp": 30}),
-             ("xcode", {"bit": 0}), ("xcode", {"bit": 7}), ("xenable_running", {}), ("xout", {})]
+             ("xcode", {"bit": 0}), ("xcode", {"bit": 7}), ("xenable_running", {})]
     decks = {}
     for code in CODES:
         for case, p in cases:
             name = f"{case}_{'_'.join(f'{k}{v}' for k, v in p.items())}_code{code}".replace("__", "_")
             decks[name] = deck(nl, code, case, p)
+        for ff in XOUT_FF:
+            decks[f"xout_ff{ff}_code{code}"] = deck(nl, code, "xout", {"ff": ff}, n_run=60)
     decks["xenable_stopped_code255"] = deck(nl, 255, "xenable_stopped", {}, n_run=60)
     decks["slow_enable_code16"] = deck(nl, 16, "slow_enable", {}, n_run=60)
     decks["slow_enable_code255"] = deck(nl, 255, "slow_enable", {}, n_run=60)
@@ -194,7 +206,7 @@ def main():
             continue
         ed, per = periods(p, code)
         mu, sd, lo, hi = C.stats(per)
-        blocks = [sum(per[i:i + 50]) / 50 for i in range(0, len(per) - 49, 50)]
+        blocks = [sum(per[i:i + 25]) / 25 for i in range(0, len(per) - 24, 25)]
         _, bsd, _, _ = C.stats(blocks)
         note = ""
         if name.startswith("xcode"):
@@ -202,12 +214,14 @@ def main():
         if name.startswith("xenable_running"):
             note = f"enable dips to {C.meas(log, 'ven_min'):.3f} V"
         if name.startswith("xout"):
-            note = f"{len(per)} periods in the window; shortest {lo*1e9:.3f} ns (a glitch would be a period << T)"
+            glitches = sum(1 for x in per if x < 0.5 * mu)
+            note = (f"{len(per)} periods; shortest {lo*1e9:.3f} ns; {glitches} extra edge(s) at the 0.6 V threshold"
+                    + (" - GLITCH" if glitches else ", clean"))
         rows.append([name, code, 1 / mu, sd, bsd, hi - lo, C.meas(log, "vmin_out"), len(ed), note])
         if name.startswith("quiet"):
             ref[code] = 1 / mu
 
-    hdr = ["case", "code", "f MHz", "shift ppm vs quiet", "period jitter ps rms", "50-period mean jitter ps",
+    hdr = ["case", "code", "f MHz", "shift ppm vs quiet", "period jitter ps rms", "25-period mean jitter ps",
            "max-min period ps", "clk_out min V", "edges", "note"]
     out = []
     for r in sorted(rows, key=lambda r: (r[1], r[0])):
@@ -220,10 +234,10 @@ def main():
     md = [f"## Environment: supply, ground and crosstalk ({which} netlist, typical, 27 C, 1.2 V)\n",
           C.table(hdr, out, fmt),
           "\nShift is the mean frequency over the run against the quiet run at the same code; the counter reads that "
-          "mean. Period jitter is what the ring does cycle to cycle; the 50-period mean jitter is closer to what a "
+          "mean. Period jitter is what the ring does cycle to cycle; the 25-period mean jitter is closer to what a "
           "reciprocal count over hundreds of periods scatters by. 50 MHz ripple and bounce are square waves with 1 ns "
           "edges; the crosstalk aggressor is a full-swing 50 MHz square with 200 ps edges through 20 fF (30 fF onto clk_out), "
-          "the victim driven through 500 ohm.\n"]
+          "the victim driven through 500 ohm. Every case of a code uses the same maximum time step.\n"]
     C.write_csv(os.path.join(C.OUT, f"{a.tag}.csv"), hdr, out)
     C.write_md(a.tag, "".join(md))
 
