@@ -29,7 +29,7 @@ from shapely.geometry import Polygon
 HERE = os.path.dirname(os.path.realpath(__file__))
 ANALOG = os.path.dirname(HERE)
 
-TOP = sys.argv[2] if len(sys.argv) > 2 else "tt_um_mgpauly1458_inverter"
+TOP = sys.argv[2] if len(sys.argv) > 2 else "tt_analog_ring"
 GDS = sys.argv[1] if len(sys.argv) > 1 else f"{ANALOG}/../gds/{TOP}.gds"
 PROCESS = f"{ANALOG}/tech/sg13g2_gds3d.txt"
 OUT = f"{ANALOG}/out/tile_3d.glb"

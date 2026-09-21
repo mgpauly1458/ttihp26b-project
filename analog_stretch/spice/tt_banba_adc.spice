@@ -1,0 +1,69 @@
+* tt_banba_adc: Banba bandgap + 1-bit sigma-delta digital readout (STRETCH GOAL)
+* Hand-written schematic-level skeleton, NOT sized, NOT simulated, NOT laid out.
+* Mirrors device/style conventions of ../../analog/spice/tt_analog_ring.spice
+* but this file is not generated -- edit freely, this is the starting point.
+*
+* Ports: mostly digital except the pass-transistor mux, which only ever
+* switches internal analog nodes (never a chip pin -- tile is digital-only).
+*
+* clk        : 50MHz digital clock (flop + counter)
+* mux_sel[1:0]: selects comparator + input: vref / vbe / vdd_half / short
+* trim[3:0] : bandgap R2/R3 trim code (from regfile, same bus as ring DAC)
+* bit_out   : 1-bit sigma-delta stream (route to a spare uo[] pin for the demo)
+* count[15:0]: N-bit accumulated count, latched every 2^N clocks (regfile-readable)
+* VPWR, VGND: supplies
+
+.subckt tt_banba_adc clk mux_sel[0] mux_sel[1] trim[0] trim[1] trim[2] trim[3] bit_out count[0] count[1] count[2] count[3] count[4] count[5] count[6] count[7] count[8] count[9] count[10] count[11] count[12] count[13] count[14] count[15] VPWR VGND
+
+* ---- Banba bandgap core ----
+* Classic Banba: two PNPs at N:1 emitter ratio, opamp forces equal
+* currents through R1 legs, Vref = Vbe + R3/R2-scaled PTAT term.
+* NMOS pair opamp (Vbe common mode 0.55-0.75V), start-up branch to
+* avoid the zero-current stable point, trimmed R2/R3.
+
+XQ1 vb1 VGND VGND pnpMPA area=1
+XQ2 vb2 VGND VGND pnpMPA area=8    * 8x emitter area -> PTAT delta-Vbe
+
+XR1a opa vb1 rhigh w=1u l=20u
+XR1b opb vb2 rhigh w=1u l=20u
+XR2 opb vref rhigh w=1u l=40u m=1  * trim[3:0] switches parallel legs, TODO
+XR3 vref VGND rhigh w=1u l=60u
+
+* opamp: NMOS input pair, folds into a simple 2-stage, forces opa=opb
+XM_ip1 opamp_out opa tail VGND sg13_lv_nmos w=2u l=0.5u ng=4
+XM_ip2 opamp_out2 opb tail VGND sg13_lv_nmos w=2u l=0.5u ng=4
+XM_tail tail bias_n VGND VGND sg13_lv_nmos w=4u l=1u ng=4
+XM_ld1 opamp_out VPWR VPWR VPWR sg13_lv_pmos w=4u l=1u ng=2
+XM_ld2 opamp_out2 VPWR VPWR VPWR sg13_lv_pmos w=4u l=1u ng=2
+* -> gate drive to XR1a/XR1b's shared PMOS current mirrors (opa, opb legs), TODO
+CC_comp opamp_out VGND 2p          * compensation cap
+XSTARTUP VPWR opamp_out startup_bias VGND sg13_lv_pmos w=0.5u l=4u ng=1
+
+* ---- analog mux: selects comparator + input ----
+* internal-only switching, never touches a chip pin (digital-only tile)
+XMUX_vref  vref     mux_n0 vin VGND sg13_lv_nmos w=1u l=0.15u ng=1
+XMUX_vbe   vb1      mux_n1 vin VGND sg13_lv_nmos w=1u l=0.15u ng=1
+XMUX_vddh  vdd_half mux_n2 vin VGND sg13_lv_nmos w=1u l=0.15u ng=1
+XMUX_short cap_node mux_n3 vin VGND sg13_lv_nmos w=1u l=0.15u ng=1
+* mux_n0..3 = decode of mux_sel[1:0], TODO (2-to-4 decoder, digital)
+
+XRDIV1 VPWR vdd_half rhigh w=1u l=10u   * VDD/2 tap for gain self-check
+XRDIV2 vdd_half VGND rhigh w=1u l=10u
+
+* ---- 1-bit sigma-delta loop ----
+* comparator: PMOS input pair (common mode ~0.6V) + latch, TODO full sizing
+XM_cp1 comp_a vin comp_tail VPWR sg13_lv_pmos w=2u l=0.5u ng=4
+XM_cp2 comp_b cap_node comp_tail VPWR sg13_lv_pmos w=2u l=0.5u ng=4
+XM_cptail comp_tail bias_p VPWR VPWR sg13_lv_pmos w=4u l=1u ng=4
+* -> comp_a/comp_b -> latch -> clocked D flop -> bit_out, TODO (digital, reuse
+*    the same flop cell library as measure_core.v / cdc_sync.v)
+
+* feedback: bit_out -> inverter -> R -> cap_node (to VGND)
+XINV_fb fb_out bit_out VPWR VGND sg13_lv_inv    * placeholder cell name
+XR_fb fb_out cap_node rhigh w=0.3u l=200u        * ~200k, sets settling time
+CC_int cap_node VGND 2p                          * integrator cap
+
+* counter/accumulator: pure digital, reuse existing counter macro
+* (see ../../src/measure_core.v) -- not modeled here.
+
+.ends tt_banba_adc

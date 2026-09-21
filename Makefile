@@ -30,7 +30,8 @@ RTL := src/project.v \
 .DEFAULT_GOAL := help
 .PHONY: help test sweep plot clean \
         test_ring_model test_ring_divider test_cdc_sync test_measure_core \
-        test_ring_mux test_rings test_top
+        test_ring_mux test_rings test_top \
+        cocotb tools harden precheck submission macro view
 
 help:
 	@echo 'Simulation (iverilog):'
@@ -52,6 +53,7 @@ help:
 	@echo '  make tools                clone tt-support-tools, set up venv'
 	@echo '  make harden               LibreLane the tile locally'
 	@echo '  make precheck             Tiny Tapeout precheck on the result'
+	@echo '  make view                 3D glTF of the final hardened GDS -> analog/out/tile_3d.glb'
 
 build:
 	mkdir -p build
@@ -167,3 +169,10 @@ precheck: $(SUBMISSION)
 	$(RUN) bash -lc 'cd /work/$(TT)/precheck && \
 	    PDK_ROOT=/foss/pdks PDK=ihp-sg13g2 PATH=$$PATH:/foss/tools/klayout \
 	    python precheck.py --gds /work/tt_submission/$(TOP).gds --tech ihp-sg13g2'
+
+# ------------------------------------------------------------------- 3D / view
+# The submission GDS as a glTF model (analog/out/tile_3d.glb), no display
+# needed -- opens in any glTF viewer, a browser, or a phone. Needs make harden
+# first; see analog/Makefile for GDS3D/KLayout 2.5D alternatives that need X.
+view: $(FINAL_GDS)
+	$(MAKE) -C analog glb GDS=../$(FINAL_GDS) CELL=$(TOP)
