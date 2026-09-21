@@ -5,7 +5,8 @@
 
 Thorough verification is sim/ (`make test`) and the sweep (`make sweep`). This drives the tile
 through its pins as a host would: ID readback, one measurement on ring 7 checked against the
-reciprocal formula, and a dead-slow code that must time out rather than hang.
+reciprocal formula, a dead-slow code that must time out rather than hang, and the statistics page
+(ui_in[7] = 1) agreeing with the results the host read itself.
 
 Rings are sim/ring_model.v instances (-DSIM), so the answer is exact: ring 7, the analog macro's
 model, runs at 164 MHz at code 255 and 2.0 MHz at code 0 (its post-layout simulation).
@@ -51,6 +52,23 @@ async def host_read(dut, rsel):
     await ClockCycles(dut.clk, 3)
     await Timer(1, units="ns")
     return int(dut.uo_out.value)
+
+
+async def stats_read(dut, index):
+    """Page bit high, index on the write-data pins (WE low), 3 clocks, sample, page bit low."""
+    await Timer(1, units="ns")
+    dut.uio_in.value = index
+    dut.ui_in.value = 0x80
+    await ClockCycles(dut.clk, 3)
+    await Timer(1, units="ns")
+    value = int(dut.uo_out.value)
+    dut.ui_in.value = 0
+    return value
+
+
+async def stats_field(dut, index, nbytes):
+    b = [await stats_read(dut, index + i) for i in range(nbytes)]
+    return sum(v << (8 * i) for i, v in enumerate(b))
 
 
 async def wait_done(dut, max_polls=100000):
@@ -126,3 +144,26 @@ async def test_slow_code_times_out(dut):
     status, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
     assert not (status & ST_TIMEOUT)
     assert abs(count - 200 * 8 * F_REF / F_RING7_MAX) <= 1
+
+
+@cocotb.test()
+async def test_stats_page(dut):
+    """Five measurements, START only between them: COUNT/MIN/MAX/SUM equal what the host read. Then a clear."""
+    await start(dut)
+    assert await stats_read(dut, 11) == 0x5A
+    _, count = await measure(dut, ring=7, code=255, tap=3, n=200, timeout=16000)
+    seen = [count]
+    for i in range(4):
+        await ClockCycles(dut.clk, i + 1)         # move the start phase
+        await host_write(dut, A_CONTROL, 1)
+        await wait_done(dut)
+        seen.append(await read_result(dut))
+    dut._log.info(f"host saw {seen}")
+    assert await stats_field(dut, 0, 2) == len(seen)
+    assert await stats_field(dut, 2, 2) == min(seen)
+    assert await stats_field(dut, 4, 2) == max(seen)
+    assert await stats_field(dut, 6, 4) == sum(seen)
+    assert await host_read(dut, R_ID) == 0xA5     # page 0 is back as it was
+    await host_write(dut, A_TRIM, 255)            # a configuration write clears
+    assert await stats_field(dut, 0, 2) == 0
+    assert await stats_field(dut, 2, 2) == 0xFFFF

@@ -26,6 +26,29 @@ wider values are split into bytes. Pins and protocol: [pinmap.md](pinmap.md).
 | 6 | `{2'b0, TAP_SEL, RING_SEL}` | readback |
 | 7 | `ID` | constant `0xA5`; read it first on new silicon |
 
+## Statistics page (`ui_in[7]` = 1, index on `uio_in[4:0]`)
+
+`stats_observer.v` watches every measurement that ends without
+`timeout_error` and keeps running statistics of `RESULT`. It drives nothing
+in the instrument; with `ui_in[7]` = 0 the chip behaves as if it were absent.
+
+| index | name | meaning |
+|---|---|---|
+| 0..1 | `COUNT` | good measurements since the last configuration write; saturates at 65535 and freezes the rest |
+| 2..3 | `MIN` | smallest `RESULT`; `0xFFFF` while `COUNT` = 0 |
+| 4..5 | `MAX` | largest `RESULT`; `MAX - MIN` is the peak-to-peak spread |
+| 6..9 | `SUM` | 32-bit sum; `SUM / COUNT` is the average, and the +-1 count error averages down about `sqrt(COUNT)` |
+| 10 | `DICE` | free-running 8-bit LFSR, each `RESULT` bit 0 folded in; a random byte for whoever reads it |
+| 11 | signature | constant `0x5A` |
+| 12..25 | text | ASCII `RING METER 26B` |
+| 26..31 | - | zero |
+
+All little-endian. 16 bits hold any good `RESULT`: `TIMEOUT` is 16 bits and
+covers the whole measurement, so a count that did not time out is below 65536. Cleared by reset and by any accepted write to `ADDR`
+0..6 (rewrite `TRIM_CODE` with the same value to clear on purpose); `START`
+does not clear. Use: configure once, write `START` and poll `done` N times
+without reading `RESULT`, then read the page once.
+
 ## Status bits
 
 | bit | set when | cleared by |

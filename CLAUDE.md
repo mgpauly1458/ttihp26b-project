@@ -18,7 +18,7 @@ The owner reads every line and must be able to explain all of it.
 
 ## What it is
 
-Reciprocal frequency counter + eight ring slots + register file on the Tiny Tapeout pins. Block diagram in `src/project.v`'s header. `f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT`.
+Reciprocal frequency counter + eight ring slots + register file on the Tiny Tapeout pins. `stats_observer.v` (count/min/max/sum of RESULT, dice byte) is a passive clk-domain add-on shown while `ui_in[7]` = 1; nothing in the measurement path depends on it. Block diagram in `src/project.v`'s header. `f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT`.
 
 ## Layout
 
@@ -63,6 +63,7 @@ Gate-level CI passes only because the cocotb bench keeps `ena` low until ring 7 
 - Region constraints for the rings, especially slots 1..3 at corners.
 - Decision: a ninth, tri-state-inverter ring (`sg13g2_einvn_*`).
 - Decision: approve or change the pin map (`docs/pinmap.md`).
+- Auto-repeat for the statistics observer (touches the measure FSM start path; deliberately left out of the deadline-day revision).
 
 ## Analog block (`analog/`)
 

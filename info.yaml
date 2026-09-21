@@ -27,6 +27,7 @@ project:
   source_files:
     - "project.v"
     - "regfile.v"
+    - "stats_observer.v"
     - "measure_core.v"
     - "cdc_sync.v"
     - "ring_divider.v"
@@ -49,7 +50,7 @@ pinout:
   ui[4]: "RSEL[0] - read select"
   ui[5]: "RSEL[1] - read select"
   ui[6]: "RSEL[2] - read select"
-  ui[7]: ""
+  ui[7]: "STATS - 1 shows the statistics byte indexed by uio[4:0] on uo"
 
   # Outputs
   uo[0]: "RDATA[0] - byte selected by RSEL"

@@ -10,9 +10,9 @@ Register contents: [registers.md](registers.md).
 | `ui_in[2:0]` | `ADDR` | in | write address 0..7 |
 | `ui_in[3]` | `WE` | in | write strobe: one rising edge = one write |
 | `ui_in[6:4]` | `RSEL` | in | which byte appears on `uo_out` |
-| `ui_in[7]` | spare | in | unused |
-| `uio_in[7:0]` | `WDATA` | in | write data; all bidirectionals are inputs (`uio_oe = 0`) |
-| `uo_out[7:0]` | `RDATA` | out | byte selected by `RSEL`, registered |
+| `ui_in[7]` | `STATS` | in | 0: `uo_out` shows the byte selected by `RSEL`; 1: the statistics byte selected by `uio_in[4:0]` |
+| `uio_in[7:0]` | `WDATA` | in | write data; statistics index while `STATS` = 1 and `WE` = 0; all bidirectionals are inputs (`uio_oe = 0`) |
+| `uo_out[7:0]` | `RDATA` | out | byte selected by `RSEL` (or the statistics index), registered |
 
 ## Protocol
 
@@ -20,6 +20,7 @@ Register contents: [registers.md](registers.md).
 |---|---|
 | write | set `ADDR`, `WDATA`; raise `WE`; hold >= 4 `clk`; lower `WE`; keep `ADDR`, `WDATA` until `WE` has been low >= 4 `clk` |
 | read | set `RSEL`; wait >= 3 `clk`; read `uo_out` |
+| stats read | `WE` low; raise `STATS`; index on `uio_in[4:0]`; wait >= 3 `clk`; read `uo_out`; lower `STATS` |
 | measure | write `RING_SEL`, `TAP_SEL`, `TRIM_CODE`, `TARGET_N` (2 bytes), `TIMEOUT` (2 bytes); write 1 to `CONTROL`; poll `STATUS` until `done`; if `timeout_error` is clear read the 4 `RESULT` bytes |
 
 The host is asynchronous to `clk`. `WE` passes a two-flop synchroniser

@@ -6,7 +6,7 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v regfile.v measure_core.v cdc_sync.v ring_divider.v ring_mux.v \
+PROJECT_SOURCES = project.v regfile.v stats_observer.v measure_core.v cdc_sync.v ring_divider.v ring_mux.v \
                   rings/ring_bank.v rings/ring_21_min.v rings/ring_21_hd.v rings/ring_11_min.v \
                   rings/ring_tap.v rings/tt_analog_ring.v
 

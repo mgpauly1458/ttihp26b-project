@@ -16,6 +16,7 @@ PY       := venv/bin/python
 # Synthesisable sources, in the order the top needs them.
 RTL := src/project.v \
        src/regfile.v \
+       src/stats_observer.v \
        src/measure_core.v \
        src/cdc_sync.v \
        src/ring_divider.v \
@@ -30,7 +31,7 @@ RTL := src/project.v \
 .DEFAULT_GOAL := help
 .PHONY: help test sweep plot clean \
         test_ring_model test_ring_divider test_cdc_sync test_measure_core \
-        test_ring_mux test_rings test_top \
+        test_ring_mux test_rings test_top test_stats_observer test_stats \
         cocotb tools harden precheck submission macro view
 
 help:
@@ -98,8 +99,19 @@ test_top: | build
 	$(VVP) build/tb_top | tee build/tb_top.log
 	@grep -q 'RESULT: PASS' build/tb_top.log
 
+# The statistics observer alone, then its page through the pins of the whole tile.
+test_stats_observer: | build
+	$(IVERILOG) -o build/tb_stats_observer sim/tb_stats_observer.v src/stats_observer.v
+	$(VVP) build/tb_stats_observer | tee build/tb_stats_observer.log
+	@grep -q 'RESULT: PASS' build/tb_stats_observer.log
+
+test_stats: | build
+	$(IVERILOG) -DSIM -Isim -o build/tb_stats sim/tb_stats.v sim/ring_model.v $(RTL)
+	$(VVP) build/tb_stats | tee build/tb_stats.log
+	@grep -q 'RESULT: PASS' build/tb_stats.log
+
 test: test_ring_model test_ring_divider test_measure_core test_cdc_sync \
-      test_ring_mux test_rings test_top
+      test_ring_mux test_rings test_top test_stats_observer test_stats
 	@echo
 	@echo 'All testbenches passed.'
 

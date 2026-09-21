@@ -1,7 +1,7 @@
 // tb_pins.vh -- host-side helpers for the pin-level testbenches (tb_top, tb_sweep)
 // Include inside a module that declares clk, ui_in, uio_in, uo_out and `integer errors`. Provides the
 // register-map localparams, host_write / host_read with the waits regfile.v mandates, wait_done,
-// read_result, and measure(ring, code, tap, n, tmo), which leaves `result` and `status` set.
+// read_result, stats_read, and measure(ring, code, tap, n, tmo), which leaves `result` and `status` set.
 
   // Write map
   localparam [2:0] A_TRIM     = 3'd0,
@@ -27,8 +27,9 @@
   reg [2:0] pin_addr = 3'd0;
   reg       pin_we   = 1'b0;
   reg [2:0] pin_rsel = 3'd0;
+  reg       pin_stats = 1'b0;          // ui_in[7]: 1 shows the stats_observer page on uo_out
 
-  always @(*) ui_in = {1'b0, pin_rsel, pin_we, pin_addr};
+  always @(*) ui_in = {pin_stats, pin_rsel, pin_we, pin_addr};
 
   // Host write: ADDR/WDATA, WE high 4 clocks, WE low 4.
   task host_write;
@@ -53,6 +54,18 @@
       pin_rsel = r;
       repeat (3) @(posedge clk); #1;
       rdata = uo_out;
+    end
+  endtask
+
+  // Stats read: page bit high, index on the write-data pins (WE is low), wait 3 clocks, sample, page bit low.
+  task stats_read;
+    input [4:0] i;
+    begin
+      @(posedge clk); #1;
+      pin_stats = 1'b1; uio_in = {3'b000, i};
+      repeat (3) @(posedge clk); #1;
+      rdata = uo_out;
+      pin_stats = 1'b0;
     end
   endtask
 

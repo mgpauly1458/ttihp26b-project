@@ -1,8 +1,9 @@
 // project.v -- Tiny Tapeout top: on-chip ring oscillator frequency meter
 //   ring_bank (8 rings) -> ring_mux -> ring_divider (/1../128) -> measure_core -> regfile -> pins
+//   stats_observer watches measure_core's outputs (count/min/max/sum of RESULT, a dice byte); ui_in[7] = 1 shows it
 //   f_ring = TARGET_N * 2^TAP_SEL * f_ref / RESULT    f_ref = the clk pin, the only thing that must be accurate
-// Pins  ui_in  = {spare, RSEL[2:0], WE, ADDR[2:0]}   uo_out = read byte      (docs/pinmap.md)
-//       uio_in = write data                          uio_out = uio_oe = 0
+// Pins  ui_in  = {STATS, RSEL[2:0], WE, ADDR[2:0]}   uo_out = read byte      (docs/pinmap.md)
+//       uio_in = write data, stats index if STATS    uio_out = uio_oe = 0
 // Clock domains: clk (regfile, measure_core FSM and counters); the selected ring and the divider taps
 //   (ring_divider, measure_core window logic). Crossings are single bits through cdc_sync (docs/constraints.md).
 // - rst_n is used synchronously by the clk domain and asynchronously by the divider, whose clock may be stopped.
@@ -34,6 +35,8 @@ module tt_um_mgpauly1458_ringmeter (
   wire        start;
   wire [31:0] ref_count;
   wire        done, busy, timeout_error;
+  wire        cfg_write;
+  wire [7:0]  stats_byte;
 
   regfile u_regs (
       .clk           (clk),
@@ -47,10 +50,24 @@ module tt_um_mgpauly1458_ringmeter (
       .target_n      (target_n),
       .timeout       (timeout),
       .start         (start),
+      .cfg_write     (cfg_write),
+      .stats_byte    (stats_byte),
       .ref_count     (ref_count),
       .done          (done),
       .busy          (busy),
       .timeout_error (timeout_error)
+  );
+
+  // ---- statistics: an observer, nothing in the measurement path depends on it --
+  stats_observer u_stats (
+      .clk           (clk),
+      .reset         (reset),
+      .done          (done),
+      .timeout_error (timeout_error),
+      .ref_count     (ref_count),
+      .clear         (cfg_write),
+      .index         (uio_in[4:0]),
+      .stats_byte    (stats_byte)
   );
 
   // ---- the rings ------------------------------------------------------------

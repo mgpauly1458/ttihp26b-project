@@ -1,5 +1,5 @@
 // regfile.v -- register file and pin interface (clk domain; every input pin is asynchronous to clk)
-// Pins   ui_in[2:0] ADDR   ui_in[3] WE (rising edge = one write)   ui_in[6:4] RSEL   ui_in[7] spare
+// Pins   ui_in[2:0] ADDR   ui_in[3] WE (rising edge = one write)   ui_in[6:4] RSEL   ui_in[7] STATS page
 //        uio_in[7:0] WDATA (all bidirectionals are inputs)          uo_out[7:0] byte selected by RSEL, registered
 // Write (ADDR)                                   Read (RSEL)
 //   0 TRIM_CODE[7:0]   1 RING_SEL[2:0]             0 STATUS = {4'b0, write_ignored, timeout_error, busy, done}
@@ -13,6 +13,9 @@
 //   RING_SEL/TAP_SEL would glitch the clock muxes, TRIM_CODE the ring, TARGET_N crosses to the ring domain unsynchronised.
 // - RESULT is a shadow latched when done rises, so a measurement starting between two byte reads cannot mix results.
 // - START is a self-clearing one-cycle pulse. Pin reasoning: docs/pinmap.md.
+// - ui_in[7] = 1 changes only what uo_out shows: the stats_observer byte indexed by uio_in[4:0] (WE low, so the
+//   write-data pins are free to carry it). Writes work the same on either page. With ui_in[7] = 0 nothing differs
+//   from the design without the observer. cfg_write tells the observer its statistics describe an old configuration.
 `default_nettype none
 
 module regfile (
@@ -31,6 +34,10 @@ module regfile (
     output reg  [15:0] target_n,
     output reg  [15:0] timeout,
     output reg         start,
+    output wire        cfg_write,       // one cycle: an accepted write to ADDR 0..6
+
+    // from the stats observer
+    input  wire [7:0]  stats_byte,
 
     // from the instrument
     input  wire [31:0] ref_count,
@@ -59,6 +66,8 @@ module regfile (
   );
 
   wire write_now = we_sync & ~we_sync_q;
+
+  assign cfg_write = write_now & ~busy & (addr != 3'd7);
 
   // ---- registers --------------------------------------------------------------
   reg write_ignored;
@@ -121,6 +130,8 @@ module regfile (
   always @(posedge clk) begin
     if (reset) begin
       uo_out <= 8'd0;
+    end else if (ui_in[7]) begin
+      uo_out <= stats_byte;
     end else begin
       case (rsel)
         3'd0:    uo_out <= {4'b0000, write_ignored, timeout_error, busy, done};
@@ -134,8 +145,6 @@ module regfile (
       endcase
     end
   end
-
-  wire _unused = &{ui_in[7]};
 
 endmodule
 

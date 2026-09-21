@@ -52,3 +52,14 @@ Slot 7 is the macro (`src/rings/tt_analog_ring.v`, `src/config.json`,
 tap 3 with N = 200 takes 800 us and a short timeout reports. The sweep
 uses tap 1 for this ring so both ends fit its timeout. Gate-level
 simulation: [constraints.md](constraints.md).
+
+## Statistics observer (added on deadline day, 2026-09-21)
+
+`6dbf460` was submitted first (tag `ttihp26b-submitted`); this is a revision on top of it.
+
+- What: `src/stats_observer.v`, count/min/max/sum of `RESULT` plus a dice byte and a text string, shown on `uo_out` while `ui_in[7]` = 1 ([registers.md](registers.md)).
+- Why it was safe to add late: `clk` domain only (12.9 ns of slack at the slow corner before it), no new clock, no SDC change, and it is an observer: it reads `done`, `timeout_error`, `ref_count` and drives only the read mux. With `ui_in[7]` = 0 the pins behave as before, so the seven earlier testbenches pass unchanged.
+- The only edits to existing RTL: `regfile.v` gains `cfg_write` (out), `stats_byte` (in) and one `if (ui_in[7])` ahead of the read `case`; `project.v` instantiates the observer.
+- Not done on purpose: auto-repeat (hardware issuing its own `START`s) would make the statistics far more useful but changes the measure FSM's start path, where the CLEAR-state bug lived. A candidate for the next shuttle.
+- Sized by what it cost: the first version (32-bit MIN/MAX, 48-bit SUM, 147 flops) took utilization from 48 % to 81 % and the divided-ring clock's slack from 0.98 to 0.28 ns. A good `RESULT` is below 65536 (the 16-bit timeout covers the whole measurement), so MIN/MAX are 16 bits and SUM 32: 89 flops.
+- Tests: `tb_stats_observer` (sum carries, saturation at 65535, clear, timeout and over-range ignored), `tb_stats` (through the pins, against what the host read), cocotb `test_stats_page` (RTL and gate level).
